@@ -4,9 +4,10 @@ export interface Opportunity {
   city: string;
   state: string;
   zip: string;
-  submittedAt: string;
-  status: 'pending' | 'in_review' | 'approved' | 'declined';
-  premium: number;
-  coverageAmount: number;
-  applicantName: string;
+  market: string;
+  lotSqFt: number;
+  source: 'MLS' | 'Off-Market';
+  sdrOwner: string;
+  dateReceived: string;
+  status: 'pending_review' | 'in_review' | 'ready_for_offer' | 'dqd';
 }

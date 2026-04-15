@@ -68,10 +68,10 @@
   margin-top: 4px;
 }
 
-.status-pending  { background-color: #fff7e6; color: #b45309; }
-.status-in_review { background-color: #eff2ff; color: #4f6ef7; }
-.status-approved { background-color: #ecfdf5; color: #059669; }
-.status-declined { background-color: #fef2f2; color: #dc2626; }
+.status-pending_review  { background-color: #fff7e6; color: #b45309; }
+.status-in_review       { background-color: #eff2ff; color: #4f6ef7; }
+.status-ready_for_offer { background-color: #ecfdf5; color: #059669; }
+.status-dqd             { background-color: #fef2f2; color: #dc2626; }
 
 .uw-grid {
   display: grid;
