@@ -1,0 +1,181 @@
+.oq-page {
+  padding: 36px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.oq-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.oq-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1f2e;
+  margin: 0 0 4px;
+}
+
+.oq-subtitle {
+  font-size: 13px;
+  color: #7a8299;
+  margin: 0;
+}
+
+.oq-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid #dde1ee;
+  background: #fff;
+  color: #555d78;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.filter-btn:hover {
+  border-color: #4f6ef7;
+  color: #4f6ef7;
+}
+
+.filter-btn.active {
+  background-color: #4f6ef7;
+  border-color: #4f6ef7;
+  color: #fff;
+}
+
+.oq-table-wrapper {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e4e7f0;
+  overflow: hidden;
+}
+
+.oq-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.oq-table thead tr {
+  background: #f7f8fc;
+  border-bottom: 1px solid #e4e7f0;
+}
+
+.oq-table th {
+  padding: 11px 16px;
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #7a8299;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.oq-row {
+  border-bottom: 1px solid #eef0f7;
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+
+.oq-row:last-child {
+  border-bottom: none;
+}
+
+.oq-row:hover {
+  background-color: #f7f8fc;
+}
+
+.oq-table td {
+  padding: 14px 16px;
+  color: #2c3348;
+  vertical-align: middle;
+}
+
+.oq-id {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  color: #7a8299 !important;
+}
+
+.oq-name {
+  font-weight: 600;
+  color: #1a1f2e !important;
+}
+
+.oq-address {
+  color: #555d78 !important;
+}
+
+.per-year {
+  font-size: 11px;
+  color: #9aa3bc;
+  margin-left: 1px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.status-pending {
+  background-color: #fff7e6;
+  color: #b45309;
+}
+
+.status-in_review {
+  background-color: #eff2ff;
+  color: #4f6ef7;
+}
+
+.status-approved {
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+.status-declined {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.review-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid #dde1ee;
+  background: #fff;
+  color: #4f6ef7;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.review-btn:hover {
+  background-color: #4f6ef7;
+  border-color: #4f6ef7;
+  color: #fff;
+}
+
+.oq-empty {
+  padding: 48px;
+  text-align: center;
+  color: #9aa3bc;
+  font-size: 14px;
+}
