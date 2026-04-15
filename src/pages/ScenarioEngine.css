@@ -1,0 +1,411 @@
+.sc-page {
+  padding: 32px 40px 64px;
+  max-width: 1160px;
+  margin: 0 auto;
+}
+
+/* ── Breadcrumb ── */
+.sc-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #9aa3bc;
+  margin-bottom: 22px;
+}
+
+.sc-breadcrumb-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #4f6ef7;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sc-breadcrumb-link:hover { text-decoration: underline; }
+
+.sc-breadcrumb-sep { color: #c0c6d9; }
+
+.sc-breadcrumb-current {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  color: #555d78;
+}
+
+/* ── Page header ── */
+.sc-page-header {
+  margin-bottom: 32px;
+}
+
+.sc-page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1f2e;
+  margin: 0 0 4px;
+}
+
+.sc-page-subtitle {
+  font-size: 13.5px;
+  color: #7a8299;
+  margin: 0;
+}
+
+/* ── Section ── */
+.sc-section {
+  margin-bottom: 36px;
+}
+
+.sc-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #9aa3bc;
+  margin: 0 0 16px;
+}
+
+.sc-section-sub {
+  font-size: 13px;
+  color: #7a8299;
+  margin: 2px 0 0;
+}
+
+/* ── Plan Cards Grid ── */
+.sc-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.sc-plan-card {
+  background: #fff;
+  border: 1px solid #e4e7f0;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sc-plan-card--recommended {
+  border-color: #4f6ef7;
+  box-shadow: 0 0 0 1px #4f6ef7, 0 4px 16px rgba(79, 110, 247, 0.12);
+}
+
+/* ── Plan Card Header ── */
+.sc-plan-card-header {
+  padding: 18px 20px 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid #eef0f7;
+}
+
+.sc-plan-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1f2e;
+  margin-bottom: 4px;
+}
+
+.sc-plan-specs {
+  font-size: 12.5px;
+  color: #555d78;
+  margin-bottom: 2px;
+}
+
+.sc-plan-elev {
+  font-size: 11.5px;
+  color: #9aa3bc;
+}
+
+.sc-recommended-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background-color: #eff2ff;
+  color: #4f6ef7;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ── Financial rows ── */
+.sc-plan-financials {
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.sc-fin-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  font-size: 13px;
+  color: #2c3348;
+}
+
+.sc-fin-row--primary {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: #1a1f2e;
+}
+
+.sc-fin-row--sub {
+  font-size: 12px;
+  color: #7a8299;
+  padding-left: 8px;
+}
+
+.sc-fin-row--total {
+  font-weight: 600;
+  border-top: 1px solid #eef0f7;
+  margin-top: 4px;
+  padding-top: 10px;
+}
+
+.sc-fin-row--highlight {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1f2e;
+  background: #f7f8fc;
+  margin: 4px -20px 0;
+  padding: 9px 20px;
+}
+
+.sc-fin-row--margin {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #059669;
+  padding-bottom: 2px;
+}
+
+.sc-fin-divider {
+  height: 1px;
+  background: #eef0f7;
+  margin: 4px 0;
+}
+
+/* ── Lot requirements ── */
+.sc-plan-lot-reqs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-top: 1px solid #eef0f7;
+  background: #fafbff;
+}
+
+.sc-lot-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9aa3bc;
+}
+
+.sc-lot-value {
+  font-size: 12px;
+  color: #555d78;
+}
+
+/* ── Confirm button ── */
+.sc-plan-action {
+  padding: 14px 20px;
+  border-top: 1px solid #e4e7f0;
+}
+
+.sc-confirm-btn {
+  width: 100%;
+  padding: 10px 0;
+  border-radius: 7px;
+  border: none;
+  background-color: #4f6ef7;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.sc-confirm-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.sc-confirm-btn:active {
+  transform: translateY(0);
+}
+
+/* ── Pro Forma Table ── */
+.sc-table-wrapper {
+  background: #fff;
+  border: 1px solid #e4e7f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.sc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.sc-table thead tr {
+  background: #f7f8fc;
+  border-bottom: 1px solid #e4e7f0;
+}
+
+.sc-table th {
+  padding: 11px 18px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  color: #555d78;
+}
+
+.sc-table th:first-child,
+.sc-table td:first-child {
+  text-align: left;
+}
+
+.sc-table-label-col {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9aa3bc !important;
+  min-width: 180px;
+}
+
+.sc-table-rec-dot {
+  color: #4f6ef7;
+  margin-left: 2px;
+}
+
+.sc-table td {
+  padding: 11px 18px;
+  text-align: right;
+  color: #2c3348;
+  border-bottom: 1px solid #f3f4f8;
+}
+
+.sc-table tr:last-child td {
+  border-bottom: none;
+}
+
+.sc-table-label {
+  text-align: left !important;
+  font-size: 13px;
+  color: #555d78;
+}
+
+.sc-table-col--recommended {
+  background-color: #fafbff;
+}
+
+.sc-table-row--primary td {
+  font-weight: 600;
+  color: #1a1f2e;
+}
+
+.sc-table-row--sub td {
+  font-size: 12.5px;
+  color: #7a8299;
+}
+
+.sc-table-row--total td {
+  font-weight: 700;
+  border-top: 1px solid #e4e7f0;
+  background: #f7f8fc;
+}
+
+.sc-table-row--highlight td {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #1a1f2e;
+  background: #eff2ff;
+}
+
+.sc-table-row--margin td {
+  font-weight: 700;
+  color: #059669;
+}
+
+/* ── Sensitivity Panel ── */
+.sc-sensitivity {
+  background: #fff;
+  border: 1px solid #e4e7f0;
+  border-radius: 10px;
+  padding: 22px 24px;
+}
+
+.sc-sensitivity-header {
+  margin-bottom: 18px;
+}
+
+.sc-sensitivity-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.sc-sensitivity-card {
+  background: #f7f8fc;
+  border: 1px solid #eef0f7;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.sc-sens-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #555d78;
+  margin-bottom: 2px;
+}
+
+.sc-sens-desc {
+  font-size: 11.5px;
+  color: #9aa3bc;
+  margin-bottom: 12px;
+}
+
+.sc-sens-offer {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1f2e;
+  margin-bottom: 4px;
+}
+
+.sc-sens-delta {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.delta-negative { color: #dc2626; }
+.delta-positive { color: #059669; }
+
+/* ── Not found ── */
+.sc-not-found {
+  padding: 60px 40px;
+  text-align: center;
+  color: #7a8299;
+  font-size: 14px;
+}
+
+.sc-not-found button {
+  background: none;
+  border: none;
+  color: #4f6ef7;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+}

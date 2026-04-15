@@ -43,11 +43,11 @@ export default function UnderwritePage() {
   }
 
   function handleProceed() {
-    navigate(`/underwrite/${opp!.id}`);
+    navigate(`/underwrite/${opp!.id}/scenario`);
   }
 
   function handleOverride() {
-    navigate(`/underwrite/${opp!.id}`);
+    navigate(`/underwrite/${opp!.id}/scenario`);
   }
 
   return (
