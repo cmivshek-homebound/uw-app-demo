@@ -258,7 +258,7 @@ export default function ScenarioEngine() {
               key={plan.id}
               plan={plan}
               fin={financials[i]}
-              onConfirm={() => navigate(`/underwrite/${opp.id}/scenario/confirmed`)}
+              onConfirm={() => navigate(`/underwrite/${opp.id}/scenario/comps`)}
             />
           ))}
         </div>
