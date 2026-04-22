@@ -41,7 +41,7 @@ export default function OpportunityQueue() {
     <div className="oq-page">
       <div className="oq-header">
         <div>
-          <h1 className="oq-title">Opportunity Queue</h1>
+          <h1 className="oq-title">BOOL Opportunity Queue</h1>
           <p className="oq-subtitle">{mockOpportunities.length} opportunities · {pendingCount} pending review</p>
         </div>
         <div className="oq-filters">

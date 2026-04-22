@@ -352,9 +352,16 @@
   margin-bottom: 18px;
 }
 
+.sc-sens-panel-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1f2e;
+  margin: 0;
+}
+
 .sc-sensitivity-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 14px;
 }
 
@@ -362,36 +369,75 @@
   background: #f7f8fc;
   border: 1px solid #eef0f7;
   border-radius: 8px;
-  padding: 14px 16px;
+  padding: 18px 20px;
+}
+
+.sc-sensitivity-card--breach {
+  background: #fff5f5;
+  border-color: #fecaca;
 }
 
 .sc-sens-label {
   font-size: 12px;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: #555d78;
-  margin-bottom: 2px;
+  margin-bottom: 10px;
 }
 
-.sc-sens-desc {
+.sc-sens-param {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.sc-sens-param-key {
   font-size: 11.5px;
   color: #9aa3bc;
-  margin-bottom: 12px;
 }
 
-.sc-sens-offer {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1a1f2e;
+.sc-sens-param-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555d78;
+}
+
+.sc-sens-offer-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9aa3bc;
   margin-bottom: 4px;
 }
 
-.sc-sens-delta {
-  font-size: 12px;
-  font-weight: 600;
+.sc-sens-offer {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a1f2e;
+  line-height: 1.1;
 }
 
-.delta-negative { color: #dc2626; }
-.delta-positive { color: #059669; }
+.sc-sens-offer--negative {
+  color: #dc2626;
+}
+
+.sc-sens-breach {
+  margin-top: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sc-sens-breach::before {
+  content: '⚠';
+  font-size: 11px;
+}
 
 /* ── Not found ── */
 .sc-not-found {

@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import homeboundLogo from '../assets/homebound-logo.png';
 import './NavBar.css';
 
 export default function NavBar() {
@@ -7,12 +8,12 @@ export default function NavBar() {
   return (
     <nav className="navbar">
       <div className="navbar-brand">
-        <div className="navbar-logo">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M14 2L26 10V26H18V18H10V26H2V10L14 2Z" fill="#ffffff" />
-          </svg>
-        </div>
-        <span className="navbar-title">Homebound Underwriting App 2.0</span>
+        <img
+          src={homeboundLogo}
+          alt="Homebound"
+          className="navbar-logo-img"
+        />
+        <span className="navbar-subtitle">Underwriting App 2.0</span>
       </div>
 
       <div className="navbar-links">

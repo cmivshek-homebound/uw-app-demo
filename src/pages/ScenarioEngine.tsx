@@ -145,27 +145,34 @@ function ProFormaTable({ plans, financials }: { plans: Plan[]; financials: PlanF
 
 // ── Sensitivity Panel ──────────────────────────────────────────
 function SensitivityPanel({ basePlan }: { basePlan: Plan }) {
-  const base = calcPlanFinancials(basePlan);
-
-  const scenarios = [
+  const scenarios: {
+    label: string;
+    adjustedParamLabel: string;
+    adjustedParamValue: string;
+    fin: ReturnType<typeof calcFinancials>;
+  }[] = [
     {
-      label: 'ESP − 5%',
-      description: 'Sale price drops 5%',
+      label: 'ESP −5%',
+      adjustedParamLabel: 'Adjusted ESP',
+      adjustedParamValue: usd(basePlan.estSalePrice * 0.95),
       fin: calcFinancials(basePlan.buildCost, basePlan.estSalePrice * 0.95),
     },
     {
-      label: 'ESP − 10%',
-      description: 'Sale price drops 10%',
+      label: 'ESP −10%',
+      adjustedParamLabel: 'Adjusted ESP',
+      adjustedParamValue: usd(basePlan.estSalePrice * 0.90),
       fin: calcFinancials(basePlan.buildCost, basePlan.estSalePrice * 0.90),
     },
     {
-      label: 'Build Cost + 3%',
-      description: 'Construction cost increases 3%',
+      label: 'Build Cost +3%',
+      adjustedParamLabel: 'Adjusted Build Cost',
+      adjustedParamValue: usd(basePlan.buildCost * 1.03),
       fin: calcFinancials(basePlan.buildCost * 1.03, basePlan.estSalePrice),
     },
     {
-      label: 'Build Cost + 5%',
-      description: 'Construction cost increases 5%',
+      label: 'Build Cost +5%',
+      adjustedParamLabel: 'Adjusted Build Cost',
+      adjustedParamValue: usd(basePlan.buildCost * 1.05),
       fin: calcFinancials(basePlan.buildCost * 1.05, basePlan.estSalePrice),
     },
   ];
@@ -173,23 +180,25 @@ function SensitivityPanel({ basePlan }: { basePlan: Plan }) {
   return (
     <div className="sc-sensitivity">
       <div className="sc-sensitivity-header">
-        <div>
-          <h3 className="sc-section-title">Sensitivity Analysis</h3>
-          <p className="sc-section-sub">Based on {basePlan.name} (Recommended Plan) · Baseline max lot offer: <strong>{usd(base.maxLotOffer)}</strong></p>
-        </div>
+        <h3 className="sc-sens-panel-title">Sensitivity Analysis — {basePlan.name}</h3>
       </div>
       <div className="sc-sensitivity-grid">
         {scenarios.map((s) => {
-          const delta = s.fin.maxLotOffer - base.maxLotOffer;
-          const isNegative = delta < 0;
+          const offerIsNegative = s.fin.maxLotOffer < 0;
           return (
-            <div key={s.label} className="sc-sensitivity-card">
+            <div key={s.label} className={`sc-sensitivity-card ${offerIsNegative ? 'sc-sensitivity-card--breach' : ''}`}>
               <div className="sc-sens-label">{s.label}</div>
-              <div className="sc-sens-desc">{s.description}</div>
-              <div className="sc-sens-offer">{usd(s.fin.maxLotOffer)}</div>
-              <div className={`sc-sens-delta ${isNegative ? 'delta-negative' : 'delta-positive'}`}>
-                {isNegative ? '▼' : '▲'} {usd(Math.abs(delta))} vs. base
+              <div className="sc-sens-param">
+                <span className="sc-sens-param-key">{s.adjustedParamLabel}</span>
+                <span className="sc-sens-param-val">{s.adjustedParamValue}</span>
               </div>
+              <div className="sc-sens-offer-label">Max Lot Offer</div>
+              <div className={`sc-sens-offer ${offerIsNegative ? 'sc-sens-offer--negative' : ''}`}>
+                {usd(s.fin.maxLotOffer)}
+              </div>
+              {offerIsNegative && (
+                <div className="sc-sens-breach">Margin floor breached</div>
+              )}
             </div>
           );
         })}

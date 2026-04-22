@@ -4,7 +4,7 @@
   justify-content: space-between;
   padding: 0 32px;
   height: 60px;
-  background-color: #1a1f2e;
+  background-color: #1A1A2E;
   border-bottom: 1px solid #2d3348;
   position: sticky;
   top: 0;
@@ -17,22 +17,18 @@
   gap: 12px;
 }
 
-.navbar-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background-color: #4f6ef7;
-  border-radius: 8px;
+.navbar-logo-img {
+  height: 28px;
+  width: auto;
+  filter: invert(1);
   flex-shrink: 0;
 }
 
-.navbar-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #f0f2f8;
-  letter-spacing: 0.01em;
+.navbar-subtitle {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7494;
+  letter-spacing: 0.02em;
 }
 
 .navbar-links {
