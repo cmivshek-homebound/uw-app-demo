@@ -9,6 +9,10 @@ type SpecLevel = (typeof SPEC_LEVELS)[number];
 const ML_ESP = 571_000;
 const MAX_LOT_OFFER = 152_760;
 
+// Plan selected in the scenario engine. Hardcoded for now — BOOL-001 recommends
+// The Emerson (highest projected margin of the lot-feasible plans).
+const SELECTED_PLAN_NAME = 'The Emerson';
+
 // ── Types ──────────────────────────────────────────────────────
 interface CompDef {
   rank: number;
@@ -113,7 +117,7 @@ function OfferPublishedScreen({ esp, onReturn }: { esp: number; onReturn: () => 
           </div>
           <div className="cs-pub-row">
             <span className="cs-pub-label">Plan</span>
-            <span className="cs-pub-value">The Birch · Premium · Elevation 1</span>
+            <span className="cs-pub-value">{SELECTED_PLAN_NAME} · Premium · Elevation 1</span>
           </div>
           <div className="cs-pub-row">
             <span className="cs-pub-label">Max Lot Offer</span>
@@ -320,7 +324,7 @@ export default function CompSelectionPage() {
         <div className="cs-header-left">
           <h1 className="cs-page-title">Comp Selection &amp; Adjustment</h1>
           <p className="cs-page-subtitle">
-            4821 Maple Creek Dr &nbsp;·&nbsp; The Birch &nbsp;·&nbsp;
+            4821 Maple Creek Dr &nbsp;·&nbsp; {SELECTED_PLAN_NAME} &nbsp;·&nbsp;
             2,100 sqft &nbsp;·&nbsp; Premium &nbsp;·&nbsp; DFW
           </p>
         </div>
