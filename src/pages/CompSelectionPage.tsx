@@ -104,7 +104,10 @@ function computeAdjValue(comp: CompDef): number {
 }
 
 // ── Offer Published Screen ─────────────────────────────────────
-function OfferPublishedScreen({ esp, onReturn }: { esp: number; onReturn: () => void }) {
+function OfferPublishedScreen(
+  { esp, onReturn, onViewContract }:
+  { esp: number; onReturn: () => void; onViewContract: () => void },
+) {
   return (
     <div className="cs-published-wrapper">
       <div className="cs-published-card">
@@ -132,9 +135,14 @@ function OfferPublishedScreen({ esp, onReturn }: { esp: number; onReturn: () => 
           <span className="cs-sys-badge cs-sys-badge--sf">✓ Published to Salesforce</span>
           <span className="cs-sys-badge cs-sys-badge--slack">✓ Slack notification sent</span>
         </div>
-        <button className="cs-return-btn" onClick={onReturn}>
-          ← Return to Queue
-        </button>
+        <div className="cs-pub-actions">
+          <button className="cs-contract-btn" onClick={onViewContract}>
+            Confirm &amp; Publish Offer →
+          </button>
+          <button className="cs-return-btn" onClick={onReturn}>
+            ← Return to Queue
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -295,7 +303,13 @@ export default function CompSelectionPage() {
   const weightsValid = weightTotal === 100;
 
   if (published) {
-    return <OfferPublishedScreen esp={displayESP} onReturn={() => navigate('/')} />;
+    return (
+      <OfferPublishedScreen
+        esp={displayESP}
+        onReturn={() => navigate('/')}
+        onViewContract={() => navigate(`/contract/${id ?? 'BOOL-001'}`)}
+      />
+    );
   }
 
   const weightDelta = 100 - weightTotal;

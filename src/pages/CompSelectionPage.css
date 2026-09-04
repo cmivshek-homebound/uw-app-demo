@@ -611,3 +611,29 @@
   border-color: #1A6B4A;
   color: #1A6B4A;
 }
+
+/* ── Published-screen actions ── */
+.cs-pub-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cs-contract-btn {
+  width: 100%;
+  padding: 12px 0;
+  border-radius: 8px;
+  border: 1px solid #1A6B4A;
+  background: #1A6B4A;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.cs-contract-btn:hover {
+  background: #155840;
+  border-color: #155840;
+}

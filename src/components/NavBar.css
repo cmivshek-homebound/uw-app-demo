@@ -56,3 +56,42 @@
   color: #f0f2f8;
   background-color: #2d3348;
 }
+
+/* ── Count badges ── */
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.nav-count {
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.nav-count--muted {
+  background-color: #262626;
+  color: #9aa3bc;
+}
+
+.nav-count--attention {
+  background-color: #1A6B4A;
+  color: #fff;
+}
+
+.nav-count--urgent {
+  background-color: #b45309;
+  color: #fff;
+}
+
+.nav-link:hover .nav-count--muted,
+.nav-link.active .nav-count--muted {
+  background-color: #3a3a3a;
+  color: #d4d8e8;
+}
