@@ -14,8 +14,8 @@
 }
 
 .oq-title {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 25px;
+  font-weight: 600;
   color: #1a1f2e;
   margin: 0 0 4px;
 }
@@ -45,13 +45,13 @@
 }
 
 .filter-btn:hover {
-  border-color: #4f6ef7;
-  color: #4f6ef7;
+  border-color: #1A6B4A;
+  color: #1A6B4A;
 }
 
 .filter-btn.active {
-  background-color: #4f6ef7;
-  border-color: #4f6ef7;
+  background-color: #1A6B4A;
+  border-color: #1A6B4A;
   color: #fff;
 }
 
@@ -95,7 +95,7 @@
 }
 
 .oq-row:hover {
-  background-color: #f7f8fc;
+  background-color: #F7F6F4;
 }
 
 .oq-table td {
@@ -140,8 +140,8 @@
 }
 
 .status-in_review {
-  background-color: #eff2ff;
-  color: #4f6ef7;
+  background-color: #EDF5F1;
+  color: #1A6B4A;
 }
 
 .status-ready_for_offer {
@@ -163,8 +163,8 @@
 }
 
 .source-mls {
-  background-color: #f0f4ff;
-  color: #3b5bdb;
+  background-color: #EDF5F1;
+  color: #155840;
 }
 
 .source-off-market {
@@ -177,7 +177,7 @@
   border-radius: 6px;
   border: 1px solid #dde1ee;
   background: #fff;
-  color: #4f6ef7;
+  color: #1A6B4A;
   font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
@@ -186,8 +186,8 @@
 }
 
 .review-btn:hover {
-  background-color: #4f6ef7;
-  border-color: #4f6ef7;
+  background-color: #1A6B4A;
+  border-color: #1A6B4A;
   color: #fff;
 }
 

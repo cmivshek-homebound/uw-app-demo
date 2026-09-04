@@ -104,8 +104,8 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #eff2ff;
-  color: #4f6ef7;
+  background: #EDF5F1;
+  color: #1A6B4A;
   font-size: 13px;
   font-weight: 700;
   display: flex;
@@ -139,8 +139,8 @@
 }
 
 .cs-tag--new {
-  background: #eff2ff;
-  color: #4f6ef7;
+  background: #EDF5F1;
+  color: #1A6B4A;
 }
 
 .cs-tag--dist {
@@ -289,8 +289,8 @@
 }
 
 .cs-spec-select:focus {
-  border-color: #4f6ef7;
-  box-shadow: 0 0 0 2px rgba(79, 110, 247, 0.15);
+  border-color: #1A6B4A;
+  box-shadow: 0 0 0 2px rgba(26, 107, 74, 0.15);
 }
 
 /* ── Weight row ── */
@@ -330,7 +330,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #4f6ef7;
+  background: #1A6B4A;
   cursor: pointer;
   border: 2px solid #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
@@ -345,7 +345,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #4f6ef7;
+  background: #1A6B4A;
   cursor: pointer;
   border: 2px solid #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
@@ -452,8 +452,8 @@
 }
 
 .cs-add-comp-btn:hover {
-  border-color: #4f6ef7;
-  color: #4f6ef7;
+  border-color: #1A6B4A;
+  color: #1A6B4A;
 }
 
 .cs-publish-btn {
@@ -584,8 +584,8 @@
 }
 
 .cs-sys-badge--sf {
-  background: #eff2ff;
-  color: #4f6ef7;
+  background: #EDF5F1;
+  color: #1A6B4A;
 }
 
 .cs-sys-badge--slack {
@@ -608,6 +608,6 @@
 }
 
 .cs-return-btn:hover {
-  border-color: #4f6ef7;
-  color: #4f6ef7;
+  border-color: #1A6B4A;
+  color: #1A6B4A;
 }

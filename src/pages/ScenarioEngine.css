@@ -18,7 +18,7 @@
   background: none;
   border: none;
   padding: 0;
-  color: #4f6ef7;
+  color: #1A6B4A;
   font-size: 13px;
   cursor: pointer;
   font-family: inherit;
@@ -148,8 +148,8 @@
 }
 
 .sc-plan-card--recommended {
-  border-color: #4f6ef7;
-  box-shadow: 0 0 0 1px #4f6ef7, 0 4px 16px rgba(79, 110, 247, 0.12);
+  border-color: #1A6B4A;
+  box-shadow: 0 0 0 1px #1A6B4A, 0 4px 16px rgba(26, 107, 74, 0.12);
 }
 
 /* ── Rendering placeholder ── */
@@ -257,8 +257,8 @@
   border-radius: 10px;
   font-size: 11px;
   font-weight: 700;
-  background-color: #eff2ff;
-  color: #4f6ef7;
+  background-color: #EDF5F1;
+  color: #1A6B4A;
   white-space: nowrap;
   flex-shrink: 0;
   margin-top: 2px;
@@ -356,7 +356,7 @@
   padding: 10px 0;
   border-radius: 7px;
   border: none;
-  background-color: #4f6ef7;
+  background-color: #1A6B4A;
   color: #fff;
   font-size: 14px;
   font-weight: 600;
@@ -416,7 +416,7 @@
 }
 
 .sc-table-rec-dot {
-  color: #4f6ef7;
+  color: #1A6B4A;
   margin-left: 2px;
 }
 
@@ -461,7 +461,7 @@
   font-size: 14.5px;
   font-weight: 700;
   color: #1a1f2e;
-  background: #eff2ff;
+  background: #EDF5F1;
 }
 
 .sc-table-row--margin td {
@@ -606,8 +606,8 @@
 
 .sc-select:focus {
   outline: none;
-  border-color: #4f6ef7;
-  box-shadow: 0 0 0 2px rgba(79, 110, 247, 0.15);
+  border-color: #1A6B4A;
+  box-shadow: 0 0 0 2px rgba(26, 107, 74, 0.15);
 }
 
 .sc-selector-hint {
@@ -637,8 +637,8 @@
 }
 
 .sc-spec-arrow:hover:not(:disabled) {
-  background: #eef2ff;
-  color: #4f6ef7;
+  background: #EDF5F1;
+  color: #1A6B4A;
 }
 
 .sc-spec-arrow:disabled {
@@ -678,13 +678,13 @@
 }
 
 .sc-spec-chip--selected {
-  background: #eef2ff;
-  border-color: #4f6ef7;
+  background: #EDF5F1;
+  border-color: #1A6B4A;
   color: #1a1f2e;
 }
 
 .sc-spec-chip--selected .sc-spec-chip-price {
-  color: #4f6ef7;
+  color: #1A6B4A;
 }
 
 /* Design pills */
@@ -734,7 +734,7 @@
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
-  color: #4f6ef7;
+  color: #1A6B4A;
   cursor: pointer;
   text-align: left;
 }
@@ -743,7 +743,7 @@
 
 .sc-addons-toggle-caret {
   font-size: 11px;
-  color: #4f6ef7;
+  color: #1A6B4A;
   width: 12px;
   display: inline-block;
 }
@@ -758,12 +758,12 @@
   color: #2c3348;
   margin: 10px 0 8px;
   padding: 8px 10px;
-  background: #eef2ff;
+  background: #EDF5F1;
   border-radius: 6px;
 }
 
 .sc-addons-summary strong {
-  color: #4f6ef7;
+  color: #1A6B4A;
 }
 
 .sc-addons-list {
@@ -788,8 +788,8 @@
 }
 
 .sc-addon-row--on {
-  background: #f4f7ff;
-  border-color: #c8d3fb;
+  background: #F2F8F5;
+  border-color: #BFD9CC;
 }
 
 .sc-addon-label {
@@ -806,7 +806,7 @@
 .sc-addon-check {
   width: 15px;
   height: 15px;
-  accent-color: #4f6ef7;
+  accent-color: #1A6B4A;
   cursor: pointer;
 }
 
@@ -838,8 +838,8 @@
 }
 
 .sc-addon-type--addon {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #D8EDE3;
+  color: #155840;
 }
 
 .sc-addon-cost {
@@ -973,7 +973,7 @@
 .sc-not-found button {
   background: none;
   border: none;
-  color: #4f6ef7;
+  color: #1A6B4A;
   cursor: pointer;
   font-size: 14px;
   font-family: inherit;
