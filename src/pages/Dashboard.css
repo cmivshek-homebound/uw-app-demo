@@ -161,13 +161,6 @@
 }
 
 /* ── Cards ── */
-.db-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: 20px;
-  align-items: start;
-}
-
 .db-card {
   background: #fff;
   border: 1px solid #e5e5e5;
@@ -284,14 +277,35 @@
 }
 
 /* ── Needs attention ── */
-.db-subhead {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: #737373;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0;
-  padding: 14px 18px 6px;
+.db-attention {
+  margin-bottom: 20px;
+}
+
+.db-attention .db-list {
+  padding-top: 8px;
+}
+
+.db-attention-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.db-attention-detail {
+  font-size: 12.5px;
+  color: #525252;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.db-attention-go {
+  color: #c4c4c4;
+  font-size: 14px;
+}
+
+.db-list-row:hover .db-attention-go {
+  color: #1A6B4A;
 }
 
 .db-list {
@@ -350,6 +364,11 @@
   color: #3f3f46;
 }
 
+.db-pill--warn {
+  background-color: #fffbeb;
+  color: #b45309;
+}
+
 .db-pill--urgent {
   background-color: #fef2f2;
   color: #dc2626;
@@ -378,10 +397,6 @@
   .db-stage {
     min-width: 128px;
   }
-
-  .db-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 @media (max-width: 600px) {
@@ -391,5 +406,14 @@
 
   .db-bar-col {
     display: none;
+  }
+
+  .db-list-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .db-attention-meta {
+    flex-wrap: wrap;
   }
 }

@@ -29,6 +29,9 @@ export type BalanceSheetStage = (typeof BALANCE_SHEET_STAGES)[number];
 /** Sold assets count toward the lifecycle only within this trailing window. */
 export const SOLD_WINDOW_MONTHS = 6;
 
+/** For-sale listings older than this many days on market are flagged as stale. */
+export const STALE_LISTING_DAYS = 60;
+
 /** Latest-mark moves larger than this (either direction) need sign-off. */
 export const APPROVAL_THRESHOLD = 10_000;
 
@@ -83,6 +86,10 @@ export function assetsNeedingApproval(assets: Asset[] = ASSETS): Asset[] {
     const mark = latestMark(a);
     return mark !== undefined && Math.abs(mark.changeFromPrior) > APPROVAL_THRESHOLD && !mark.approvedBy;
   });
+}
+
+export function staleListings(assets: Asset[] = ASSETS, days: number = STALE_LISTING_DAYS): Asset[] {
+  return assets.filter((a) => a.stage === 'for_sale' && a.listing && a.listing.daysOnMarket > days);
 }
 
 /** Sold assets whose sale closed within the trailing window ending at `asOf`. */

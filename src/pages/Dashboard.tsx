@@ -6,14 +6,18 @@ import {
   MARKETS,
   PRODUCT_TYPES,
   SOLD_WINDOW_MONTHS,
+  STALE_LISTING_DAYS,
   assetsByStage,
+  assetsNeedingApproval,
   balanceSheet,
   filterAssets,
+  latestMark,
   lifecycleByStage,
   pipelineAssets,
+  staleListings,
 } from '../data/selectors';
 import type { BalanceSheetRow } from '../data/selectors';
-import type { AssetStage, Market, PipelineStatus, ProductType } from '../types';
+import type { Asset, AssetStage, Market, PipelineStatus, ProductType } from '../types';
 // Reuse the queue's pill filter buttons (.filter-btn).
 import './OpportunityQueue.css';
 import './Dashboard.css';
@@ -41,6 +45,43 @@ const STAGE_META: Record<AssetStage, { label: string; phase: Phase; to: string |
 
 const INSPECTION_WARN_DAYS = 7;
 const LONGEST_PENDING_LIMIT = 3;
+
+// ── Needs attention ──
+// Reasons in urgency order: hard deadlines first, then sign-offs, then
+// slow listings, then intake backlog. Within a reason, `severity` sorts
+// most urgent first.
+type AttentionReason = 'inspection' | 'mark_approval' | 'stale_listing' | 'pending_review';
+
+const REASON_META: Record<AttentionReason, { rank: number; tag: string; tone: string }> = {
+  inspection:     { rank: 0, tag: 'Inspection deadline', tone: 'urgent' },
+  mark_approval:  { rank: 1, tag: 'Mark needs approval', tone: 'warn' },
+  stale_listing:  { rank: 2, tag: 'Stale listing',       tone: 'neutral' },
+  pending_review: { rank: 3, tag: 'Pending review',      tone: 'neutral' },
+};
+
+interface AttentionItem {
+  asset: Asset;
+  reason: AttentionReason;
+  detail: string;
+  severity: number; // higher = more urgent within its reason
+  to: string;
+}
+
+/** Page where an asset at its current stage is worked. */
+function assetPath(asset: Asset): string {
+  switch (asset.stage) {
+    case 'opportunity':
+    case 'underwriting':   return `/underwrite/${asset.id}`;
+    case 'under_contract': return `/contract/${asset.id}`;
+    case 'for_sale':       return '/for-sale';
+    default:               return '/portfolio';
+  }
+}
+
+function signedUsd(n: number) {
+  const abs = Math.abs(n).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  return `${n < 0 ? '−' : '+'}${abs}`;
+}
 
 function usdCompact(n: number) {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
@@ -107,17 +148,34 @@ export default function Dashboard() {
   ) as Record<PipelineStatus, number>;
 
   // ── Needs attention ──
-  const expiringInspections = assetsByStage(assets).under_contract
-    .filter((a) => a.contract)
-    .map((a) => ({ asset: a, days: daysRemaining(a.contract!.inspectionExpires) }))
-    .filter((x) => x.days < INSPECTION_WARN_DAYS)
-    .sort((a, b) => a.days - b.days);
-
-  const longestPending = pipeline
-    .filter((a) => a.pipelineStatus === 'pending_review' && a.intake)
-    .map((a) => ({ asset: a, days: daysSince(a.intake!.dateReceived) }))
-    .sort((a, b) => b.days - a.days)
-    .slice(0, LONGEST_PENDING_LIMIT);
+  const attention: AttentionItem[] = [
+    ...assetsByStage(assets).under_contract
+      .filter((a) => a.contract)
+      .map((a) => ({ asset: a, days: daysRemaining(a.contract!.inspectionExpires) }))
+      .filter(({ days }) => days < INSPECTION_WARN_DAYS)
+      .map(({ asset, days }) => ({
+        asset, reason: 'inspection' as const, detail: `${plural(days, 'day')} left`, severity: -days, to: assetPath(asset),
+      })),
+    ...assetsNeedingApproval(assets).map((asset) => {
+      const change = latestMark(asset)!.changeFromPrior;
+      return {
+        asset, reason: 'mark_approval' as const, detail: `${signedUsd(change)} latest mark`,
+        severity: Math.abs(change), to: assetPath(asset),
+      };
+    }),
+    ...staleListings(assets).map((asset) => ({
+      asset, reason: 'stale_listing' as const, detail: `${asset.listing!.daysOnMarket} days on market`,
+      severity: asset.listing!.daysOnMarket, to: assetPath(asset),
+    })),
+    ...pipeline
+      .filter((a) => a.pipelineStatus === 'pending_review' && a.intake)
+      .map((a) => ({ asset: a, days: daysSince(a.intake!.dateReceived) }))
+      .sort((a, b) => b.days - a.days)
+      .slice(0, LONGEST_PENDING_LIMIT)
+      .map(({ asset, days }) => ({
+        asset, reason: 'pending_review' as const, detail: `${plural(days, 'day')} waiting`, severity: days, to: assetPath(asset),
+      })),
+  ].sort((a, b) => REASON_META[a.reason].rank - REASON_META[b.reason].rank || b.severity - a.severity);
 
   const asOf = new Date(DEMO_TODAY).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC',
@@ -232,111 +290,95 @@ export default function Dashboard() {
         </p>
       </section>
 
-      <div className="db-grid">
-        {/* Pipeline */}
-        <section className="db-card">
-          <div className="db-card-header">
-            <h2 className="db-card-title">Pipeline by Market</h2>
-            <div className="db-legend">
-              {STATUS_ORDER.map((s) => (
-                <span key={s} className="db-legend-item">
-                  <span className={`db-swatch db-fill--${s}`} />
-                  {STATUS_LABELS[s]}
-                </span>
-              ))}
-            </div>
+      {/* Needs attention */}
+      <section className="db-card db-attention">
+        <div className="db-card-header">
+          <h2 className="db-card-title">Needs Attention</h2>
+          <span className="db-card-caption">
+            Inspections &lt; {INSPECTION_WARN_DAYS} days · marks &gt; $10K awaiting approval · listings &gt; {STALE_LISTING_DAYS} days · longest pending review
+          </span>
+        </div>
+        {attention.length === 0 ? (
+          <p className="db-empty db-empty--padded">Nothing needs attention for these filters.</p>
+        ) : (
+          <ul className="db-list">
+            {attention.map(({ asset, reason, detail, to }) => (
+              <li key={`${asset.id}-${reason}`}>
+                <button className="db-list-row" onClick={() => navigate(to)}>
+                  <span className="db-list-main">
+                    <span className="db-list-id">{asset.id}</span>
+                    <span className="db-list-address">{asset.address} · {asset.market}</span>
+                  </span>
+                  <span className="db-attention-meta">
+                    <span className="db-attention-detail">{detail}</span>
+                    <span className={`db-pill db-pill--${REASON_META[reason].tone}`}>{REASON_META[reason].tag}</span>
+                    <span className="db-attention-go" aria-hidden="true">→</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Pipeline */}
+      <section className="db-card">
+        <div className="db-card-header">
+          <h2 className="db-card-title">Pipeline by Market</h2>
+          <div className="db-legend">
+            {STATUS_ORDER.map((s) => (
+              <span key={s} className="db-legend-item">
+                <span className={`db-swatch db-fill--${s}`} />
+                {STATUS_LABELS[s]}
+              </span>
+            ))}
           </div>
-          {pipeline.length === 0 ? (
-            <p className="db-empty db-empty--padded">No pipeline opportunities match these filters.</p>
-          ) : (
-            <table className="db-table">
-              <thead>
-                <tr>
-                  <th>Market</th>
-                  {STATUS_ORDER.map((s) => <th key={s} className="db-num">{STATUS_LABELS[s]}</th>)}
-                  <th className="db-num">Total</th>
-                  <th className="db-bar-col"></th>
+        </div>
+        {pipeline.length === 0 ? (
+          <p className="db-empty db-empty--padded">No pipeline opportunities match these filters.</p>
+        ) : (
+          <table className="db-table">
+            <thead>
+              <tr>
+                <th>Market</th>
+                {STATUS_ORDER.map((s) => <th key={s} className="db-num">{STATUS_LABELS[s]}</th>)}
+                <th className="db-num">Total</th>
+                <th className="db-bar-col"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {pipelineRows.map(({ market: m, counts, total }) => (
+                <tr key={m}>
+                  <td className="db-market">{m}</td>
+                  {STATUS_ORDER.map((s) => (
+                    <td key={s} className={`db-num ${counts[s] === 0 ? 'db-zero' : ''}`}>{counts[s]}</td>
+                  ))}
+                  <td className="db-num db-total">{total}</td>
+                  <td className="db-bar-col">
+                    <div className="db-bar" title={`${m}: ${total} of ${pipeline.length} opportunities`}>
+                      {STATUS_ORDER.filter((s) => counts[s] > 0).map((s) => (
+                        <span
+                          key={s}
+                          className={`db-bar-seg db-fill--${s}`}
+                          style={{ width: `${(counts[s] / pipeline.length) * 100}%` }}
+                        />
+                      ))}
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {pipelineRows.map(({ market: m, counts, total }) => (
-                  <tr key={m}>
-                    <td className="db-market">{m}</td>
-                    {STATUS_ORDER.map((s) => (
-                      <td key={s} className={`db-num ${counts[s] === 0 ? 'db-zero' : ''}`}>{counts[s]}</td>
-                    ))}
-                    <td className="db-num db-total">{total}</td>
-                    <td className="db-bar-col">
-                      <div className="db-bar" title={`${m}: ${total} of ${pipeline.length} opportunities`}>
-                        {STATUS_ORDER.filter((s) => counts[s] > 0).map((s) => (
-                          <span
-                            key={s}
-                            className={`db-bar-seg db-fill--${s}`}
-                            style={{ width: `${(counts[s] / pipeline.length) * 100}%` }}
-                          />
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td>All markets</td>
-                  {STATUS_ORDER.map((s) => <td key={s} className="db-num">{statusTotals[s]}</td>)}
-                  <td className="db-num">{pipeline.length}</td>
-                  <td className="db-bar-col"></td>
-                </tr>
-              </tfoot>
-            </table>
-          )}
-        </section>
-
-        {/* Needs attention */}
-        <section className="db-card">
-          <div className="db-card-header">
-            <h2 className="db-card-title">Needs Attention</h2>
-          </div>
-
-          <h3 className="db-subhead">Inspections expiring in &lt; {INSPECTION_WARN_DAYS} days</h3>
-          {expiringInspections.length === 0 ? (
-            <p className="db-empty">No inspection deadlines this week.</p>
-          ) : (
-            <ul className="db-list">
-              {expiringInspections.map(({ asset, days }) => (
-                <li key={asset.id}>
-                  <button className="db-list-row" onClick={() => navigate(`/contract/${asset.id}`)}>
-                    <span className="db-list-main">
-                      <span className="db-list-id">{asset.id}</span>
-                      <span className="db-list-address">{asset.address} · {asset.market}</span>
-                    </span>
-                    <span className="db-pill db-pill--urgent">{plural(days, 'day')} left</span>
-                  </button>
-                </li>
               ))}
-            </ul>
-          )}
-
-          <h3 className="db-subhead">Longest pending review</h3>
-          {longestPending.length === 0 ? (
-            <p className="db-empty">Nothing pending review.</p>
-          ) : (
-            <ul className="db-list">
-              {longestPending.map(({ asset, days }) => (
-                <li key={asset.id}>
-                  <button className="db-list-row" onClick={() => navigate(`/underwrite/${asset.id}`)}>
-                    <span className="db-list-main">
-                      <span className="db-list-id">{asset.id}</span>
-                      <span className="db-list-address">{asset.address} · {asset.market}</span>
-                    </span>
-                    <span className="db-pill">{plural(days, 'day')} waiting</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td>All markets</td>
+                {STATUS_ORDER.map((s) => <td key={s} className="db-num">{statusTotals[s]}</td>)}
+                <td className="db-num">{pipeline.length}</td>
+                <td className="db-bar-col"></td>
+              </tr>
+            </tfoot>
+          </table>
+        )}
+      </section>
     </div>
   );
 }
