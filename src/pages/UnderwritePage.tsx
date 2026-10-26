@@ -26,7 +26,7 @@ export default function UnderwritePage() {
         <div className="uw-empty-state">
           <div className="uw-empty-icon">
             <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              <path d="M24 4L44 16V44H30V32H18V44H4V16L24 4Z" fill="#e4e7f0" />
+              <path d="M24 4L44 16V44H30V32H18V44H4V16L24 4Z" fill="#e5e5e5" />
             </svg>
           </div>
           <h2>No opportunity selected</h2>

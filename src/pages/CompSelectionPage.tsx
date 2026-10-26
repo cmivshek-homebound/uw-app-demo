@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { DFW_PLANS } from '../data/plans';
 import './CompSelectionPage.css';
 
 // ── Constants ──────────────────────────────────────────────────
@@ -9,9 +10,9 @@ type SpecLevel = (typeof SPEC_LEVELS)[number];
 const ML_ESP = 571_000;
 const MAX_LOT_OFFER = 152_760;
 
-// Plan selected in the scenario engine. Hardcoded for now — BOOL-001 recommends
+// Fallback when no ?plan= is passed from the scenario engine. BOOL-001 recommends
 // The Emerson (highest projected margin of the lot-feasible plans).
-const SELECTED_PLAN_NAME = 'The Emerson';
+const DEFAULT_PLAN_NAME = 'The Emerson';
 
 // ── Types ──────────────────────────────────────────────────────
 interface CompDef {
@@ -105,8 +106,8 @@ function computeAdjValue(comp: CompDef): number {
 
 // ── Offer Published Screen ─────────────────────────────────────
 function OfferPublishedScreen(
-  { esp, onReturn, onViewContract }:
-  { esp: number; onReturn: () => void; onViewContract: () => void },
+  { esp, planName, onReturn, onViewContract }:
+  { esp: number; planName: string; onReturn: () => void; onViewContract: () => void },
 ) {
   return (
     <div className="cs-published-wrapper">
@@ -120,7 +121,7 @@ function OfferPublishedScreen(
           </div>
           <div className="cs-pub-row">
             <span className="cs-pub-label">Plan</span>
-            <span className="cs-pub-value">{SELECTED_PLAN_NAME} · Premium · Elevation 1</span>
+            <span className="cs-pub-value">{planName} · Premium · Elevation 1</span>
           </div>
           <div className="cs-pub-row">
             <span className="cs-pub-label">Max Lot Offer</span>
@@ -284,6 +285,9 @@ function CompCard({
 export default function CompSelectionPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const confirmedPlan = DFW_PLANS.find((p) => p.id === searchParams.get('plan'));
+  const planName = confirmedPlan?.name ?? DEFAULT_PLAN_NAME;
 
   const [weights, setWeights] = useState<number[]>(COMPS.map(c => c.startingWeight));
   const [specLevels, setSpecLevels] = useState<string[]>(COMPS.map(c => c.spec));
@@ -306,6 +310,7 @@ export default function CompSelectionPage() {
     return (
       <OfferPublishedScreen
         esp={displayESP}
+        planName={planName}
         onReturn={() => navigate('/')}
         onViewContract={() => navigate(`/contract/${id ?? 'BOOL-001'}`)}
       />
@@ -327,7 +332,7 @@ export default function CompSelectionPage() {
         </button>
         <span className="sc-breadcrumb-sep">›</span>
         <button className="sc-breadcrumb-link" onClick={() => navigate(`/underwrite/${id}/scenario`)}>
-          Plan Selection
+          {confirmedPlan?.name ?? 'Plan Selection'}
         </button>
         <span className="sc-breadcrumb-sep">›</span>
         <span className="sc-breadcrumb-current">Comp Selection</span>
@@ -338,7 +343,7 @@ export default function CompSelectionPage() {
         <div className="cs-header-left">
           <h1 className="cs-page-title">Comp Selection &amp; Adjustment</h1>
           <p className="cs-page-subtitle">
-            4821 Maple Creek Dr &nbsp;·&nbsp; {SELECTED_PLAN_NAME} &nbsp;·&nbsp;
+            4821 Maple Creek Dr &nbsp;·&nbsp; {planName} &nbsp;·&nbsp;
             2,100 sqft &nbsp;·&nbsp; Premium &nbsp;·&nbsp; DFW
           </p>
         </div>

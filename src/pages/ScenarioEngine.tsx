@@ -92,10 +92,12 @@ interface PlanCardProps {
   state: PlanCardState;
   fin: PlanFinancials;
   isRecommended: boolean;
+  isSelected: boolean;
+  onToggleSelect: () => void;
   onChange: (patch: Partial<PlanCardState>) => void;
 }
 
-function PlanCard({ plan, state, fin, isRecommended, onChange }: PlanCardProps) {
+function PlanCard({ plan, state, fin, isRecommended, isSelected, onToggleSelect, onChange }: PlanCardProps) {
   const elevation = plan.elevations[state.elevationIdx];
   const specVisible = plan.specLevels.slice(state.specWindowStart, state.specWindowStart + 2);
   const canShiftLeft = state.specWindowStart > 0;
@@ -125,7 +127,7 @@ function PlanCard({ plan, state, fin, isRecommended, onChange }: PlanCardProps) 
   const selectedOptionsCount = state.selectedOptionIds.length;
 
   return (
-    <div className={`sc-plan-card ${isRecommended ? 'sc-plan-card--recommended' : ''}`}>
+    <div className={`sc-plan-card ${isSelected ? 'sc-plan-card--selected' : ''}`}>
       {/* Rendering */}
       <RenderingPlaceholder planName={plan.name} elevationName={elevation.name} />
 
@@ -140,7 +142,15 @@ function PlanCard({ plan, state, fin, isRecommended, onChange }: PlanCardProps) 
             {plan.beds}bd / {plan.baths}ba &nbsp;·&nbsp; {plan.stories} stories &nbsp;·&nbsp; {plan.elevations.length} elevations
           </div>
         </div>
-        {isRecommended && <span className="sc-recommended-badge">Recommended</span>}
+        <div className="sc-plan-card-badges">
+          {isRecommended && <span className="sc-recommended-badge">Recommended</span>}
+          <button
+            className={`sc-select-btn ${isSelected ? 'sc-select-btn--active' : ''}`}
+            onClick={onToggleSelect}
+          >
+            {isSelected ? '✓ Selected' : 'Select'}
+          </button>
+        </div>
       </div>
 
       {/* Selectors */}
@@ -343,10 +353,12 @@ function ProFormaTable({
   plans,
   financials,
   recommendedId,
+  selectedId,
 }: {
   plans: Plan[];
   financials: PlanFinancials[];
   recommendedId: string;
+  selectedId: string;
 }) {
   return (
     <div className="sc-table-wrapper">
@@ -355,7 +367,7 @@ function ProFormaTable({
           <tr>
             <th className="sc-table-label-col">Line Item</th>
             {plans.map((p) => (
-              <th key={p.id} className={p.id === recommendedId ? 'sc-table-col--recommended' : ''}>
+              <th key={p.id} className={p.id === selectedId ? 'sc-table-col--selected' : ''}>
                 {p.name}
                 {p.id === recommendedId && <span className="sc-table-rec-dot"> ★</span>}
               </th>
@@ -369,7 +381,7 @@ function ProFormaTable({
               {financials.map((fin, i) => (
                 <td
                   key={plans[i].id}
-                  className={plans[i].id === recommendedId ? 'sc-table-col--recommended' : ''}
+                  className={plans[i].id === selectedId ? 'sc-table-col--selected' : ''}
                 >
                   {row.format(fin[row.key] as number)}
                 </td>
@@ -541,6 +553,11 @@ export default function ScenarioEngine() {
   const recommendedPlan = feasiblePlans[recommendedIdx];
   const recommendedFin = financials[recommendedIdx];
 
+  // Analyst override; null means "use the recommended plan".
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedPlan = feasiblePlans.find((p) => p.id === selectedId) ?? recommendedPlan;
+  const selectedFin = financials[feasiblePlans.indexOf(selectedPlan)];
+
   const patchCard = (planId: string, patch: Partial<PlanCardState>) => {
     setCardStates((prev) => ({
       ...prev,
@@ -617,6 +634,8 @@ export default function ScenarioEngine() {
               state={cardStates[plan.id] ?? initialCardState(plan)}
               fin={financials[i]}
               isRecommended={plan.id === recommendedPlan?.id}
+              isSelected={plan.id === selectedPlan?.id}
+              onToggleSelect={() => setSelectedId(plan.id === selectedId ? null : plan.id)}
               onChange={(patch) => patchCard(plan.id, patch)}
             />
           ))}
@@ -625,9 +644,9 @@ export default function ScenarioEngine() {
           <div className="sc-plan-action-row">
             <button
               className="sc-confirm-btn"
-              onClick={() => navigate(`/underwrite/${opp.id}/scenario/comps`)}
+              onClick={() => navigate(`/underwrite/${opp.id}/scenario/comps?plan=${selectedPlan.id}`)}
             >
-              Confirm {recommendedPlan?.name} &amp; Proceed
+              Confirm {selectedPlan?.name} &amp; Proceed
             </button>
           </div>
         )}
@@ -641,14 +660,15 @@ export default function ScenarioEngine() {
             plans={feasiblePlans}
             financials={financials}
             recommendedId={recommendedPlan.id}
+            selectedId={selectedPlan.id}
           />
         </section>
       )}
 
       {/* Sensitivity */}
-      {recommendedPlan && (
+      {selectedPlan && (
         <section className="sc-section">
-          <SensitivityPanel plan={recommendedPlan} fin={recommendedFin} />
+          <SensitivityPanel plan={selectedPlan} fin={selectedFin} />
         </section>
       )}
 

@@ -5,7 +5,7 @@
   padding: 0 32px;
   height: 60px;
   background-color: #0A0A0A;
-  border-bottom: 1px solid #2d3348;
+  border-bottom: 1px solid #262626;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -27,7 +27,7 @@
 .navbar-subtitle {
   font-size: 12px;
   font-weight: 400;
-  color: #6b7494;
+  color: #737373;
   letter-spacing: 0.02em;
 }
 
@@ -42,19 +42,19 @@
   border-radius: 6px;
   font-size: 13.5px;
   font-weight: 500;
-  color: #9aa3bc;
+  color: #a3a3a3;
   text-decoration: none;
   transition: color 0.15s, background-color 0.15s;
 }
 
 .nav-link:hover {
-  color: #f0f2f8;
-  background-color: #2d3348;
+  color: #fafafa;
+  background-color: #262626;
 }
 
 .nav-link.active {
-  color: #f0f2f8;
-  background-color: #2d3348;
+  color: #fafafa;
+  background-color: #262626;
 }
 
 /* ── Count badges ── */
@@ -77,7 +77,7 @@
 
 .nav-count--muted {
   background-color: #262626;
-  color: #9aa3bc;
+  color: #a3a3a3;
 }
 
 .nav-count--attention {
@@ -93,5 +93,5 @@
 .nav-link:hover .nav-count--muted,
 .nav-link.active .nav-count--muted {
   background-color: #3a3a3a;
-  color: #d4d8e8;
+  color: #e5e5e5;
 }

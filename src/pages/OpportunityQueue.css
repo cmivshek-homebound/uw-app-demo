@@ -16,13 +16,13 @@
 .oq-title {
   font-size: 25px;
   font-weight: 600;
-  color: #1a1f2e;
+  color: #171717;
   margin: 0 0 4px;
 }
 
 .oq-subtitle {
   font-size: 13px;
-  color: #7a8299;
+  color: #737373;
   margin: 0;
 }
 
@@ -35,9 +35,9 @@
 .filter-btn {
   padding: 6px 14px;
   border-radius: 20px;
-  border: 1px solid #dde1ee;
+  border: 1px solid #e5e5e5;
   background: #fff;
-  color: #555d78;
+  color: #525252;
   font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
@@ -58,7 +58,7 @@
 .oq-table-wrapper {
   background: #fff;
   border-radius: 10px;
-  border: 1px solid #e4e7f0;
+  border: 1px solid #e5e5e5;
   overflow: hidden;
 }
 
@@ -69,8 +69,8 @@
 }
 
 .oq-table thead tr {
-  background: #f7f8fc;
-  border-bottom: 1px solid #e4e7f0;
+  background: #fafafa;
+  border-bottom: 1px solid #e5e5e5;
 }
 
 .oq-table th {
@@ -78,14 +78,14 @@
   text-align: left;
   font-size: 11.5px;
   font-weight: 600;
-  color: #7a8299;
+  color: #737373;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   white-space: nowrap;
 }
 
 .oq-row {
-  border-bottom: 1px solid #eef0f7;
+  border-bottom: 1px solid #f5f5f5;
   cursor: pointer;
   transition: background-color 0.12s;
 }
@@ -100,28 +100,28 @@
 
 .oq-table td {
   padding: 14px 16px;
-  color: #2c3348;
+  color: #262626;
   vertical-align: middle;
 }
 
 .oq-id {
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 12px;
-  color: #7a8299 !important;
+  color: #737373 !important;
 }
 
 .oq-name {
   font-weight: 600;
-  color: #1a1f2e !important;
+  color: #171717 !important;
 }
 
 .oq-address {
-  color: #555d78 !important;
+  color: #525252 !important;
 }
 
 .per-year {
   font-size: 11px;
-  color: #9aa3bc;
+  color: #a3a3a3;
   margin-left: 1px;
 }
 
@@ -140,13 +140,13 @@
 }
 
 .status-in_review {
-  background-color: #EDF5F1;
-  color: #1A6B4A;
+  background-color: #f4f4f5;
+  color: #3f3f46;
 }
 
 .status-ready_for_offer {
-  background-color: #ecfdf5;
-  color: #059669;
+  background-color: #1A6B4A;
+  color: #fff;
 }
 
 .status-dqd {
@@ -175,7 +175,7 @@
 .review-btn {
   padding: 5px 12px;
   border-radius: 6px;
-  border: 1px solid #dde1ee;
+  border: 1px solid #e5e5e5;
   background: #fff;
   color: #1A6B4A;
   font-size: 12.5px;
@@ -194,6 +194,6 @@
 .oq-empty {
   padding: 48px;
   text-align: center;
-  color: #9aa3bc;
+  color: #a3a3a3;
   font-size: 14px;
 }
