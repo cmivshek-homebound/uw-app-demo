@@ -311,7 +311,7 @@ export default function CompSelectionPage() {
       <OfferPublishedScreen
         esp={displayESP}
         planName={planName}
-        onReturn={() => navigate('/')}
+        onReturn={() => navigate('/queue')}
         onViewContract={() => navigate(`/contract/${id ?? 'BOOL-001'}`)}
       />
     );
@@ -323,7 +323,7 @@ export default function CompSelectionPage() {
     <div className="cs-page">
       {/* Breadcrumb — reuse sc- classes from ScenarioEngine.css */}
       <div className="sc-breadcrumb">
-        <button className="sc-breadcrumb-link" onClick={() => navigate('/')}>
+        <button className="sc-breadcrumb-link" onClick={() => navigate('/queue')}>
           Opportunity Queue
         </button>
         <span className="sc-breadcrumb-sep">›</span>

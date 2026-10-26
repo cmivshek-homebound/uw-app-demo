@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import NavBar from './components/NavBar';
+import Dashboard from './pages/Dashboard';
 import OpportunityQueue from './pages/OpportunityQueue';
 import UnderwritePage from './pages/UnderwritePage';
 import ScenarioEngine from './pages/ScenarioEngine';
@@ -11,7 +12,8 @@ export default function App() {
     <BrowserRouter>
       <NavBar />
       <Routes>
-        <Route path="/" element={<OpportunityQueue />} />
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/queue" element={<OpportunityQueue />} />
         <Route path="/underwrite" element={<UnderwritePage />} />
         <Route path="/underwrite/:id" element={<UnderwritePage />} />
         <Route path="/underwrite/:id/scenario" element={<ScenarioEngine />} />

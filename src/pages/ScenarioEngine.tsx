@@ -570,7 +570,7 @@ export default function ScenarioEngine() {
       <div className="sc-page">
         <p className="sc-not-found">
           Opportunity not found.{' '}
-          <button onClick={() => navigate('/')}>← Back to Queue</button>
+          <button onClick={() => navigate('/queue')}>← Back to Queue</button>
         </p>
       </div>
     );
@@ -580,7 +580,7 @@ export default function ScenarioEngine() {
     <div className="sc-page">
       {/* Breadcrumb */}
       <div className="sc-breadcrumb">
-        <button className="sc-breadcrumb-link" onClick={() => navigate('/')}>
+        <button className="sc-breadcrumb-link" onClick={() => navigate('/queue')}>
           Opportunity Queue
         </button>
         <span className="sc-breadcrumb-sep">›</span>

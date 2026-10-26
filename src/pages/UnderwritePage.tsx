@@ -14,7 +14,7 @@ export default function UnderwritePage() {
       <div className="uw-page">
         <div className="uw-not-found">
           <p>Opportunity <strong>{id}</strong> not found.</p>
-          <button className="uw-back-btn" onClick={() => navigate('/')}>← Back to Queue</button>
+          <button className="uw-back-btn" onClick={() => navigate('/queue')}>← Back to Queue</button>
         </div>
       </div>
     );
@@ -31,7 +31,7 @@ export default function UnderwritePage() {
           </div>
           <h2>No opportunity selected</h2>
           <p>Select a property from the queue to begin underwriting.</p>
-          <button className="uw-back-btn" onClick={() => navigate('/')}>← Go to Queue</button>
+          <button className="uw-back-btn" onClick={() => navigate('/queue')}>← Go to Queue</button>
         </div>
       </div>
     );
@@ -39,7 +39,7 @@ export default function UnderwritePage() {
 
   function handleDQ() {
     updateOpportunityStatus(opp!.id, 'dqd');
-    navigate('/');
+    navigate('/queue');
   }
 
   function handleProceed() {
@@ -53,7 +53,7 @@ export default function UnderwritePage() {
   return (
     <div className="uw-page">
       <div className="uw-breadcrumb">
-        <button className="uw-breadcrumb-link" onClick={() => navigate('/')}>Opportunity Queue</button>
+        <button className="uw-breadcrumb-link" onClick={() => navigate('/queue')}>Opportunity Queue</button>
         <span className="uw-breadcrumb-sep">›</span>
         <span className="uw-breadcrumb-current">{opp.id}</span>
       </div>

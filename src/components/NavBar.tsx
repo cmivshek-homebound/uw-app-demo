@@ -19,11 +19,24 @@ export default function NavBar() {
 
   const contractUrgent = soonestDays !== undefined && soonestDays < 7;
 
-  const links = [
+  const links: {
+    to: string;
+    label: string;
+    active: boolean;
+    count?: number;
+    tone?: string;
+    title: string;
+  }[] = [
     {
       to: '/',
-      label: 'Opportunity Queue',
+      label: 'Dashboard',
       active: pathname === '/',
+      title: 'Portfolio overview',
+    },
+    {
+      to: '/queue',
+      label: 'Opportunity Queue',
+      active: pathname.startsWith('/queue'),
       count: queueCount,
       tone: pendingCount > 0 ? 'attention' : 'muted',
       title: `${queueCount} opportunities · ${pendingCount} pending review`,
@@ -68,7 +81,9 @@ export default function NavBar() {
             className={`nav-link ${link.active ? 'active' : ''}`}
           >
             {link.label}
-            <span className={`nav-count nav-count--${link.tone}`}>{link.count}</span>
+            {link.count !== undefined && (
+              <span className={`nav-count nav-count--${link.tone}`}>{link.count}</span>
+            )}
           </Link>
         ))}
       </div>

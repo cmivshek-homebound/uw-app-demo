@@ -144,7 +144,7 @@ export default function UnderContractPage() {
         <div className="uc-empty-state">
           <h2>{id ? `No contract found for ${id}.` : 'No deal under contract selected.'}</h2>
           <p>Deals appear here once an offer is accepted and the lot goes under contract.</p>
-          <button className="uc-back-btn" onClick={() => navigate('/')}>← Back to Queue</button>
+          <button className="uc-back-btn" onClick={() => navigate('/queue')}>← Back to Queue</button>
         </div>
       </div>
     );
@@ -154,7 +154,7 @@ export default function UnderContractPage() {
     <div className="uc-page">
       {/* Breadcrumb — reuse sc- classes from ScenarioEngine.css */}
       <div className="sc-breadcrumb">
-        <button className="sc-breadcrumb-link" onClick={() => navigate('/')}>
+        <button className="sc-breadcrumb-link" onClick={() => navigate('/queue')}>
           Opportunity Queue
         </button>
         <span className="sc-breadcrumb-sep">›</span>
