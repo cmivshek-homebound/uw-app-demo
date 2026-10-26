@@ -27,41 +27,22 @@
   margin: 0;
 }
 
-.db-queue-btn {
-  padding: 8px 16px;
-  border-radius: 7px;
-  border: none;
-  background-color: #1A6B4A;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-
-.db-queue-btn:hover {
-  opacity: 0.88;
-}
-
-/* ── KPI strip ── */
-.db-kpis {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
+/* ── Filters ── */
+.db-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
   margin-bottom: 20px;
 }
 
-.db-kpi {
+.db-filter-group {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 16px 18px;
-  background: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 10px;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.db-kpi-label {
+.db-filter-label {
   font-size: 11.5px;
   font-weight: 600;
   color: #737373;
@@ -69,32 +50,114 @@
   letter-spacing: 0.05em;
 }
 
-.db-kpi-value {
-  font-size: 26px;
+/* ── Lifecycle strip ── */
+.db-lifecycle {
+  display: flex;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.db-stage-wrap {
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 0;
+  min-width: 0;
+  border-top: 3px solid transparent;
+}
+
+/* Phase band across the top of the strip */
+.db-stage-wrap--pipeline { border-top-color: #d4d4d4; }
+.db-stage-wrap--contract { border-top-color: #f59e0b; }
+.db-stage-wrap--owned    { border-top-color: #1A6B4A; }
+.db-stage-wrap--sold     { border-top-color: #155840; }
+
+.db-stage-arrow {
+  display: flex;
+  align-items: center;
+  font-size: 18px;
+  color: #c4c4c4;
+  padding: 0 2px;
+}
+
+.db-stage {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 12px 14px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+
+.db-stage:hover:not(:disabled) {
+  background-color: #F7F6F4;
+}
+
+.db-stage:disabled {
+  cursor: default;
+}
+
+.db-stage-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #737373;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.db-stage-count {
+  font-size: 24px;
   font-weight: 600;
   color: #171717;
   font-variant-numeric: tabular-nums;
 }
 
-.db-kpi-value--brand {
-  color: #1A6B4A;
+.db-stage-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #262626;
+  font-variant-numeric: tabular-nums;
 }
 
-.db-kpi-value--urgent {
-  color: #dc2626;
+.db-stage-note {
+  font-size: 11.5px;
+  color: #a3a3a3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.db-kpi-note {
+/* ── Balance sheet ── */
+.db-balance {
+  margin-bottom: 20px;
+}
+
+.db-card-caption {
   font-size: 12px;
   color: #a3a3a3;
 }
 
-/* ── Owned portfolio ── */
-.db-owned {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
+.db-margin {
+  color: #1A6B4A !important;
+  font-weight: 600;
+}
+
+.db-footnote {
+  font-size: 12px;
+  color: #a3a3a3;
+  margin: 0;
+  padding: 10px 14px 12px;
+  border-top: 1px solid #f5f5f5;
 }
 
 /* ── Cards ── */
@@ -299,9 +362,21 @@
   padding: 4px 18px 14px;
 }
 
+.db-empty--padded {
+  padding: 18px;
+}
+
 @media (max-width: 960px) {
-  .db-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .db-lifecycle {
+    overflow-x: auto;
+  }
+
+  .db-stage-wrap {
+    flex: 0 0 auto;
+  }
+
+  .db-stage {
+    min-width: 128px;
   }
 
   .db-grid {
@@ -316,9 +391,5 @@
 
   .db-bar-col {
     display: none;
-  }
-
-  .db-owned {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
