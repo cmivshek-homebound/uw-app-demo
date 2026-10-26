@@ -1,139 +1,39 @@
-import type { Opportunity } from '../types';
+import type { Asset, Opportunity } from '../types';
+import { ASSETS } from './assets';
+import { DEMO_DEAL_ID } from './contracts';
 
+// ── Opportunity queue ──────────────────────────────────────────
+// Derived from assets.ts: every opportunity / underwriting-stage asset, plus
+// the scripted demo deal pinned at its intake status so the walkthrough
+// (queue → underwrite → scenario → comps → contract) still starts here.
+
+const DEMO_DEAL_QUEUE_STATUS: Opportunity['status'] = 'pending_review';
+
+function toOpportunity(asset: Asset, status: Opportunity['status']): Opportunity {
+  return {
+    id: asset.id,
+    address: asset.address,
+    city: asset.city,
+    state: asset.state,
+    zip: asset.zip,
+    market: asset.market,
+    lotSqFt: asset.lotSqFt,
+    source: asset.intake!.source,
+    sdrOwner: asset.intake!.sdrOwner,
+    dateReceived: asset.intake!.dateReceived,
+    status,
+  };
+}
+
+export const mockOpportunities: Opportunity[] = ASSETS
+  .filter((a) => a.intake && (a.id === DEMO_DEAL_ID || a.pipelineStatus))
+  .map((a) => toOpportunity(a, a.id === DEMO_DEAL_ID ? DEMO_DEAL_QUEUE_STATUS : a.pipelineStatus!))
+  .sort((a, b) => a.id.localeCompare(b.id));
+
+/** Updates the queue row and, for pipeline-stage assets, the underlying asset. */
 export function updateOpportunityStatus(id: string, status: Opportunity['status']) {
   const opp = mockOpportunities.find((o) => o.id === id);
   if (opp) opp.status = status;
+  const asset = ASSETS.find((a) => a.id === id);
+  if (asset?.pipelineStatus) asset.pipelineStatus = status;
 }
-
-export const mockOpportunities: Opportunity[] = [
-  {
-    id: 'BOOL-001',
-    address: '4821 Maple Creek Dr',
-    city: 'Dallas',
-    state: 'TX',
-    zip: '75227',
-    market: 'DFW',
-    lotSqFt: 6240,
-    source: 'Off-Market',
-    sdrOwner: 'Ben Teters',
-    dateReceived: '2026-04-14T00:00:00Z',
-    status: 'pending_review',
-  },
-  {
-    id: 'BOOL-002',
-    address: '5102 Ridgecrest Ln',
-    city: 'Dallas',
-    state: 'TX',
-    zip: '75228',
-    market: 'DFW',
-    lotSqFt: 7100,
-    source: 'MLS',
-    sdrOwner: 'Ben Teters',
-    dateReceived: '2026-04-14T00:00:00Z',
-    status: 'in_review',
-  },
-  {
-    id: 'BOOL-003',
-    address: '8834 Sunbrook Ct',
-    city: 'Houston',
-    state: 'TX',
-    zip: '77055',
-    market: 'Houston',
-    lotSqFt: 5800,
-    source: 'Off-Market',
-    sdrOwner: 'Ryan Weiss',
-    dateReceived: '2026-04-13T00:00:00Z',
-    status: 'pending_review',
-  },
-  {
-    id: 'BOOL-004',
-    address: '4710 Elmwood Pass',
-    city: 'Tampa',
-    state: 'FL',
-    zip: '33606',
-    market: 'Tampa',
-    lotSqFt: 6500,
-    source: 'MLS',
-    sdrOwner: 'Danny Gaule',
-    dateReceived: '2026-04-12T00:00:00Z',
-    status: 'ready_for_offer',
-  },
-  {
-    id: 'BOOL-005',
-    address: '3821 Westover Hills Blvd',
-    city: 'Fort Worth',
-    state: 'TX',
-    zip: '76116',
-    market: 'DFW',
-    lotSqFt: 5400,
-    source: 'MLS',
-    sdrOwner: 'Ben Teters',
-    dateReceived: '2026-04-10T00:00:00Z',
-    status: 'dqd',
-  },
-  {
-    id: 'BOOL-006',
-    address: '7734 Lawndale St',
-    city: 'Houston',
-    state: 'TX',
-    zip: '77023',
-    market: 'Houston',
-    lotSqFt: 6800,
-    source: 'Off-Market',
-    sdrOwner: 'Ryan Weiss',
-    dateReceived: '2026-04-10T00:00:00Z',
-    status: 'ready_for_offer',
-  },
-  {
-    id: 'BOOL-007',
-    address: '2241 Cove Cay Dr',
-    city: 'Clearwater',
-    state: 'FL',
-    zip: '33760',
-    market: 'St. Pete',
-    lotSqFt: 7200,
-    source: 'MLS',
-    sdrOwner: 'Karsten Thompson',
-    dateReceived: '2026-04-09T00:00:00Z',
-    status: 'pending_review',
-  },
-  {
-    id: 'BOOL-008',
-    address: '4892 Chevy Chase Dr',
-    city: 'Dallas',
-    state: 'TX',
-    zip: '75225',
-    market: 'DFW',
-    lotSqFt: 8100,
-    source: 'Off-Market',
-    sdrOwner: 'Grady Knipper',
-    dateReceived: '2026-04-09T00:00:00Z',
-    status: 'in_review',
-  },
-  {
-    id: 'BOOL-009',
-    address: '11234 Gorham Ave',
-    city: 'Los Angeles',
-    state: 'CA',
-    zip: '90049',
-    market: 'LA',
-    lotSqFt: 4900,
-    source: 'MLS',
-    sdrOwner: 'Danny Gaule',
-    dateReceived: '2026-04-08T00:00:00Z',
-    status: 'pending_review',
-  },
-  {
-    id: 'BOOL-010',
-    address: '5523 Morningside Dr',
-    city: 'Houston',
-    state: 'TX',
-    zip: '77005',
-    market: 'Houston',
-    lotSqFt: 5600,
-    source: 'Off-Market',
-    sdrOwner: 'Ryan Weiss',
-    dateReceived: '2026-04-08T00:00:00Z',
-    status: 'in_review',
-  },
-];

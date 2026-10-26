@@ -89,6 +89,14 @@
   color: #a3a3a3;
 }
 
+/* ── Owned portfolio ── */
+.db-owned {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
 /* ── Cards ── */
 .db-grid {
   display: grid;
@@ -308,5 +316,9 @@
 
   .db-bar-col {
     display: none;
+  }
+
+  .db-owned {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

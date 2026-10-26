@@ -42,6 +42,12 @@ export interface MonthlyMark {
   approvedBy?: string;
 }
 
+export interface AssetIntake {
+  source: Opportunity['source'];
+  sdrOwner: string;
+  dateReceived: string; // ISO
+}
+
 export interface AssetUnderwrite {
   planName: string;
   landPrice: number;
@@ -87,6 +93,7 @@ export interface Asset {
   stage: AssetStage;
   lotSqFt: number;
   pipelineStatus?: PipelineStatus; // opportunity / underwriting stages only
+  intake?: AssetIntake;
   underwrite?: AssetUnderwrite;
   contract?: AssetContract;
   owned?: AssetOwned;

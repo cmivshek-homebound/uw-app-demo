@@ -1,19 +1,28 @@
 import { useNavigate } from 'react-router-dom';
-import { mockOpportunities } from '../data/opportunities';
-import { CONTRACT_DEALS, DEMO_TODAY, daysRemaining } from '../data/contracts';
-import type { Opportunity } from '../types';
+import { DEMO_TODAY, daysRemaining, daysSince } from '../data/dates';
+import {
+  assetsByStage,
+  countByStage,
+  currentMarkByStage,
+  pipelineAssets,
+} from '../data/selectors';
+import type { AssetStage, PipelineStatus } from '../types';
 import './Dashboard.css';
 
-type Status = Opportunity['status'];
+const STATUS_ORDER: PipelineStatus[] = ['pending_review', 'in_review', 'ready_for_offer', 'dqd'];
 
-const STATUS_ORDER: Status[] = ['pending_review', 'in_review', 'ready_for_offer', 'dqd'];
-
-const STATUS_LABELS: Record<Status, string> = {
+const STATUS_LABELS: Record<PipelineStatus, string> = {
   pending_review: 'Pending Review',
   in_review: 'In Review',
   ready_for_offer: 'Ready for Offer',
   dqd: "DQ'd",
 };
+
+const OWNED_TILES: { stage: AssetStage; label: string }[] = [
+  { stage: 'precon', label: 'Pre-Con' },
+  { stage: 'construction', label: 'Construction' },
+  { stage: 'for_sale', label: 'For Sale' },
+];
 
 const INSPECTION_WARN_DAYS = 7;
 const LONGEST_PENDING_LIMIT = 3;
@@ -22,9 +31,8 @@ function usd(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 }
 
-/** Whole days from `from` back to `since`. */
-function daysSince(since: string, from: string = DEMO_TODAY): number {
-  return Math.max(0, Math.round((new Date(from).getTime() - new Date(since).getTime()) / 86_400_000));
+function usdMillions(n: number) {
+  return `$${(n / 1_000_000).toFixed(1)}M`;
 }
 
 function plural(n: number, word: string) {
@@ -35,39 +43,46 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   // ── KPIs ──
-  const deals = Object.values(CONTRACT_DEALS);
-  const activeCount = mockOpportunities.filter((o) => o.status !== 'dqd').length;
-  const pendingCount = mockOpportunities.filter((o) => o.status === 'pending_review').length;
-  const totalOffer = deals.reduce((sum, d) => sum + d.offer, 0);
-  const avgMargin = deals.length > 0
-    ? deals.reduce((sum, d) => sum + d.marginPct, 0) / deals.length
+  const pipeline = pipelineAssets();
+  const underContract = assetsByStage().under_contract;
+  const activeCount = pipeline.filter((a) => a.pipelineStatus !== 'dqd').length;
+  const pendingCount = pipeline.filter((a) => a.pipelineStatus === 'pending_review').length;
+  const totalOffer = underContract.reduce((sum, a) => sum + (a.underwrite?.landPrice ?? 0), 0);
+  const avgMargin = underContract.length > 0
+    ? underContract.reduce((sum, a) => sum + (a.underwrite?.marginPct ?? 0), 0) / underContract.length
     : null;
-  const soonestInspection = deals.length > 0
-    ? Math.min(...deals.map((d) => daysRemaining(d.inspectionExpires)))
+  const inspections = underContract
+    .filter((a) => a.contract)
+    .map((a) => ({ asset: a, days: daysRemaining(a.contract!.inspectionExpires) }));
+  const soonestInspection = inspections.length > 0
+    ? Math.min(...inspections.map((x) => x.days))
     : null;
+
+  // ── Owned portfolio ──
+  const stageCounts = countByStage();
+  const stageMarks = currentMarkByStage();
 
   // ── Pipeline by market ──
-  const markets = [...new Set(mockOpportunities.map((o) => o.market))];
-  const pipeline = markets.map((market) => {
-    const opps = mockOpportunities.filter((o) => o.market === market);
+  const markets = [...new Set(pipeline.map((a) => a.market))];
+  const pipelineRows = markets.map((market) => {
+    const inMarket = pipeline.filter((a) => a.market === market);
     const counts = Object.fromEntries(
-      STATUS_ORDER.map((s) => [s, opps.filter((o) => o.status === s).length]),
-    ) as Record<Status, number>;
-    return { market, counts, total: opps.length };
+      STATUS_ORDER.map((s) => [s, inMarket.filter((a) => a.pipelineStatus === s).length]),
+    ) as Record<PipelineStatus, number>;
+    return { market, counts, total: inMarket.length };
   });
   const statusTotals = Object.fromEntries(
-    STATUS_ORDER.map((s) => [s, mockOpportunities.filter((o) => o.status === s).length]),
-  ) as Record<Status, number>;
+    STATUS_ORDER.map((s) => [s, pipeline.filter((a) => a.pipelineStatus === s).length]),
+  ) as Record<PipelineStatus, number>;
 
   // ── Needs attention ──
-  const expiringInspections = deals
-    .map((d) => ({ deal: d, days: daysRemaining(d.inspectionExpires) }))
+  const expiringInspections = inspections
     .filter((x) => x.days < INSPECTION_WARN_DAYS)
     .sort((a, b) => a.days - b.days);
 
-  const longestPending = mockOpportunities
-    .filter((o) => o.status === 'pending_review')
-    .map((o) => ({ opp: o, days: daysSince(o.dateReceived) }))
+  const longestPending = pipeline
+    .filter((a) => a.pipelineStatus === 'pending_review' && a.intake)
+    .map((a) => ({ asset: a, days: daysSince(a.intake!.dateReceived) }))
     .sort((a, b) => b.days - a.days)
     .slice(0, LONGEST_PENDING_LIMIT);
 
@@ -81,7 +96,7 @@ export default function Dashboard() {
         <div>
           <h1 className="db-title">BOOL Underwriting Dashboard</h1>
           <p className="db-subtitle">
-            {mockOpportunities.length} opportunities across {plural(markets.length, 'market')} · as of {asOf}
+            {pipeline.length} opportunities across {plural(markets.length, 'market')} · as of {asOf}
           </p>
         </div>
         <button className="db-queue-btn" onClick={() => navigate('/queue')}>
@@ -103,7 +118,7 @@ export default function Dashboard() {
         </div>
         <div className="db-kpi">
           <span className="db-kpi-label">Under Contract</span>
-          <span className="db-kpi-value">{deals.length}</span>
+          <span className="db-kpi-value">{underContract.length}</span>
           <span className="db-kpi-note">{usd(totalOffer)} total offer</span>
         </div>
         <div className="db-kpi">
@@ -111,7 +126,7 @@ export default function Dashboard() {
           <span className="db-kpi-value db-kpi-value--brand">
             {avgMargin === null ? '—' : `${avgMargin.toFixed(1)}%`}
           </span>
-          <span className="db-kpi-note">across {plural(deals.length, 'contract')}</span>
+          <span className="db-kpi-note">across {plural(underContract.length, 'contract')}</span>
         </div>
         <div className="db-kpi">
           <span className="db-kpi-label">Next Inspection Deadline</span>
@@ -124,6 +139,17 @@ export default function Dashboard() {
           </span>
           <span className="db-kpi-note">soonest expiry</span>
         </div>
+      </div>
+
+      {/* Owned portfolio */}
+      <div className="db-owned">
+        {OWNED_TILES.map(({ stage, label }) => (
+          <div key={stage} className="db-kpi">
+            <span className="db-kpi-label">{label}</span>
+            <span className="db-kpi-value">{stageCounts[stage]}</span>
+            <span className="db-kpi-note">{usdMillions(stageMarks[stage])} current mark</span>
+          </div>
+        ))}
       </div>
 
       <div className="db-grid">
@@ -150,7 +176,7 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {pipeline.map(({ market, counts, total }) => (
+              {pipelineRows.map(({ market, counts, total }) => (
                 <tr key={market}>
                   <td className="db-market">{market}</td>
                   {STATUS_ORDER.map((s) => (
@@ -158,12 +184,12 @@ export default function Dashboard() {
                   ))}
                   <td className="db-num db-total">{total}</td>
                   <td className="db-bar-col">
-                    <div className="db-bar" title={`${market}: ${total} of ${mockOpportunities.length} opportunities`}>
+                    <div className="db-bar" title={`${market}: ${total} of ${pipeline.length} opportunities`}>
                       {STATUS_ORDER.filter((s) => counts[s] > 0).map((s) => (
                         <span
                           key={s}
                           className={`db-bar-seg db-fill--${s}`}
-                          style={{ width: `${(counts[s] / mockOpportunities.length) * 100}%` }}
+                          style={{ width: `${(counts[s] / pipeline.length) * 100}%` }}
                         />
                       ))}
                     </div>
@@ -175,7 +201,7 @@ export default function Dashboard() {
               <tr>
                 <td>All markets</td>
                 {STATUS_ORDER.map((s) => <td key={s} className="db-num">{statusTotals[s]}</td>)}
-                <td className="db-num">{mockOpportunities.length}</td>
+                <td className="db-num">{pipeline.length}</td>
                 <td className="db-bar-col"></td>
               </tr>
             </tfoot>
@@ -193,12 +219,12 @@ export default function Dashboard() {
             <p className="db-empty">No inspection deadlines this week.</p>
           ) : (
             <ul className="db-list">
-              {expiringInspections.map(({ deal, days }) => (
-                <li key={deal.oppId}>
-                  <button className="db-list-row" onClick={() => navigate(`/contract/${deal.oppId}`)}>
+              {expiringInspections.map(({ asset, days }) => (
+                <li key={asset.id}>
+                  <button className="db-list-row" onClick={() => navigate(`/contract/${asset.id}`)}>
                     <span className="db-list-main">
-                      <span className="db-list-id">{deal.oppId}</span>
-                      <span className="db-list-address">{deal.address}</span>
+                      <span className="db-list-id">{asset.id}</span>
+                      <span className="db-list-address">{asset.address} · {asset.market}</span>
                     </span>
                     <span className="db-pill db-pill--urgent">{plural(days, 'day')} left</span>
                   </button>
@@ -212,12 +238,12 @@ export default function Dashboard() {
             <p className="db-empty">Nothing pending review.</p>
           ) : (
             <ul className="db-list">
-              {longestPending.map(({ opp, days }) => (
-                <li key={opp.id}>
-                  <button className="db-list-row" onClick={() => navigate(`/underwrite/${opp.id}`)}>
+              {longestPending.map(({ asset, days }) => (
+                <li key={asset.id}>
+                  <button className="db-list-row" onClick={() => navigate(`/underwrite/${asset.id}`)}>
                     <span className="db-list-main">
-                      <span className="db-list-id">{opp.id}</span>
-                      <span className="db-list-address">{opp.address} · {opp.market}</span>
+                      <span className="db-list-id">{asset.id}</span>
+                      <span className="db-list-address">{asset.address} · {asset.market}</span>
                     </span>
                     <span className="db-pill">{plural(days, 'day')} waiting</span>
                   </button>

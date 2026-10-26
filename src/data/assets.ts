@@ -1,15 +1,17 @@
 import type {
   Asset,
+  AssetIntake,
   AssetStage,
   Market,
   MonthlyMark,
   PipelineStatus,
   ProductType,
 } from '../types';
-import { mockOpportunities } from './opportunities';
-import { CONTRACT_DEALS, DEMO_TODAY, daysRemaining } from './contracts';
+import { DEMO_TODAY, daysRemaining } from './dates';
 
 // ── Unified asset portfolio ────────────────────────────────────
+// Single source of truth for property data. opportunities.ts and
+// contracts.ts derive their legacy exports from ASSETS.
 // Seeds hold only the independent inputs. Everything derivable (margin,
 // totals, budgets, spend, days on market, monthly marks) is computed by
 // buildAsset so the numbers can't drift out of sync.
@@ -25,6 +27,7 @@ interface Seed {
   stage: AssetStage;
   lotSqFt: number;
   pipelineStatus?: PipelineStatus;
+  intake?: AssetIntake;
   /** Underwrite inputs; totalCost = land + build. `on` defaults to a week before contract. */
   uw?: { plan: string; esp: number; land: number; build: number; on?: string };
   contractDate?: string;      // defaults to 30 days before closedOn
@@ -127,6 +130,7 @@ function buildAsset(s: Seed): Asset {
     lotSqFt: s.lotSqFt,
   };
   if (s.pipelineStatus) asset.pipelineStatus = s.pipelineStatus;
+  if (s.intake) asset.intake = { ...s.intake, dateReceived: iso(s.intake.dateReceived) };
 
   const contractDate = s.contractDate ?? (s.closedOn ? addDays(s.closedOn, -30) : undefined);
 
@@ -177,59 +181,95 @@ function buildAsset(s: Seed): Asset {
   return asset;
 }
 
-// ── Opportunity & underwriting (existing queue + BOOL-011) ─────
-// BOOL-001 has moved to under contract (see below).
-const PIPELINE_UW: Record<string, NonNullable<Seed['uw']>> = {
-  'BOOL-002': { plan: 'The Emerson',  esp:   905_000, land: 215_000, build: 470_000, on: '2026-04-16' },
-  'BOOL-004': { plan: 'The Daniel',   esp: 1_230_000, land: 320_000, build: 600_000, on: '2026-04-15' },
-  'BOOL-006': { plan: 'The Benjamin', esp:   720_000, land: 150_000, build: 395_000, on: '2026-04-13' },
-  'BOOL-008': { plan: 'The Daniel',   esp: 1_350_000, land: 420_000, build: 600_000, on: '2026-04-12' },
-  'BOOL-010': { plan: 'The Ryan',     esp: 1_040_000, land: 290_000, build: 495_000, on: '2026-04-11' },
-};
-
-const pipelineSeeds: Seed[] = mockOpportunities
-  .filter((o) => o.id !== 'BOOL-001')
-  .map((o) => ({
-    id: o.id,
-    address: o.address,
-    city: o.city,
-    state: o.state,
-    zip: o.zip,
-    market: o.market as Market,
-    stage: o.status === 'in_review' || o.status === 'ready_for_offer' ? 'underwriting' : 'opportunity',
-    lotSqFt: o.lotSqFt,
-    pipelineStatus: o.status,
-    uw: PIPELINE_UW[o.id],
-  }));
-
-pipelineSeeds.push({
-  id: 'BOOL-011', address: '2706 W Prospect Rd', city: 'Tampa', state: 'FL', zip: '33629',
-  market: 'Tampa', stage: 'opportunity', lotSqFt: 6900, pipelineStatus: 'pending_review',
-});
+// ── Opportunity & underwriting ─────────────────────────────────
+// The intake queue. BOOL-001 has moved on to under contract (below).
+const pipelineSeeds: Seed[] = [
+  {
+    id: 'BOOL-002', address: '5102 Ridgecrest Ln', city: 'Dallas', state: 'TX', zip: '75228',
+    market: 'DFW', stage: 'underwriting', lotSqFt: 7100, pipelineStatus: 'in_review',
+    intake: { source: 'MLS', sdrOwner: 'Ben Teters', dateReceived: '2026-04-14' },
+    uw: { plan: 'The Emerson', esp: 905_000, land: 215_000, build: 470_000, on: '2026-04-16' },
+  },
+  {
+    id: 'BOOL-003', address: '8834 Sunbrook Ct', city: 'Houston', state: 'TX', zip: '77055',
+    market: 'Houston', stage: 'opportunity', lotSqFt: 5800, pipelineStatus: 'pending_review',
+    intake: { source: 'Off-Market', sdrOwner: 'Ryan Weiss', dateReceived: '2026-04-13' },
+  },
+  {
+    id: 'BOOL-004', address: '4710 Elmwood Pass', city: 'Tampa', state: 'FL', zip: '33606',
+    market: 'Tampa', stage: 'underwriting', lotSqFt: 6500, pipelineStatus: 'ready_for_offer',
+    intake: { source: 'MLS', sdrOwner: 'Danny Gaule', dateReceived: '2026-04-12' },
+    uw: { plan: 'The Daniel', esp: 1_230_000, land: 320_000, build: 600_000, on: '2026-04-15' },
+  },
+  {
+    id: 'BOOL-005', address: '3821 Westover Hills Blvd', city: 'Fort Worth', state: 'TX', zip: '76116',
+    market: 'DFW', stage: 'opportunity', lotSqFt: 5400, pipelineStatus: 'dqd',
+    intake: { source: 'MLS', sdrOwner: 'Ben Teters', dateReceived: '2026-04-10' },
+  },
+  {
+    id: 'BOOL-006', address: '7734 Lawndale St', city: 'Houston', state: 'TX', zip: '77023',
+    market: 'Houston', stage: 'underwriting', lotSqFt: 6800, pipelineStatus: 'ready_for_offer',
+    intake: { source: 'Off-Market', sdrOwner: 'Ryan Weiss', dateReceived: '2026-04-10' },
+    uw: { plan: 'The Benjamin', esp: 720_000, land: 150_000, build: 395_000, on: '2026-04-13' },
+  },
+  {
+    id: 'BOOL-007', address: '2241 Cove Cay Dr', city: 'Clearwater', state: 'FL', zip: '33760',
+    market: 'St. Pete', stage: 'opportunity', lotSqFt: 7200, pipelineStatus: 'pending_review',
+    intake: { source: 'MLS', sdrOwner: 'Karsten Thompson', dateReceived: '2026-04-09' },
+  },
+  {
+    id: 'BOOL-008', address: '4892 Chevy Chase Dr', city: 'Dallas', state: 'TX', zip: '75225',
+    market: 'DFW', stage: 'underwriting', lotSqFt: 8100, pipelineStatus: 'in_review',
+    intake: { source: 'Off-Market', sdrOwner: 'Grady Knipper', dateReceived: '2026-04-09' },
+    uw: { plan: 'The Daniel', esp: 1_350_000, land: 420_000, build: 600_000, on: '2026-04-12' },
+  },
+  {
+    id: 'BOOL-009', address: '11234 Gorham Ave', city: 'Los Angeles', state: 'CA', zip: '90049',
+    market: 'LA', stage: 'opportunity', lotSqFt: 4900, pipelineStatus: 'pending_review',
+    intake: { source: 'MLS', sdrOwner: 'Danny Gaule', dateReceived: '2026-04-08' },
+  },
+  {
+    id: 'BOOL-010', address: '5523 Morningside Dr', city: 'Houston', state: 'TX', zip: '77005',
+    market: 'Houston', stage: 'underwriting', lotSqFt: 5600, pipelineStatus: 'in_review',
+    intake: { source: 'Off-Market', sdrOwner: 'Ryan Weiss', dateReceived: '2026-04-08' },
+    uw: { plan: 'The Ryan', esp: 1_040_000, land: 290_000, build: 495_000, on: '2026-04-11' },
+  },
+  {
+    id: 'BOOL-011', address: '2706 W Prospect Rd', city: 'Tampa', state: 'FL', zip: '33629',
+    market: 'Tampa', stage: 'opportunity', lotSqFt: 6900, pipelineStatus: 'pending_review',
+    intake: { source: 'Off-Market', sdrOwner: 'Danny Gaule', dateReceived: '2026-04-16' },
+  },
+];
 
 // ── Under contract ─────────────────────────────────────────────
-const deal = CONTRACT_DEALS['BOOL-001'];
-const opp001 = mockOpportunities.find((o) => o.id === 'BOOL-001')!;
+// BOOL-001 is the scripted demo deal: received, underwritten and put under
+// contract on Apr 14. Its land price, ESP and 36.2% margin are the figures
+// shown throughout the walkthrough.
+const BOOL_001_OFFER = 405_004;
+const BOOL_001_ESP = 1_119_788;
+const BOOL_001_MARGIN_PCT = 36.2;
 
 const underContractSeeds: Seed[] = [
   {
-    id: deal.oppId, address: deal.address, city: opp001.city, state: opp001.state, zip: opp001.zip,
-    market: opp001.market as Market, stage: 'under_contract', lotSqFt: opp001.lotSqFt,
+    id: 'BOOL-001', address: '4821 Maple Creek Dr', city: 'Dallas', state: 'TX', zip: '75227',
+    market: 'DFW', stage: 'under_contract', lotSqFt: 6240,
+    intake: { source: 'Off-Market', sdrOwner: 'Ben Teters', dateReceived: '2026-04-14' },
     uw: {
-      plan: deal.planLine.split(' · ')[0],
-      esp: deal.esp,
-      land: deal.offer,
-      // Back out total cost from the deal's stated margin so it re-derives to the same %.
-      build: Math.round(deal.esp * (1 - deal.marginPct / 100)) - deal.offer,
+      plan: 'The Emerson',
+      esp: BOOL_001_ESP,
+      land: BOOL_001_OFFER,
+      // Back out total cost from the stated margin so it re-derives to the same %.
+      build: Math.round(BOOL_001_ESP * (1 - BOOL_001_MARGIN_PCT / 100)) - BOOL_001_OFFER,
+      on: '2026-04-14',
     },
-    contractDate: deal.contractDate,
-    inspectionExpires: deal.inspectionExpires,
+    contractDate: '2026-04-14',
+    inspectionExpires: '2026-04-24',
   },
   {
     id: 'BOOL-012', address: '1418 Superba Ave', city: 'Los Angeles', state: 'CA', zip: '90291',
     market: 'LA', stage: 'under_contract', lotSqFt: 5200,
     uw: { plan: 'The Kendall', esp: 3_450_000, land: 1_180_000, build: 1_520_000 },
-    contractDate: '2026-04-03',
+    contractDate: '2026-04-13',
   },
   {
     id: 'SUB-001', address: '15422 Cypress Hollow Dr', city: 'Cypress', state: 'TX', zip: '77433',

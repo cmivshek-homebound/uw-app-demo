@@ -1,45 +1,38 @@
 import { Link, useLocation } from 'react-router-dom';
 import homeboundLogo from '../assets/homebound-logo.png';
-import { mockOpportunities } from '../data/opportunities';
-import { CONTRACT_DEALS, contractCount, daysRemaining } from '../data/contracts';
+import { daysRemaining } from '../data/dates';
+import { assetsByStage, countByStage, pipelineAssets } from '../data/selectors';
 import './NavBar.css';
 
 export default function NavBar() {
   const { pathname } = useLocation();
 
   // Counts shown beside each destination so the bar reports live workload.
-  const queueCount = mockOpportunities.length;
-  const pendingCount = mockOpportunities.filter((o) => o.status === 'pending_review').length;
-  const inReviewCount = mockOpportunities.filter((o) => o.status === 'in_review').length;
+  const pipeline = pipelineAssets();
+  const stageCounts = countByStage();
+  const pipelineCount = pipeline.length;
+  const pendingCount = pipeline.filter((a) => a.pipelineStatus === 'pending_review').length;
+  const inReviewCount = pipeline.filter((a) => a.pipelineStatus === 'in_review').length;
+  const contractCount = stageCounts.under_contract;
+  const portfolioCount = stageCounts.precon + stageCounts.construction;
+  const forSaleCount = stageCounts.for_sale;
 
-  // Soonest inspection deadline across under-contract deals.
-  const soonestDays = Object.values(CONTRACT_DEALS)
-    .map((d) => daysRemaining(d.inspectionExpires))
+  // Soonest inspection deadline across under-contract assets.
+  const soonestDays = assetsByStage().under_contract
+    .filter((a) => a.contract)
+    .map((a) => daysRemaining(a.contract!.inspectionExpires))
     .sort((a, b) => a - b)[0];
 
   const contractUrgent = soonestDays !== undefined && soonestDays < 7;
 
-  const links: {
-    to: string;
-    label: string;
-    active: boolean;
-    count?: number;
-    tone?: string;
-    title: string;
-  }[] = [
-    {
-      to: '/',
-      label: 'Dashboard',
-      active: pathname === '/',
-      title: 'Portfolio overview',
-    },
+  const links = [
     {
       to: '/queue',
-      label: 'Opportunity Queue',
+      label: 'Pipeline',
       active: pathname.startsWith('/queue'),
-      count: queueCount,
+      count: pipelineCount,
       tone: pendingCount > 0 ? 'attention' : 'muted',
-      title: `${queueCount} opportunities · ${pendingCount} pending review`,
+      title: `${pipelineCount} opportunities · ${pendingCount} pending review`,
     },
     {
       to: '/underwrite',
@@ -50,7 +43,7 @@ export default function NavBar() {
       title: `${inReviewCount} in review`,
     },
     {
-      to: contractCount === 1 ? `/contract/${Object.keys(CONTRACT_DEALS)[0]}` : '/contract',
+      to: '/contract',
       label: 'Under Contract',
       active: pathname.startsWith('/contract'),
       count: contractCount,
@@ -59,18 +52,34 @@ export default function NavBar() {
         ? `${contractCount} under contract · inspection ends in ${soonestDays} days`
         : `${contractCount} under contract`,
     },
+    {
+      to: '/portfolio',
+      label: 'Portfolio',
+      active: pathname.startsWith('/portfolio'),
+      count: portfolioCount,
+      tone: 'muted',
+      title: `${stageCounts.precon} pre-con · ${stageCounts.construction} in construction`,
+    },
+    {
+      to: '/for-sale',
+      label: 'For Sale',
+      active: pathname.startsWith('/for-sale'),
+      count: forSaleCount,
+      tone: 'muted',
+      title: `${forSaleCount} listed`,
+    },
   ];
 
   return (
     <nav className="navbar">
-      <div className="navbar-brand">
+      <Link to="/" className="navbar-brand" title="Dashboard">
         <img
           src={homeboundLogo}
           alt="Homebound"
           className="navbar-logo-img"
         />
         <span className="navbar-subtitle">Underwriting App 2.0</span>
-      </div>
+      </Link>
 
       <div className="navbar-links">
         {links.map((link) => (
@@ -81,9 +90,7 @@ export default function NavBar() {
             className={`nav-link ${link.active ? 'active' : ''}`}
           >
             {link.label}
-            {link.count !== undefined && (
-              <span className={`nav-count nav-count--${link.tone}`}>{link.count}</span>
-            )}
+            <span className={`nav-count nav-count--${link.tone}`}>{link.count}</span>
           </Link>
         ))}
       </div>

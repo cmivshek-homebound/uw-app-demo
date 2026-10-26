@@ -1,5 +1,11 @@
+import { ASSETS } from './assets';
+
 // ── Under-contract deals ───────────────────────────────────────
-// Post-offer workflow state. Keyed by opportunity id.
+// Post-offer workflow state, derived from under-contract assets in
+// assets.ts. Workflow cards and timeline detail are hardcoded below,
+// keyed by asset id.
+
+export { DEMO_TODAY, daysRemaining } from './dates';
 
 export type ItemState = 'done' | 'due' | 'waiting';
 
@@ -39,21 +45,14 @@ export interface ContractDeal {
   timeline: TimelineStep[];
 }
 
-// Fixed "today" for the demo so the inspection countdown is stable.
-// Apr 18 against an Apr 24 expiry lands at 6 days remaining.
-export const DEMO_TODAY = '2026-04-18T00:00:00Z';
+/** The scripted walkthrough deal; the nav's Under Contract link opens it. */
+export const DEMO_DEAL_ID = 'BOOL-001';
 
-export const CONTRACT_DEALS: Record<string, ContractDeal> = {
+type ContractDetail = Pick<ContractDeal, 'planLine' | 'cards' | 'timeline'>;
+
+const CONTRACT_DETAILS: Record<string, ContractDetail> = {
   'BOOL-001': {
-    oppId: 'BOOL-001',
-    address: '4821 Maple Creek Dr',
-    cityStateZip: 'Dallas, TX 75227',
     planLine: 'The Emerson · Premium · Modern Farmhouse',
-    offer: 405_004,
-    esp: 1_119_788,
-    marginPct: 36.2,
-    contractDate: '2026-04-14T00:00:00Z',
-    inspectionExpires: '2026-04-24T00:00:00Z',
     cards: [
       {
         id: 'ic-deck',
@@ -115,10 +114,25 @@ export const CONTRACT_DEALS: Record<string, ContractDeal> = {
   },
 };
 
-export const contractCount = Object.keys(CONTRACT_DEALS).length;
+export const CONTRACT_DEALS: Record<string, ContractDeal> = Object.fromEntries(
+  ASSETS.filter((a) => a.stage === 'under_contract' && a.underwrite && a.contract).map((a) => {
+    const uw = a.underwrite!;
+    const detail = CONTRACT_DETAILS[a.id];
+    const deal: ContractDeal = {
+      oppId: a.id,
+      address: a.address,
+      cityStateZip: `${a.city}, ${a.state} ${a.zip}`,
+      planLine: detail?.planLine ?? uw.planName,
+      offer: uw.landPrice,
+      esp: uw.esp,
+      marginPct: uw.marginPct,
+      contractDate: a.contract!.contractDate,
+      inspectionExpires: a.contract!.inspectionExpires,
+      cards: detail?.cards ?? [],
+      timeline: detail?.timeline ?? [],
+    };
+    return [a.id, deal];
+  }),
+);
 
-/** Whole days from `from` until `until`, floored at 0. */
-export function daysRemaining(until: string, from: string = DEMO_TODAY): number {
-  const ms = new Date(until).getTime() - new Date(from).getTime();
-  return Math.max(0, Math.round(ms / 86_400_000));
-}
+export const contractCount = Object.keys(CONTRACT_DEALS).length;

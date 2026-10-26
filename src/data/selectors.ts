@@ -15,6 +15,9 @@ export const ASSET_STAGES: AssetStage[] = [
   'sold',
 ];
 
+/** Pre-contract stages that carry a pipelineStatus. */
+export const PIPELINE_STAGES: AssetStage[] = ['opportunity', 'underwriting'];
+
 /** Latest-mark moves larger than this (either direction) need sign-off. */
 export const APPROVAL_THRESHOLD = 10_000;
 
@@ -31,6 +34,10 @@ export function filterAssets(
   return assets.filter(
     (a) => (!productType || a.productType === productType) && (!market || a.market === market),
   );
+}
+
+export function pipelineAssets(assets: Asset[] = ASSETS): Asset[] {
+  return assets.filter((a) => PIPELINE_STAGES.includes(a.stage));
 }
 
 export function assetsByStage(assets: Asset[] = ASSETS): Record<AssetStage, Asset[]> {
