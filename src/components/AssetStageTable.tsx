@@ -32,7 +32,6 @@ export default function AssetStageTable({ assets }: { assets: Asset[] }) {
             <th>ID</th>
             <th>Property Address</th>
             <th>Market</th>
-            <th>Product Type</th>
             <th>Stage</th>
             <th>Latest Mark</th>
           </tr>
@@ -45,7 +44,6 @@ export default function AssetStageTable({ assets }: { assets: Asset[] }) {
                 <td className="oq-id">{asset.id}</td>
                 <td className="oq-address">{asset.address}, {asset.city}, {asset.state} {asset.zip}</td>
                 <td>{asset.market}</td>
-                <td>{asset.productType}</td>
                 <td>{STAGE_LABELS[asset.stage]}</td>
                 <td>
                   {mark ? (

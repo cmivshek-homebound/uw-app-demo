@@ -1,10 +1,10 @@
-import type { Asset, AssetStage, Market, MonthlyMark, ProductType } from '../types';
+import type { Asset, AssetStage, Market, MonthlyMark } from '../types';
 import { ASSETS } from './assets';
 import { DEMO_TODAY } from './dates';
 
 // ── Portfolio selectors ────────────────────────────────────────
 // Pure functions over the asset list. Every selector defaults to the full
-// portfolio; pass the output of filterAssets to scope by product or market.
+// portfolio; pass the output of filterAssets to scope by market.
 
 export const ASSET_STAGES: AssetStage[] = [
   'opportunity',
@@ -20,7 +20,6 @@ export const ASSET_STAGES: AssetStage[] = [
 export const PIPELINE_STAGES: AssetStage[] = ['opportunity', 'underwriting'];
 
 export const MARKETS: Market[] = ['DFW', 'Houston', 'Tampa', 'St. Pete', 'LA'];
-export const PRODUCT_TYPES: ProductType[] = ['BOOL', 'Suburban'];
 
 /** Owned, not-yet-sold stages that sit on the balance sheet. */
 export const BALANCE_SHEET_STAGES = ['precon', 'construction', 'for_sale'] as const;
@@ -43,11 +42,9 @@ function byStage<T>(assets: Asset[], value: (stageAssets: Asset[]) => T): Record
 
 export function filterAssets(
   assets: Asset[] = ASSETS,
-  { productType, market }: { productType?: ProductType; market?: Market } = {},
+  { market }: { market?: Market } = {},
 ): Asset[] {
-  return assets.filter(
-    (a) => (!productType || a.productType === productType) && (!market || a.market === market),
-  );
+  return assets.filter((a) => !market || a.market === market);
 }
 
 export function pipelineAssets(assets: Asset[] = ASSETS): Asset[] {

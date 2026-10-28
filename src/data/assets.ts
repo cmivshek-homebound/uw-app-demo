@@ -5,7 +5,6 @@ import type {
   Market,
   MonthlyMark,
   PipelineStatus,
-  ProductType,
 } from '../types';
 import { DEMO_TODAY, daysRemaining } from './dates';
 
@@ -23,7 +22,6 @@ interface Seed {
   state: string;
   zip: string;
   market: Market;
-  productType?: ProductType; // defaults to BOOL
   stage: AssetStage;
   lotSqFt: number;
   pipelineStatus?: PipelineStatus;
@@ -125,7 +123,6 @@ function buildAsset(s: Seed): Asset {
     state: s.state,
     zip: s.zip,
     market: s.market,
-    productType: s.productType ?? 'BOOL',
     stage: s.stage,
     lotSqFt: s.lotSqFt,
   };
@@ -272,9 +269,9 @@ const underContractSeeds: Seed[] = [
     contractDate: '2026-04-13',
   },
   {
-    id: 'SUB-001', address: '15422 Cypress Hollow Dr', city: 'Cypress', state: 'TX', zip: '77433',
-    market: 'Houston', productType: 'Suburban', stage: 'under_contract', lotSqFt: 8800,
-    uw: { plan: 'The Laurel', esp: 535_000, land: 82_000, build: 345_000 },
+    id: 'BOOL-040', address: '1347 Seamist Dr', city: 'Houston', state: 'TX', zip: '77008',
+    market: 'Houston', stage: 'under_contract', lotSqFt: 5000,
+    uw: { plan: 'The Benjamin', esp: 795_000, land: 190_000, build: 415_000 },
     contractDate: '2026-04-10',
   },
 ];
@@ -312,9 +309,9 @@ const preconSeeds: Seed[] = [
     closedOn: '2026-03-02', pct: 0.01,
   },
   {
-    id: 'SUB-002', address: '1408 Sandstone Ct', city: 'Frisco', state: 'TX', zip: '75034',
-    market: 'DFW', productType: 'Suburban', stage: 'precon', lotSqFt: 8400,
-    uw: { plan: 'The Cypress', esp: 585_000, land: 92_000, build: 375_000 },
+    id: 'BOOL-041', address: '1219 N Clinton Ave', city: 'Dallas', state: 'TX', zip: '75208',
+    market: 'DFW', stage: 'precon', lotSqFt: 6000,
+    uw: { plan: 'The Emerson', esp: 945_000, land: 215_000, build: 480_000 },
     closedOn: '2025-12-15', pct: 0.06,
   },
 ];
@@ -392,9 +389,9 @@ const constructionSeeds: Seed[] = [
     closedOn: '2025-09-03', pct: 0.33,
   },
   {
-    id: 'SUB-003', address: '27814 Willow Bend Ln', city: 'Katy', state: 'TX', zip: '77494',
-    market: 'Houston', productType: 'Suburban', stage: 'construction', lotSqFt: 9000,
-    uw: { plan: 'The Laurel', esp: 540_000, land: 78_000, build: 350_000 },
+    id: 'BOOL-042', address: '8123 Westview Dr', city: 'Houston', state: 'TX', zip: '77055',
+    market: 'Houston', stage: 'construction', lotSqFt: 6400,
+    uw: { plan: 'The Benjamin', esp: 740_000, land: 165_000, build: 400_000 },
     closedOn: '2025-08-25', pct: 0.48,
   },
 ];
@@ -446,18 +443,18 @@ const forSaleSeeds: Seed[] = [
     listing: { listedOn: '2026-01-09', listPrice: 4_295_000, showings: 21, priceDrops: 1 },
   },
   {
-    id: 'SUB-004', address: '31207 Cypress Grove Way', city: 'Wesley Chapel', state: 'FL', zip: '33543',
-    market: 'Tampa', productType: 'Suburban', stage: 'for_sale', lotSqFt: 8800,
-    uw: { plan: 'The Cypress', esp: 565_000, land: 88_000, build: 362_000 },
+    id: 'BOOL-043', address: '6107 N Central Ave', city: 'Tampa', state: 'FL', zip: '33604',
+    market: 'Tampa', stage: 'for_sale', lotSqFt: 5600,
+    uw: { plan: 'The Dakota', esp: 835_000, land: 180_000, build: 450_000 },
     closedOn: '2025-02-11',
-    listing: { listedOn: '2026-04-03', listPrice: 569_000, showings: 4, priceDrops: 0 },
+    listing: { listedOn: '2026-04-03', listPrice: 849_000, showings: 4, priceDrops: 0 },
   },
   {
-    id: 'SUB-005', address: '26511 Meadowlark Ct', city: 'Valencia', state: 'CA', zip: '91355',
-    market: 'LA', productType: 'Suburban', stage: 'for_sale', lotSqFt: 7200,
-    uw: { plan: 'The Laurel', esp: 1_180_000, land: 290_000, build: 650_000 },
+    id: 'BOOL-044', address: '1845 N Marengo Ave', city: 'Altadena', state: 'CA', zip: '91001',
+    market: 'LA', stage: 'for_sale', lotSqFt: 6500,
+    uw: { plan: 'The Kendall', esp: 1_980_000, land: 640_000, build: 880_000 },
     closedOn: '2025-03-06',
-    listing: { listedOn: '2026-03-20', listPrice: 1_195_000, showings: 9, priceDrops: 0 },
+    listing: { listedOn: '2026-03-20', listPrice: 2_025_000, showings: 9, priceDrops: 0 },
   },
 ];
 
@@ -504,12 +501,12 @@ const soldSeeds: Seed[] = [
     sale: { soldOn: '2026-03-18', salePrice: 2_920_000 },
   },
   {
-    id: 'SUB-006', address: '4207 Prairie Rose Dr', city: 'McKinney', state: 'TX', zip: '75071',
-    market: 'DFW', productType: 'Suburban', stage: 'sold', lotSqFt: 8600,
-    uw: { plan: 'The Cypress', esp: 555_000, land: 85_000, build: 358_000 },
+    id: 'BOOL-045', address: '6814 Lakeshore Dr', city: 'Dallas', state: 'TX', zip: '75214',
+    market: 'DFW', stage: 'sold', lotSqFt: 6400,
+    uw: { plan: 'The Daniel', esp: 1_045_000, land: 275_000, build: 500_000 },
     closedOn: '2024-12-03',
-    listing: { listedOn: '2026-01-30', listPrice: 559_000, showings: 12, priceDrops: 0 },
-    sale: { soldOn: '2026-04-09', salePrice: 556_000 },
+    listing: { listedOn: '2026-01-30', listPrice: 1_059_000, showings: 12, priceDrops: 0 },
+    sale: { soldOn: '2026-04-09', salePrice: 1_048_000 },
   },
 ];
 

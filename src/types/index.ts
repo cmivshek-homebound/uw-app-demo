@@ -26,9 +26,20 @@ export type AssetStage =
   | 'for_sale'
   | 'sold';
 
-export type ProductType = 'BOOL' | 'Suburban';
-
 export type Market = 'DFW' | 'Houston' | 'Tampa' | 'St. Pete' | 'LA';
+
+// ── Provenance ─────────────────────────────────────────────────
+// Where a displayed number came from: drafted by AI (unconfirmed),
+// confirmed or overridden by an analyst, or pulled from a system of record.
+export type Provenance = 'ai' | 'human' | 'system';
+
+export type ProvenanceSource = 'Salesforce' | 'BOOL data tape' | 'Blueprint' | 'MLS';
+
+export interface ProvenanceInfo {
+  provenance: Provenance;
+  source?: ProvenanceSource; // system values
+  note?: string;             // human overrides, e.g. "Overrode AI ESP: corner lot premium"
+}
 
 export type PipelineStatus = Opportunity['status'];
 
@@ -89,7 +100,6 @@ export interface Asset {
   state: string;
   zip: string;
   market: Market;
-  productType: ProductType;
   stage: AssetStage;
   lotSqFt: number;
   pipelineStatus?: PipelineStatus; // opportunity / underwriting stages only

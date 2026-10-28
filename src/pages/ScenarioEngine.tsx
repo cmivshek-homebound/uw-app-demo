@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mockOpportunities } from '../data/opportunities';
+import { ASSETS } from '../data/assets';
+import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
+import type { ProvenanceInfo } from '../types';
 import {
   DFW_PLANS,
   ADD_ON_OPTIONS,
@@ -36,6 +39,33 @@ const LOT_DIMS: Record<string, FeasibilityLot> = {
   'BOOL-003': { widthFt: 48, depthFt: 121 },
   'BOOL-004': { widthFt: 55, depthFt: 118 },
 };
+
+// ── Analyst overrides of AI-drafted comp $/sqft ────────────────
+// The Daniel sits on BOOL-001's corner; the analyst bumped its comps.
+const COMP_OVERRIDES: Record<string, { espPerSqft: number; reason: string }> = {
+  daniel: { espPerSqft: 282, reason: 'corner lot premium' },
+};
+
+/** Plan with any analyst comp override applied, for calcFinancials. */
+function withOverrides(plan: Plan): Plan {
+  const override = COMP_OVERRIDES[plan.id];
+  return override ? { ...plan, espPerSqft: override.espPerSqft } : plan;
+}
+
+function compProvenance(plan: Plan): ProvenanceInfo {
+  const override = COMP_OVERRIDES[plan.id];
+  if (!override) return { provenance: 'ai' };
+  return {
+    provenance: 'human',
+    note: `Overrode AI comp $/sqft ($${plan.espPerSqft} → $${override.espPerSqft}): ${override.reason}`,
+  };
+}
+
+function espProvenance(plan: Plan): ProvenanceInfo {
+  const override = COMP_OVERRIDES[plan.id];
+  if (!override) return { provenance: 'ai' };
+  return { provenance: 'human', note: `Uses analyst comp $/sqft: ${override.reason}` };
+}
 
 // ── Per-card state ─────────────────────────────────────────────
 interface PlanCardState {
@@ -331,14 +361,16 @@ function PlanCard({ plan, state, fin, isRecommended, isSelected, onToggleSelect,
 // ── Pro Forma Table ────────────────────────────────────────────
 interface ProFormaRow {
   label: string;
-  key: keyof PlanFinancials;
+  key: keyof PlanFinancials | 'compPerSqft' | 'landPrice';
   format: (n: number) => string;
   style?: string;
+  provenance?: (plan: Plan) => ProvenanceInfo;
 }
 
 const PROFORMA_ROWS: ProFormaRow[] = [
   { label: 'Sellable Sqft',        key: 'sqft',             format: (n) => n.toLocaleString() + ' sqft', style: 'primary' },
-  { label: 'Est. Sale Price',      key: 'estSalePrice',     format: usd,                                  style: 'primary' },
+  { label: 'Comp ESP / Sqft',      key: 'compPerSqft',      format: (n) => usd(n) + '/sqft',              style: 'sub', provenance: compProvenance },
+  { label: 'Est. Sale Price',      key: 'estSalePrice',     format: usd,                                  style: 'primary', provenance: espProvenance },
   { label: 'Build Cost',           key: 'buildCost',        format: usd },
   { label: 'Options',              key: 'optionsCost',      format: (n) => (n > 0 ? '+' + usd(n) : '—'), style: 'sub' },
   { label: 'Financing (6%)',       key: 'financingCost',    format: usd,                                  style: 'sub' },
@@ -346,6 +378,7 @@ const PROFORMA_ROWS: ProFormaRow[] = [
   { label: 'Homebound Fee (5%)',   key: 'homeboundFee',     format: usd,                                  style: 'sub' },
   { label: 'Total Cost Ex-Land',   key: 'totalCostExLand',  format: usd,                                  style: 'total' },
   { label: 'Max Lot Offer',        key: 'maxLotOffer',      format: usd,                                  style: 'highlight' },
+  { label: 'Land Price',           key: 'landPrice',        format: usd,                                  provenance: () => ({ provenance: 'system', source: 'Salesforce' }) },
   { label: 'Projected Margin',     key: 'projectedMargin',  format: pct,                                  style: 'margin' },
 ];
 
@@ -354,12 +387,21 @@ function ProFormaTable({
   financials,
   recommendedId,
   selectedId,
+  landPrice,
 }: {
   plans: Plan[];
   financials: PlanFinancials[];
   recommendedId: string;
   selectedId: string;
+  landPrice?: number;
 }) {
+  const rows = PROFORMA_ROWS.filter((row) => row.key !== 'landPrice' || landPrice !== undefined);
+  const cellValue = (row: ProFormaRow, fin: PlanFinancials): number => {
+    if (row.key === 'compPerSqft') return fin.estSalePrice / fin.sqft;
+    if (row.key === 'landPrice') return landPrice!;
+    return fin[row.key];
+  };
+
   return (
     <div className="sc-table-wrapper">
       <table className="sc-table">
@@ -375,7 +417,7 @@ function ProFormaTable({
           </tr>
         </thead>
         <tbody>
-          {PROFORMA_ROWS.map((row) => (
+          {rows.map((row) => (
             <tr key={row.key} className={row.style ? `sc-table-row--${row.style}` : ''}>
               <td className="sc-table-label">{row.label}</td>
               {financials.map((fin, i) => (
@@ -383,7 +425,13 @@ function ProFormaTable({
                   key={plans[i].id}
                   className={plans[i].id === selectedId ? 'sc-table-col--selected' : ''}
                 >
-                  {row.format(fin[row.key] as number)}
+                  {row.provenance ? (
+                    <ProvenanceValue info={row.provenance(plans[i])}>
+                      {row.format(cellValue(row, fin))}
+                    </ProvenanceValue>
+                  ) : (
+                    row.format(cellValue(row, fin))
+                  )}
                 </td>
               ))}
             </tr>
@@ -514,6 +562,7 @@ export default function ScenarioEngine() {
   const navigate = useNavigate();
 
   const opp = id ? mockOpportunities.find((o) => o.id === id) : null;
+  const landPrice = ASSETS.find((a) => a.id === id)?.underwrite?.landPrice;
   const lot: FeasibilityLot = (id && LOT_DIMS[id]) || { widthFt: 52, depthFt: 120 };
 
   // Compute feasibility for every plan.
@@ -538,7 +587,7 @@ export default function ScenarioEngine() {
   const financials = feasiblePlans.map((plan) => {
     const s = cardStates[plan.id] ?? initialCardState(plan);
     return calcFinancials({
-      plan,
+      plan: withOverrides(plan),
       elevationIdx: s.elevationIdx,
       specLevelIdx: s.specSelectedIdx,
       selectedOptionIds: s.selectedOptionIds,
@@ -656,11 +705,13 @@ export default function ScenarioEngine() {
       {feasiblePlans.length > 0 && (
         <section className="sc-section">
           <h2 className="sc-section-title">Pro Forma Comparison</h2>
+          <ProvenanceLegend />
           <ProFormaTable
             plans={feasiblePlans}
             financials={financials}
             recommendedId={recommendedPlan.id}
             selectedId={selectedPlan.id}
+            landPrice={landPrice}
           />
         </section>
       )}

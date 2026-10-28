@@ -1,0 +1,72 @@
+/* ── Provenance markers ── */
+.pv {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.pv-icon {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+}
+
+/* AI draft: light warm tint until confirmed */
+.pv--ai .pv-value {
+  background: #faf5e8;
+  border-radius: 3px;
+  padding: 0 3px;
+}
+
+.pv--ai .pv-icon { color: #b08a2e; }
+
+/* Human: reads as normal, small check */
+.pv--human .pv-icon { color: #1A6B4A; opacity: 0.7; }
+
+/* System: small source tag */
+.pv-tag {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: #8a8a8a;
+  border: 1px solid #e5e5e5;
+  border-radius: 3px;
+  padding: 2px 3px;
+}
+
+.pv-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── Legend ── */
+.pv-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  font-size: 11.5px;
+  color: #8a8a8a;
+  margin-bottom: 10px;
+}
+
+.pv-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pv-legend .pv { cursor: default; }
+
+.pv-legend-hint {
+  margin-left: auto;
+  color: #a3a3a3;
+}

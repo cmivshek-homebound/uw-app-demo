@@ -4,7 +4,6 @@ import {
   ASSET_STAGES,
   BALANCE_SHEET_STAGES,
   MARKETS,
-  PRODUCT_TYPES,
   SOLD_WINDOW_MONTHS,
   STALE_LISTING_DAYS,
   assetsByStage,
@@ -17,7 +16,7 @@ import {
   staleListings,
 } from '../data/selectors';
 import type { BalanceSheetRow } from '../data/selectors';
-import type { Asset, AssetStage, Market, PipelineStatus, ProductType } from '../types';
+import type { Asset, AssetStage, Market, PipelineStatus } from '../types';
 // Reuse the queue's pill filter buttons (.filter-btn).
 import './OpportunityQueue.css';
 import './Dashboard.css';
@@ -113,19 +112,17 @@ export default function Dashboard() {
   const [params, setParams] = useSearchParams();
 
   // ── Filters (kept in the URL so they survive navigating away and back) ──
-  const productParam = params.get('product');
   const marketParam = params.get('market');
-  const productType = PRODUCT_TYPES.includes(productParam as ProductType) ? (productParam as ProductType) : undefined;
   const market = MARKETS.includes(marketParam as Market) ? (marketParam as Market) : undefined;
 
-  const setFilter = (key: 'product' | 'market', value: string | undefined) => {
+  const setMarket = (value: Market | undefined) => {
     const next = new URLSearchParams(params);
-    if (value) next.set(key, value);
-    else next.delete(key);
+    if (value) next.set('market', value);
+    else next.delete('market');
     setParams(next, { replace: true });
   };
 
-  const assets = filterAssets(undefined, { productType, market });
+  const assets = filterAssets(undefined, { market });
 
   // ── Lifecycle ──
   const lifecycle = lifecycleByStage(assets);
@@ -180,7 +177,7 @@ export default function Dashboard() {
   const asOf = new Date(DEMO_TODAY).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC',
   });
-  const scope = [productType ?? 'All products', market ?? 'all markets'].join(' · ');
+  const scope = ['BOOL infill', market ?? 'all markets'].join(' · ');
 
   return (
     <div className="db-page">
@@ -196,27 +193,13 @@ export default function Dashboard() {
       {/* Filters */}
       <div className="db-filters">
         <div className="db-filter-group">
-          <span className="db-filter-label">Product</span>
-          <div className="oq-filters">
-            {[undefined, ...PRODUCT_TYPES].map((p) => (
-              <button
-                key={p ?? 'all'}
-                className={`filter-btn ${productType === p ? 'active' : ''}`}
-                onClick={() => setFilter('product', p)}
-              >
-                {p ?? 'All'}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="db-filter-group">
           <span className="db-filter-label">Market</span>
           <div className="oq-filters">
             {[undefined, ...MARKETS].map((m) => (
               <button
                 key={m ?? 'all'}
                 className={`filter-btn ${market === m ? 'active' : ''}`}
-                onClick={() => setFilter('market', m)}
+                onClick={() => setMarket(m)}
               >
                 {m ?? 'All'}
               </button>
