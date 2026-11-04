@@ -7,7 +7,6 @@ import {
   BALANCE_SHEET_STAGES,
   MARKETS,
   SOLD_WINDOW_MONTHS,
-  STALE_LISTING_DAYS,
   assetsByStage,
   assetsNeedingApproval,
   balanceSheet,
@@ -278,7 +277,7 @@ export default function Dashboard() {
         <div className="db-card-header">
           <h2 className="db-card-title">Needs Attention</h2>
           <span className="db-card-caption">
-            Inspections &lt; {INSPECTION_WARN_DAYS} days · marks &gt; $10K awaiting approval · listings &gt; {STALE_LISTING_DAYS} days · longest pending review
+            Inspections &lt; {INSPECTION_WARN_DAYS} days · marks &gt; $10K awaiting approval · listings over 1.5× market days on market · longest pending review
           </span>
         </div>
         {attention.length === 0 ? (

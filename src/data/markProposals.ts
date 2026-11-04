@@ -239,7 +239,7 @@ const SEEDS: Record<string, ProposalSeed> = {
       explanation: 'One Rice Village new build closed just above March.',
       comps: [{ address: '3610 Tangley St', salePrice: 1_030_000, sqft: 4_300, soldOn: '2026-04-02', distanceMi: 0.2 }],
     },
-    listingDemand: { amount: -500, explanation: '36 days and 11 showings, about the market’s normal pace.' },
+    listingDemand: { amount: -2_000, explanation: '36 days and 11 showings, about the market’s normal pace; the one active offer, $995K, sits below the mark.' },
   },
   'BOOL-031': {
     newComps: {
@@ -259,7 +259,7 @@ const SEEDS: Record<string, ProposalSeed> = {
       comps: [{ address: '1210 Arlington Ave N', salePrice: 905_000, sqft: 4_380, soldOn: '2026-04-09', distanceMi: 0.1 }],
     },
     homeboundSales: { amount: 1_000, assetIds: ['BOOL-038'], note: 'above ESP half a mile away.' },
-    listingDemand: { amount: 1_500, explanation: '7 showings in 22 days and a second showing booked; pace ahead of market.' },
+    listingDemand: { amount: 1_500, explanation: '7 showings in 17 days and a second showing booked; pace ahead of market.' },
     status: 'analyst_reviewed',
   },
   'BOOL-033': {
@@ -268,7 +268,7 @@ const SEEDS: Record<string, ProposalSeed> = {
       explanation: 'One Rancho Park sale closed under list.',
       comps: [{ address: '2530 Midvale Ave', salePrice: 3_090_000, sqft: 3_770, soldOn: '2026-04-01', distanceMi: 0.2 }],
     },
-    listingDemand: { amount: -4_000, explanation: '57 days and 15 showings since the March price drop; interest is soft.' },
+    listingDemand: { amount: -4_000, explanation: '57 days and only 7 showings, under half the LA pace even after the March price drop; interest is soft.' },
   },
   'BOOL-034': {
     newComps: {
@@ -276,7 +276,7 @@ const SEEDS: Record<string, ProposalSeed> = {
       explanation: 'One Ocean Park sale closed under its reduced list.',
       comps: [{ address: '726 Marine St', salePrice: 3_840_000, sqft: 3_720, soldOn: '2026-03-24', distanceMi: 0.3 }],
     },
-    listingDemand: { amount: -8_500, explanation: '99 days on market and 21 showings since the March drop, still no offers.' },
+    listingDemand: { amount: -8_500, explanation: '99 days on market and 21 showings, only 9 since the March drop; still no offers.' },
     status: 'analyst_reviewed',
   },
   'BOOL-043': {
@@ -285,7 +285,7 @@ const SEEDS: Record<string, ProposalSeed> = {
       explanation: 'One Seminole Heights sale closed slightly under March.',
       comps: [{ address: '6210 N Central Ave', salePrice: 815_000, sqft: 4_770, soldOn: '2026-04-04', distanceMi: 0.1 }],
     },
-    listingDemand: { amount: 500, explanation: '4 showings in the first 15 days, normal for a new listing.' },
+    listingDemand: { amount: 1_500, explanation: '4 showings in the first 15 days and a cash offer at $840K already; strong for a new listing.' },
   },
   'BOOL-044': {
     newComps: {
@@ -293,7 +293,7 @@ const SEEDS: Record<string, ProposalSeed> = {
       explanation: 'One Altadena new build closed in line with March.',
       comps: [{ address: '1920 N Marengo Ave', salePrice: 1_985_000, sqft: 3_780, soldOn: '2026-03-26', distanceMi: 0.1 }],
     },
-    listingDemand: { amount: 1_000, explanation: '9 showings in 29 days with one second showing; steady interest.' },
+    listingDemand: { amount: 1_000, explanation: '9 showings in 19 days with one second showing; ahead of the LA pace.' },
     status: 'approved',
     approvedBy: 'Elena Ruiz',
   },

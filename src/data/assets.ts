@@ -2,11 +2,14 @@ import type {
   Asset,
   AssetDiligence,
   AssetIntake,
+  AssetListing,
+  BuyerFinancing,
   AssetStage,
   Market,
   MonthlyMark,
   DiligenceIssue,
   DiligenceSignoffKind,
+  ListingOffer,
   PipelineStatus,
   UnderwriteOverrideField,
   UnderwritingStatus,
@@ -42,7 +45,23 @@ interface Seed {
   inspectionExpires?: string; // defaults to 10 days after contractDate
   closedOn?: string;
   pct?: number;               // construction progress, 0–1; for_sale/sold default to 1
-  listing?: { listedOn: string; listPrice: number; showings: number; priceDrops: number };
+  listing?: {
+    listedOn: string;
+    listPrice: number;   // current list price
+    showings: number;
+    priceDrops: number;
+    /** Weekly [showings, online views, saves] since listing; the last week may be partial. */
+    weeks?: [number, number, number][];
+    drops?: { date: string; from: number; to: number }[];
+    offers?: {
+      date: string;
+      amount: number;
+      financing: BuyerFinancing;
+      concessions: number;
+      concessionNote?: string;
+      status: ListingOffer['status'];
+    }[];
+  };
   /**
    * Realized at sale: closing as % of land, build vs. budget (%, + = overrun),
    * and carry as % of realized build. Selling costs use the standard rate on sale price.
@@ -141,6 +160,48 @@ function buildMarks(s: Seed, esp: number): MonthlyMark[] {
   return marks;
 }
 
+/** Listing totals plus, where seeded, weekly history, price drops and offers. Totals must agree. */
+function buildListing(s: Seed): AssetListing {
+  const l = s.listing!;
+  const listedOn = iso(l.listedOn);
+  const daysOnMarket = daysRemaining(iso(s.sale?.soldOn ?? DEMO_TODAY), listedOn);
+  const listing: AssetListing = {
+    listedOn,
+    listPrice: l.listPrice,
+    daysOnMarket,
+    showings: l.showings,
+    priceDrops: l.priceDrops,
+  };
+  const fail = (msg: string) => {
+    throw new Error(`Listing for ${s.id}: ${msg}`);
+  };
+
+  if (l.weeks) {
+    if (l.weeks.length !== Math.ceil(daysOnMarket / 7)) fail(`${l.weeks.length} weeks of history for ${daysOnMarket} days`);
+    listing.weeklyHistory = l.weeks.map(([showings, views, saves], i) => ({
+      weekStart: addDays(listedOn, i * 7),
+      days: Math.min(7, daysOnMarket - i * 7),
+      showings,
+      views,
+      saves,
+    }));
+    const total = l.weeks.reduce((sum, [showings]) => sum + showings, 0);
+    if (total !== l.showings) fail(`weekly showings sum to ${total}, not ${l.showings}`);
+  }
+
+  if (l.drops) {
+    if (l.drops.length !== l.priceDrops) fail(`${l.drops.length} drops in history, ${l.priceDrops} counted`);
+    l.drops.forEach((d, i) => {
+      if (i > 0 && d.from !== l.drops![i - 1].to) fail(`drop ${i + 1} starts at ${d.from}, not the prior price`);
+    });
+    if (l.drops.length && l.drops[l.drops.length - 1].to !== l.listPrice) fail('last drop doesn’t land on the list price');
+    listing.priceDropHistory = l.drops.map((d) => ({ ...d, date: iso(d.date) }));
+  }
+
+  if (l.offers) listing.offers = l.offers.map((o) => ({ ...o, date: iso(o.date) }));
+  return listing;
+}
+
 function buildAsset(s: Seed): Asset {
   const asset: Asset = {
     id: s.id,
@@ -235,15 +296,7 @@ function buildAsset(s: Seed): Asset {
     asset.marks = buildMarks(s, s.uw.esp);
   }
 
-  if (s.listing) {
-    asset.listing = {
-      listedOn: iso(s.listing.listedOn),
-      listPrice: s.listing.listPrice,
-      daysOnMarket: daysRemaining(iso(s.sale?.soldOn ?? DEMO_TODAY), iso(s.listing.listedOn)),
-      showings: s.listing.showings,
-      priceDrops: s.listing.priceDrops,
-    };
-  }
+  if (s.listing) asset.listing = buildListing(s);
 
   if (s.sale && s.uw) {
     const realized = costStack({
@@ -500,7 +553,13 @@ const forSaleSeeds: Seed[] = [
     market: 'DFW', stage: 'for_sale', lotSqFt: 7000,
     uw: { plan: 'The Daniel', esp: 1_060_000, land: 285_000, build: 540_000 },
     closedOn: '2024-11-14',
-    listing: { listedOn: '2026-02-06', listPrice: 1_075_000, showings: 18, priceDrops: 0 },
+    listing: {
+      // Steady showings, no offers.
+      listedOn: '2026-02-06', listPrice: 1_075_000, showings: 18, priceDrops: 0,
+      weeks: [[3, 520, 24], [3, 410, 15], [2, 330, 11], [2, 290, 9], [2, 260, 8], [1, 220, 6], [2, 240, 7], [1, 190, 5], [1, 170, 4], [1, 150, 4], [0, 20, 0]],
+      drops: [],
+      offers: [],
+    },
     // No offers in ~50 days on market; March post-listing mark cut to recent Preston Hollow closings.
     markOverrides: [{ month: '2026-03', change: -68_000, approvedBy: 'J. Park' }],
   },
@@ -509,14 +568,32 @@ const forSaleSeeds: Seed[] = [
     market: 'Houston', stage: 'for_sale', lotSqFt: 6250,
     uw: { plan: 'The Emerson', esp: 1_010_000, land: 280_000, build: 510_000 },
     closedOn: '2024-12-09',
-    listing: { listedOn: '2026-03-13', listPrice: 1_025_000, showings: 11, priceDrops: 0 },
+    listing: {
+      // Active offer below the current mark.
+      listedOn: '2026-03-13', listPrice: 1_025_000, showings: 11, priceDrops: 0,
+      weeks: [[2, 380, 14], [2, 300, 10], [2, 270, 9], [2, 260, 8], [2, 240, 8], [1, 40, 1]],
+      drops: [],
+      offers: [
+        { date: '2026-03-28', amount: 960_000, financing: 'Conventional', concessions: 15_000, concessionNote: 'Closing-cost credit', status: 'rejected' },
+        { date: '2026-04-14', amount: 995_000, financing: 'Conventional', concessions: 10_000, concessionNote: 'Closing-cost credit', status: 'active' },
+      ],
+    },
   },
   {
     id: 'BOOL-031', address: '2916 W Granada St', city: 'Tampa', state: 'FL', zip: '33629',
     market: 'Tampa', stage: 'for_sale', lotSqFt: 6500,
     uw: { plan: 'The Dakota', esp: 1_150_000, land: 310_000, build: 585_000 },
     closedOn: '2024-09-20',
-    listing: { listedOn: '2026-01-16', listPrice: 1_075_000, showings: 24, priceDrops: 2 },
+    listing: {
+      // Steady showings, no offers, even after two cuts.
+      listedOn: '2026-01-16', listPrice: 1_075_000, showings: 24, priceDrops: 2,
+      weeks: [[2, 480, 18], [2, 390, 12], [1, 300, 8], [1, 260, 6], [2, 280, 7], [3, 520, 19], [2, 360, 10], [1, 250, 6], [3, 470, 16], [2, 330, 9], [2, 280, 7], [1, 220, 5], [1, 190, 4], [1, 30, 0]],
+      drops: [
+        { date: '2026-02-20', from: 1_195_000, to: 1_135_000 },
+        { date: '2026-03-18', from: 1_135_000, to: 1_075_000 },
+      ],
+      offers: [],
+    },
     // Price drops in February and March; March cut approved. April's further cut is a proposal.
     markOverrides: [{ month: '2026-03', change: -69_500, approvedBy: 'J. Park' }],
   },
@@ -525,14 +602,26 @@ const forSaleSeeds: Seed[] = [
     market: 'St. Pete', stage: 'for_sale', lotSqFt: 5800,
     uw: { plan: 'The Benjamin', esp: 890_000, land: 215_000, build: 500_000 },
     closedOn: '2025-01-17',
-    listing: { listedOn: '2026-03-27', listPrice: 899_000, showings: 7, priceDrops: 0 },
+    listing: {
+      // Healthy: ahead of the St. Pete pace.
+      listedOn: '2026-04-01', listPrice: 899_000, showings: 7, priceDrops: 0,
+      weeks: [[3, 520, 31], [3, 430, 24], [1, 160, 9]],
+      drops: [],
+      offers: [],
+    },
   },
   {
     id: 'BOOL-033', address: '2423 Glendon Ave', city: 'Los Angeles', state: 'CA', zip: '90064',
     market: 'LA', stage: 'for_sale', lotSqFt: 5500,
     uw: { plan: 'The Kendall', esp: 3_280_000, land: 1_120_000, build: 1_340_000 },
     closedOn: '2024-10-04',
-    listing: { listedOn: '2026-02-20', listPrice: 3_199_000, showings: 15, priceDrops: 1 },
+    listing: {
+      // Low traffic, even after the March cut.
+      listedOn: '2026-02-20', listPrice: 3_199_000, showings: 7, priceDrops: 1,
+      weeks: [[2, 310, 9], [1, 220, 5], [1, 240, 6], [1, 180, 4], [1, 150, 3], [0, 120, 2], [0, 110, 2], [1, 100, 2], [0, 10, 0]],
+      drops: [{ date: '2026-03-10', from: 3_349_000, to: 3_199_000 }],
+      offers: [],
+    },
     // Price drop in March after soft showing feedback; mark follows the new list price.
     markOverrides: [{ month: '2026-03', change: -173_000, approvedBy: 'J. Park' }],
   },
@@ -541,7 +630,13 @@ const forSaleSeeds: Seed[] = [
     market: 'LA', stage: 'for_sale', lotSqFt: 6000,
     uw: { plan: 'The Daniel', esp: 4_150_000, land: 1_450_000, build: 1_660_000 },
     closedOn: '2024-08-22',
-    listing: { listedOn: '2026-01-09', listPrice: 3_950_000, showings: 21, priceDrops: 1 },
+    listing: {
+      // Stale: well past the LA norm, traffic fading after the March cut.
+      listedOn: '2026-01-09', listPrice: 3_950_000, showings: 21, priceDrops: 1,
+      weeks: [[3, 640, 31], [2, 480, 20], [2, 390, 15], [1, 300, 10], [1, 260, 8], [1, 220, 6], [1, 200, 5], [1, 180, 5], [2, 330, 14], [2, 280, 11], [1, 190, 6], [1, 160, 4], [1, 140, 3], [1, 120, 3], [1, 15, 0]],
+      drops: [{ date: '2026-03-12', from: 4_295_000, to: 3_950_000 }],
+      offers: [],
+    },
     // Price drop in March after 60+ days on market; mark follows the new list price.
     markOverrides: [{ month: '2026-03', change: -254_500, approvedBy: 'J. Park' }],
   },
@@ -550,14 +645,28 @@ const forSaleSeeds: Seed[] = [
     market: 'Tampa', stage: 'for_sale', lotSqFt: 5600,
     uw: { plan: 'The Dakota', esp: 835_000, land: 180_000, build: 490_000 },
     closedOn: '2025-02-11',
-    listing: { listedOn: '2026-04-03', listPrice: 849_000, showings: 4, priceDrops: 0 },
+    listing: {
+      // Active offer above the current mark, two weeks in.
+      listedOn: '2026-04-03', listPrice: 849_000, showings: 4, priceDrops: 0,
+      weeks: [[2, 410, 22], [1, 330, 15], [1, 50, 3]],
+      drops: [],
+      offers: [
+        { date: '2026-04-13', amount: 840_000, financing: 'Cash', concessions: 0, status: 'active' },
+      ],
+    },
   },
   {
     id: 'BOOL-044', address: '1845 N Marengo Ave', city: 'Altadena', state: 'CA', zip: '91001',
     market: 'LA', stage: 'for_sale', lotSqFt: 6500,
     uw: { plan: 'The Kendall', esp: 1_980_000, land: 640_000, build: 805_000 },
     closedOn: '2025-03-06',
-    listing: { listedOn: '2026-03-20', listPrice: 2_025_000, showings: 9, priceDrops: 0 },
+    listing: {
+      // Healthy: ahead of the LA pace with strong saves.
+      listedOn: '2026-03-30', listPrice: 2_025_000, showings: 9, priceDrops: 0,
+      weeks: [[4, 780, 44], [3, 640, 35], [2, 420, 21]],
+      drops: [],
+      offers: [],
+    },
   },
 ];
 

@@ -5,6 +5,7 @@ import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue
 import { getAIDraft } from '../data/aiDrafts';
 import { ASSETS } from '../data/assets';
 import { DEMO_TODAY } from '../data/dates';
+import { useListingActions, withListingActions } from '../data/listingActions';
 import { useMarkReviews, withMarkReviews } from '../data/markReview';
 import { APPROVAL_THRESHOLD, PIPELINE_STAGES, stageHistory, underwritingGap } from '../data/selectors';
 import type { GapLine } from '../data/selectors';
@@ -459,6 +460,69 @@ function ListingSection({ asset }: { asset: Asset }) {
         <Stat label="Showings"><ProvenanceValue info={MLS}>{l.showings}</ProvenanceValue></Stat>
         <Stat label="Price drops"><ProvenanceValue info={MLS}>{l.priceDrops}</ProvenanceValue></Stat>
       </div>
+
+      {l.priceDropHistory && l.priceDropHistory.length > 0 && (
+        <>
+          <h3 className="as-subhead">Price drops</h3>
+          <table className="as-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th className="as-num">From</th>
+                <th className="as-num">To</th>
+                <th className="as-num">Drop</th>
+                <th>Logged by</th>
+              </tr>
+            </thead>
+            <tbody>
+              {l.priceDropHistory.map((d) => {
+                const info: ProvenanceInfo = d.loggedBy ? { provenance: 'human', note: `Accepted from the listing board by ${d.loggedBy}` } : MLS;
+                return (
+                  <tr key={d.date}>
+                    <td>{shortDate(d.date)}</td>
+                    <td className="as-num"><ProvenanceValue info={MLS}>{usd(d.from)}</ProvenanceValue></td>
+                    <td className="as-num"><ProvenanceValue info={info}>{usd(d.to)}</ProvenanceValue></td>
+                    <td className="as-num as-bad"><ProvenanceValue info={info}>−{usd(d.from - d.to)}</ProvenanceValue></td>
+                    <td>{d.loggedBy ? `${d.loggedBy} · this session` : 'MLS'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {l.offers && l.offers.length > 0 && (
+        <>
+          <h3 className="as-subhead">Offers</h3>
+          <table className="as-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th className="as-num">Amount</th>
+                <th>Financing</th>
+                <th className="as-num">Concessions</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {l.offers.map((o) => (
+                <tr key={o.date}>
+                  <td>{shortDate(o.date)}</td>
+                  <td className="as-num"><ProvenanceValue info={MLS}>{usd(o.amount)}</ProvenanceValue></td>
+                  <td>{o.financing}</td>
+                  <td className="as-num">{o.concessions ? <ProvenanceValue info={MLS}>{usd(o.concessions)}</ProvenanceValue> : '—'}</td>
+                  <td>
+                    <span className={`as-pill as-pill--${o.status === 'active' || o.status === 'countered' ? 'conditional' : o.status === 'accepted' ? 'done' : 'pending'}`}>
+                      {o.status[0].toUpperCase() + o.status.slice(1)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
     </Card>
   );
 }
@@ -552,7 +616,8 @@ export default function AssetDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { reviews, published } = useMarkReviews();
-  const asset = withMarkReviews(ASSETS, reviews, published).find((a) => a.id === id);
+  const { actions } = useListingActions();
+  const asset = withListingActions(withMarkReviews(ASSETS, reviews, published), actions).find((a) => a.id === id);
 
   if (!asset) {
     return (

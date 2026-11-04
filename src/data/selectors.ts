@@ -1,6 +1,7 @@
 import type { Asset, AssetStage, Market, MonthlyMark, UnderwritingStatus } from '../types';
 import { ASSETS } from './assets';
 import { DEMO_TODAY, daysSince } from './dates';
+import { isStale } from './listingHealth';
 
 // ── Portfolio selectors ────────────────────────────────────────
 // Pure functions over the asset list. Every selector defaults to the full
@@ -27,9 +28,6 @@ export type BalanceSheetStage = (typeof BALANCE_SHEET_STAGES)[number];
 
 /** Sold assets count toward the lifecycle only within this trailing window. */
 export const SOLD_WINDOW_MONTHS = 6;
-
-/** For-sale listings older than this many days on market are flagged as stale. */
-export const STALE_LISTING_DAYS = 60;
 
 export { APPROVAL_THRESHOLD } from './markProposals';
 
@@ -193,8 +191,9 @@ export function assetsNeedingApproval(assets: Asset[] = ASSETS): Asset[] {
   return assets.filter((a) => a.markProposal?.status === 'needs_approval');
 }
 
-export function staleListings(assets: Asset[] = ASSETS, days: number = STALE_LISTING_DAYS): Asset[] {
-  return assets.filter((a) => a.stage === 'for_sale' && a.listing && a.listing.daysOnMarket > days);
+/** For-sale listings more than 1.5× their market's typical days on market (see listingHealth.ts). */
+export function staleListings(assets: Asset[] = ASSETS): Asset[] {
+  return assets.filter(isStale);
 }
 
 /** Sold assets whose sale closed within the trailing window ending at `asOf`. */

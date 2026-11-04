@@ -170,12 +170,42 @@ export interface AssetOwned {
   pctComplete: number;  // 0–1
 }
 
+export interface ListingWeek {
+  weekStart: string;    // ISO
+  days: number;         // 7, or fewer for the current week
+  showings: number;
+  views: number;        // online listing views
+  saves: number;        // online saves / favorites
+}
+
+export interface PriceDrop {
+  date: string;         // ISO
+  from: number;
+  to: number;
+  loggedBy?: string;    // set when accepted from the listing health board this session
+}
+
+export type BuyerFinancing = 'Cash' | 'Conventional' | 'Jumbo' | 'FHA' | 'VA';
+
+export interface ListingOffer {
+  date: string;         // ISO
+  amount: number;
+  financing: BuyerFinancing;
+  concessions: number;  // $ requested from the seller; 0 for none
+  concessionNote?: string;
+  status: 'active' | 'countered' | 'rejected' | 'accepted';
+}
+
 export interface AssetListing {
   listedOn: string;     // ISO
-  listPrice: number;
+  listPrice: number;    // current (after any drops)
   daysOnMarket: number;
-  showings: number;
-  priceDrops: number;
+  showings: number;     // total; equals the sum of weeklyHistory showings
+  priceDrops: number;   // equals priceDropHistory.length where history exists
+  // For-sale listings carry full history; sold listings only the totals above.
+  weeklyHistory?: ListingWeek[];
+  priceDropHistory?: PriceDrop[];
+  offers?: ListingOffer[];
 }
 
 /** Realized costs at sale; marginPct is against salePrice. */
