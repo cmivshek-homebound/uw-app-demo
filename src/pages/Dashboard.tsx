@@ -101,6 +101,7 @@ function BalanceCells({ row }: { row: BalanceSheetRow }) {
     <>
       <td className="db-num">{row.count}</td>
       <td className="db-num">{row.count ? usdCompact(row.costBasis) : '—'}</td>
+      <td className="db-num">{row.count ? usdCompact(row.projectedTotalCost) : '—'}</td>
       <td className="db-num">{row.count ? usdCompact(row.currentMark) : '—'}</td>
       <td className="db-num db-margin">{pct(row.impliedMarginPct)}</td>
     </>
@@ -247,7 +248,8 @@ export default function Dashboard() {
             <tr>
               <th>Stage</th>
               <th className="db-num">Assets</th>
-              <th className="db-num">Cost Basis</th>
+              <th className="db-num">Cost to Date</th>
+              <th className="db-num">Projected Total Cost</th>
               <th className="db-num">Current Mark</th>
               <th className="db-num">Implied Margin</th>
             </tr>
@@ -268,8 +270,8 @@ export default function Dashboard() {
           </tfoot>
         </table>
         <p className="db-footnote">
-          Cost basis = land + vertical spend to date. Implied margin = (current mark − underwritten
-          all-in cost) ÷ current mark.
+          Cost to date = land + vertical spend to date. Projected total cost = land + full vertical
+          budget. Implied margin = (current mark − projected total cost) ÷ current mark.
         </p>
       </section>
 

@@ -73,6 +73,16 @@ export function costBasisByStage(assets: Asset[] = ASSETS): Record<AssetStage, n
   return byStage(assets, (list) => list.reduce((sum, a) => sum + costBasis(a), 0));
 }
 
+/** Projected all-in cost: land plus the full vertical budget. Zero before close. */
+export function projectedTotalCost(asset: Asset): number {
+  if (!asset.owned || !asset.underwrite) return 0;
+  return asset.underwrite.landPrice + asset.owned.budget;
+}
+
+export function projectedTotalCostByStage(assets: Asset[] = ASSETS): Record<AssetStage, number> {
+  return byStage(assets, (list) => list.reduce((sum, a) => sum + projectedTotalCost(a), 0));
+}
+
 /** Sum of each asset's latest mark value. Only owned stages carry marks. */
 export function currentMarkByStage(assets: Asset[] = ASSETS): Record<AssetStage, number> {
   return byStage(assets, (list) => list.reduce((sum, a) => sum + (latestMark(a)?.value ?? 0), 0));
@@ -134,22 +144,22 @@ export function lifecycleByStage(assets: Asset[] = ASSETS): Record<AssetStage, L
 
 export interface BalanceSheetRow {
   count: number;
-  costBasis: number;      // land + vertical spend to date
-  currentMark: number;    // sum of latest marks
-  totalCost: number;      // underwritten all-in cost (land + full vertical budget)
-  impliedMarginPct: number | null; // (currentMark - totalCost) / currentMark
+  costBasis: number;          // land + vertical spend to date
+  projectedTotalCost: number; // land + full vertical budget
+  currentMark: number;        // sum of latest marks
+  impliedMarginPct: number | null; // (currentMark - projectedTotalCost) / currentMark
 }
 
 function balanceRow(list: Asset[]): BalanceSheetRow {
   const costBasisSum = list.reduce((sum, a) => sum + costBasis(a), 0);
+  const projectedTotal = list.reduce((sum, a) => sum + projectedTotalCost(a), 0);
   const currentMark = list.reduce((sum, a) => sum + (latestMark(a)?.value ?? 0), 0);
-  const totalCost = list.reduce((sum, a) => sum + (a.underwrite?.totalCost ?? 0), 0);
   return {
     count: list.length,
     costBasis: costBasisSum,
+    projectedTotalCost: projectedTotal,
     currentMark,
-    totalCost,
-    impliedMarginPct: currentMark > 0 ? ((currentMark - totalCost) / currentMark) * 100 : null,
+    impliedMarginPct: currentMark > 0 ? ((currentMark - projectedTotal) / currentMark) * 100 : null,
   };
 }
 
