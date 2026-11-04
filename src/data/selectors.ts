@@ -93,6 +93,21 @@ export function marketPlanNames(market: Market, assets: Asset[] = ASSETS): Set<s
   return new Set(assets.filter((a) => a.market === market && a.underwrite).map((a) => a.underwrite!.planName));
 }
 
+/** Date the asset entered each stage it has reached, in lifecycle order. */
+export function stageHistory(asset: Asset): { stage: AssetStage; date?: string; reached: boolean }[] {
+  const dates: Record<AssetStage, string | undefined> = {
+    opportunity: asset.intake?.dateReceived,
+    underwriting: asset.underwrite?.underwrittenOn,
+    under_contract: asset.contract?.contractDate,
+    precon: asset.owned?.closedOn,
+    construction: asset.owned?.startedOn,
+    for_sale: asset.listing?.listedOn,
+    sold: asset.sale?.soldOn,
+  };
+  const current = ASSET_STAGES.indexOf(asset.stage);
+  return ASSET_STAGES.map((stage, i) => ({ stage, date: i <= current ? dates[stage] : undefined, reached: i <= current }));
+}
+
 export function assetsByStage(assets: Asset[] = ASSETS): Record<AssetStage, Asset[]> {
   return byStage(assets, (list) => list);
 }

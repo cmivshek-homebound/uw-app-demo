@@ -346,3 +346,13 @@
   border-color: #1A6B4A;
   color: #1A6B4A;
 }
+
+.uc-record-link {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1A6B4A;
+  text-decoration: none;
+}
+
+.uc-record-link:hover { text-decoration: underline; }

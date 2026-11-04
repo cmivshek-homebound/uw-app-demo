@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { mockOpportunities } from '../data/opportunities';
 import type { Opportunity } from '../types';
 import './OpportunityQueue.css';
@@ -78,7 +78,16 @@ export default function OpportunityQueue() {
           <tbody>
             {filtered.map((opp) => (
               <tr key={opp.id} className="oq-row" onClick={() => navigate(`/underwrite/${opp.id}`)}>
-                <td className="oq-id">{opp.id}</td>
+                <td className="oq-id">
+                  <Link
+                    to={`/asset/${opp.id}`}
+                    className="oq-id-link"
+                    title="View asset record"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {opp.id}
+                  </Link>
+                </td>
                 <td className="oq-address">{opp.address}, {opp.city}, {opp.state} {opp.zip}</td>
                 <td>{opp.market}</td>
                 <td>{formatSqFt(opp.lotSqFt)}</td>

@@ -62,26 +62,75 @@ export interface AssetIntake {
   dateReceived: string; // ISO
 }
 
-export interface AssetUnderwrite {
-  planName: string;
+/** Cost stack shared by the underwrite (projected) and the sale (realized). */
+export interface CostBreakdown {
   landPrice: number;
   closingCosts: number;    // on land
-  buildCost: number;       // vertical budget
+  buildCost: number;       // vertical
   carryCosts: number;      // construction financing and carry
   sellingCosts: number;    // commissions and seller closing costs
   totalCost: number;       // land + closing + build + carry + selling (see data/underwriting.ts)
-  esp: number;
-  marginPct: number;       // (esp - totalCost) / esp, as a percent
+  marginPct: number;       // (price - totalCost) / price, as a percent
+}
+
+export type UnderwriteOverrideField =
+  | 'esp'
+  | 'buildCost'
+  | 'landPrice'
+  | 'compPricePerSqft'
+  | 'sideSetback'
+  | 'maxCoveragePct';
+
+export interface UnderwriteOverride {
+  field: UnderwriteOverrideField;
+  aiValue: number;
+  finalValue: number;      // matches the underwrite for esp, buildCost and landPrice
+  reason: string;
+}
+
+export interface UnderwriteReview {
+  analyst: string;
+  reviewedOn: string;      // ISO
+  overrides: UnderwriteOverride[];
+}
+
+export interface AssetUnderwrite extends CostBreakdown {
+  planName: string;
+  esp: number;             // marginPct is against ESP
   underwrittenOn: string;  // ISO
+  review?: UnderwriteReview; // assets past underwriting
+}
+
+export type DiligenceSignoffKind = 'design_plan_fit' | 'site_visit' | 'procurement_budget' | 'sales_lot_feedback';
+
+export interface DiligenceSignoff {
+  kind: DiligenceSignoffKind;
+  owner: string;
+  date: string;            // ISO; signed-off date, or due date while pending
+  status: 'signed_off' | 'conditional' | 'pending'; // conditional = signed with an open issue
+}
+
+export interface DiligenceIssue {
+  category: string;        // e.g. 'Protected tree', 'Seller condition'
+  notes: string;
+  raisedBy: DiligenceSignoffKind;
+  status: 'open' | 'resolved';
+}
+
+export interface AssetDiligence {
+  signoffs: DiligenceSignoff[];
+  issues: DiligenceIssue[];
 }
 
 export interface AssetContract {
   contractDate: string;      // ISO
   inspectionExpires: string; // ISO
+  diligence?: AssetDiligence; // under_contract and later
 }
 
 export interface AssetOwned {
   closedOn: string;     // ISO
+  startedOn?: string;   // ISO, construction start; construction and later
   budget: number;       // vertical budget (underwrite.buildCost)
   costToDate: number;   // vertical spend to date
   pctComplete: number;  // 0–1
@@ -95,7 +144,8 @@ export interface AssetListing {
   priceDrops: number;
 }
 
-export interface AssetSale {
+/** Realized costs at sale; marginPct is against salePrice. */
+export interface AssetSale extends CostBreakdown {
   soldOn: string;       // ISO
   salePrice: number;
 }

@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { latestMark } from '../data/selectors';
 import type { Asset, AssetStage } from '../types';
 // Reuse the queue's page and table classes (oq-*).
@@ -24,6 +25,7 @@ function formatMonth(month: string) {
 }
 
 export default function AssetStageTable({ assets }: { assets: Asset[] }) {
+  const navigate = useNavigate();
   return (
     <div className="oq-table-wrapper">
       <table className="oq-table">
@@ -40,7 +42,7 @@ export default function AssetStageTable({ assets }: { assets: Asset[] }) {
           {assets.map((asset) => {
             const mark = latestMark(asset);
             return (
-              <tr key={asset.id}>
+              <tr key={asset.id} className="oq-row" onClick={() => navigate(`/asset/${asset.id}`)}>
                 <td className="oq-id">{asset.id}</td>
                 <td className="oq-address">{asset.address}, {asset.city}, {asset.state} {asset.zip}</td>
                 <td>{asset.market}</td>

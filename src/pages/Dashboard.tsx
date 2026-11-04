@@ -68,13 +68,7 @@ interface AttentionItem {
 
 /** Page where an asset at its current stage is worked. */
 function assetPath(asset: Asset): string {
-  switch (asset.stage) {
-    case 'opportunity':
-    case 'underwriting':   return `/underwrite/${asset.id}`;
-    case 'under_contract': return `/contract/${asset.id}`;
-    case 'for_sale':       return '/for-sale';
-    default:               return '/portfolio';
-  }
+  return `/asset/${asset.id}`;
 }
 
 function signedUsd(n: number) {

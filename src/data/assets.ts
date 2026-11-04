@@ -1,14 +1,18 @@
 import type {
   Asset,
+  AssetDiligence,
   AssetIntake,
   AssetStage,
   Market,
   MonthlyMark,
+  DiligenceIssue,
+  DiligenceSignoffKind,
   PipelineStatus,
+  UnderwriteOverrideField,
   UnderwritingStatus,
 } from '../types';
 import { DEMO_TODAY, daysRemaining } from './dates';
-import { buildForMargin, costStack, marginPct } from './underwriting';
+import { buildForMargin, closingCostPctFor, costStack, marginPct } from './underwriting';
 
 // ── Unified asset portfolio ────────────────────────────────────
 // Single source of truth for property data. opportunities.ts and
@@ -38,12 +42,29 @@ interface Seed {
   closedOn?: string;
   pct?: number;               // construction progress, 0–1; for_sale/sold default to 1
   listing?: { listedOn: string; listPrice: number; showings: number; priceDrops: number };
-  sale?: { soldOn: string; salePrice: number };
+  /**
+   * Realized at sale: closing as % of land, build vs. budget (%, + = overrun),
+   * and carry as % of realized build. Selling costs use the standard rate on sale price.
+   */
+  sale?: { soldOn: string; salePrice: number; closingPct: number; buildVariancePct?: number; carryPct: number };
   /** Forced mark moves (replace that month's drift). */
   markOverrides?: { month: string; change: number; approvedBy?: string }[];
 }
 
 const AUTO_APPROVER = 'Auto-approved';
+
+/** Pre-con runs this long before construction starts. */
+const PRECON_DAYS = 45;
+/** Intake for owned assets, which predate the queue: received this long before underwriting. */
+const INTAKE_LEAD_DAYS = 6;
+const SDR_BY_MARKET: Record<Market, string> = {
+  DFW: 'Ben Teters',
+  Houston: 'Ryan Weiss',
+  Tampa: 'Danny Gaule',
+  'St. Pete': 'Karsten Thompson',
+  LA: 'Danny Gaule',
+};
+const STARTED_STAGES: AssetStage[] = ['construction', 'for_sale', 'sold'];
 const MAX_DRIFT = 9_500; // keeps routine monthly drift under the $10K approval threshold
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -139,7 +160,13 @@ function buildAsset(s: Seed): Asset {
   const contractDate = s.contractDate ?? (s.closedOn ? addDays(s.closedOn, -30) : undefined);
 
   if (s.uw) {
-    const costs = costStack({ land: s.uw.land, build: s.uw.build, esp: s.uw.esp });
+    const underwrittenOn = iso(s.uw.on ?? addDays(contractDate!, -7));
+    const costs = costStack({
+      land: s.uw.land,
+      build: s.uw.build,
+      esp: s.uw.esp,
+      closingPct: closingCostPctFor(underwrittenOn),
+    });
     asset.underwrite = {
       planName: s.uw.plan,
       landPrice: s.uw.land,
@@ -150,23 +177,55 @@ function buildAsset(s: Seed): Asset {
       totalCost: costs.total,
       esp: s.uw.esp,
       marginPct: marginPct(s.uw.esp, costs.total),
-      underwrittenOn: iso(s.uw.on ?? addDays(contractDate!, -7)),
+      underwrittenOn,
     };
+    if (!asset.intake) {
+      asset.intake = {
+        source: Number(s.id.slice(-2)) % 2 ? 'MLS' : 'Off-Market',
+        sdrOwner: SDR_BY_MARKET[s.market],
+        dateReceived: addDays(underwrittenOn, -INTAKE_LEAD_DAYS),
+      };
+    }
+    const review = REVIEWS[s.id];
+    if (review) {
+      const uwValues: Partial<Record<UnderwriteOverrideField, number>> = {
+        esp: s.uw.esp,
+        buildCost: s.uw.build,
+        landPrice: s.uw.land,
+      };
+      asset.underwrite.review = {
+        analyst: review.analyst,
+        reviewedOn: addDays(underwrittenOn, review.days),
+        overrides: (review.overrides ?? []).map((o) => ({
+          field: o.field,
+          aiValue: o.ai,
+          finalValue: uwValues[o.field] ?? o.final!,
+          reason: o.reason,
+        })),
+      };
+    }
   }
 
   if (contractDate) {
     asset.contract = {
       contractDate: iso(contractDate),
       inspectionExpires: iso(s.inspectionExpires ?? addDays(contractDate, 10)),
+      diligence: buildDiligence(s, contractDate),
     };
   }
+
+  // Realized build for sold assets; everything else spends against budget.
+  const realizedBuild = s.sale && s.uw
+    ? Math.round((s.uw.build * (1 + (s.sale.buildVariancePct ?? 0) / 100)) / 500) * 500
+    : undefined;
 
   if (s.closedOn && s.uw) {
     const pct = s.pct ?? 1;
     asset.owned = {
       closedOn: iso(s.closedOn),
+      ...(STARTED_STAGES.includes(s.stage) && { startedOn: addDays(s.closedOn, PRECON_DAYS) }),
       budget: s.uw.build,
-      costToDate: Math.round(s.uw.build * pct),
+      costToDate: realizedBuild ?? Math.round(s.uw.build * pct),
       pctComplete: pct,
     };
     asset.marks = buildMarks(s, s.uw.esp);
@@ -182,8 +241,25 @@ function buildAsset(s: Seed): Asset {
     };
   }
 
-  if (s.sale) {
-    asset.sale = { soldOn: iso(s.sale.soldOn), salePrice: s.sale.salePrice };
+  if (s.sale && s.uw) {
+    const realized = costStack({
+      land: s.uw.land,
+      build: realizedBuild!,
+      esp: s.sale.salePrice,
+      closingPct: s.sale.closingPct,
+      carryPct: s.sale.carryPct,
+    });
+    asset.sale = {
+      soldOn: iso(s.sale.soldOn),
+      salePrice: s.sale.salePrice,
+      landPrice: realized.land,
+      closingCosts: realized.closing,
+      buildCost: realized.build,
+      carryCosts: realized.carry,
+      sellingCosts: realized.selling,
+      totalCost: realized.total,
+      marginPct: marginPct(s.sale.salePrice, realized.total),
+    };
   }
 
   return asset;
@@ -491,7 +567,7 @@ const soldSeeds: Seed[] = [
     uw: { plan: 'The Emerson', esp: 1_020_000, land: 250_000, build: 550_000 },
     closedOn: '2024-05-16',
     listing: { listedOn: '2025-09-05', listPrice: 1_039_000, showings: 22, priceDrops: 1 },
-    sale: { soldOn: '2025-10-24', salePrice: 1_012_000 },
+    sale: { soldOn: '2025-10-24', salePrice: 1_012_000, closingPct: 0.88, carryPct: 6.6 },
   },
   {
     id: 'BOOL-036', address: '2105 Peden St', city: 'Houston', state: 'TX', zip: '77019',
@@ -499,15 +575,15 @@ const soldSeeds: Seed[] = [
     uw: { plan: 'The Ryan', esp: 940_000, land: 250_000, build: 520_000 },
     closedOn: '2024-06-27',
     listing: { listedOn: '2025-10-17', listPrice: 959_000, showings: 16, priceDrops: 0 },
-    sale: { soldOn: '2025-12-05', salePrice: 951_000 },
+    sale: { soldOn: '2025-12-05', salePrice: 951_000, closingPct: 0.93, buildVariancePct: -2.5, carryPct: 6.0 },
   },
   {
     id: 'BOOL-037', address: '3412 W Bay Vista Ave', city: 'Tampa', state: 'FL', zip: '33611',
     market: 'Tampa', stage: 'sold', lotSqFt: 6700,
     uw: { plan: 'The Daniel', esp: 1_210_000, land: 300_000, build: 650_000 },
     closedOn: '2024-07-30',
-    listing: { listedOn: '2025-11-14', listPrice: 1_249_000, showings: 19, priceDrops: 1 },
-    sale: { soldOn: '2026-01-22', salePrice: 1_218_000 },
+    listing: { listedOn: '2025-11-14', listPrice: 1_209_000, showings: 19, priceDrops: 1 },
+    sale: { soldOn: '2026-01-22', salePrice: 1_189_000, closingPct: 0.9, buildVariancePct: 6.5, carryPct: 7.2 },
   },
   {
     id: 'BOOL-038', address: '735 18th Ave NE', city: 'St. Petersburg', state: 'FL', zip: '33704',
@@ -515,7 +591,7 @@ const soldSeeds: Seed[] = [
     uw: { plan: 'The Emerson', esp: 1_090_000, land: 280_000, build: 605_000 },
     closedOn: '2024-09-10',
     listing: { listedOn: '2026-01-08', listPrice: 1_115_000, showings: 14, priceDrops: 0 },
-    sale: { soldOn: '2026-02-27', salePrice: 1_104_000 },
+    sale: { soldOn: '2026-02-27', salePrice: 1_104_000, closingPct: 0.55, carryPct: 6.1 },
   },
   {
     id: 'BOOL-039', address: '3540 Military Ave', city: 'Los Angeles', state: 'CA', zip: '90034',
@@ -523,7 +599,7 @@ const soldSeeds: Seed[] = [
     uw: { plan: 'The Kendall', esp: 2_950_000, land: 1_000_000, build: 1_190_000 },
     closedOn: '2024-08-08',
     listing: { listedOn: '2025-12-05', listPrice: 2_995_000, showings: 17, priceDrops: 1 },
-    sale: { soldOn: '2026-03-18', salePrice: 2_920_000 },
+    sale: { soldOn: '2026-03-18', salePrice: 2_920_000, closingPct: 0.95, buildVariancePct: 4.5, carryPct: 8.4 },
   },
   {
     id: 'BOOL-045', address: '6814 Lakeshore Dr', city: 'Dallas', state: 'TX', zip: '75214',
@@ -531,9 +607,267 @@ const soldSeeds: Seed[] = [
     uw: { plan: 'The Daniel', esp: 1_045_000, land: 275_000, build: 540_000 },
     closedOn: '2024-12-03',
     listing: { listedOn: '2026-01-30', listPrice: 1_059_000, showings: 12, priceDrops: 0 },
-    sale: { soldOn: '2026-04-09', salePrice: 1_048_000 },
+    sale: { soldOn: '2026-04-09', salePrice: 1_048_000, closingPct: 0.6, carryPct: 7.4 },
   },
 ];
+
+// ── Underwrite reviews ─────────────────────────────────────────
+// Who reviewed each underwrite past the underwriting stage, how many days
+// after it was drafted, and what they overrode. ESP, build and land overrides
+// take their final value from the underwrite above; others state it.
+interface ReviewSeed {
+  analyst: string;
+  days: number;
+  overrides?: { field: UnderwriteOverrideField; ai: number; final?: number; reason: string }[];
+}
+
+const REVIEWS: Record<string, ReviewSeed> = {
+  // Under contract
+  'BOOL-001': {
+    analyst: 'Luis Ortega', days: 0,
+    overrides: [{ field: 'compPricePerSqft', ai: 275, final: 282, reason: 'Corner lot premium on The Daniel’s comps' }],
+  },
+  'BOOL-012': {
+    analyst: 'Maya Chen', days: 2,
+    overrides: [{ field: 'buildCost', ai: 1_225_000, reason: 'Protected coast live oak needs a modified foundation' }],
+  },
+  'BOOL-040': { analyst: 'Priya Shah', days: 1 },
+  // Pre-con
+  'BOOL-013': {
+    analyst: 'Luis Ortega', days: 1,
+    overrides: [{ field: 'esp', ai: 1_030_000, reason: 'Two Lakewood comps closed above the draft median after it ran' }],
+  },
+  'BOOL-014': { analyst: 'Priya Shah', days: 2 },
+  'BOOL-015': {
+    analyst: 'Maya Chen', days: 1,
+    overrides: [{ field: 'esp', ai: 1_315_000, reason: 'Busy-street discount: lot fronts Bay to Bay Blvd' }],
+  },
+  'BOOL-016': { analyst: 'Luis Ortega', days: 1 },
+  'BOOL-017': {
+    analyst: 'Priya Shah', days: 2,
+    overrides: [{ field: 'buildCost', ai: 997_000, reason: 'LADWP power-line relocation quoted at $18K' }],
+  },
+  'BOOL-041': {
+    analyst: 'Jordan Pike', days: 1,
+    overrides: [
+      { field: 'esp', ai: 975_000, reason: 'Dropped a Bishop Arts comp with a pool and casita that skewed high' },
+      { field: 'buildCost', ai: 575_000, reason: 'Soil report calls for a pier-and-beam foundation' },
+    ],
+  },
+  // Construction
+  'BOOL-018': { analyst: 'Luis Ortega', days: 1 },
+  'BOOL-019': {
+    analyst: 'Jordan Pike', days: 2,
+    overrides: [{ field: 'compPricePerSqft', ai: 221, final: 215, reason: 'Dropped an off-market outlier from the comp set' }],
+  },
+  'BOOL-020': {
+    analyst: 'Jordan Pike', days: 1,
+    overrides: [{ field: 'esp', ai: 1_110_000, reason: 'Lakewood conservation district premium for brick elevations' }],
+  },
+  'BOOL-021': {
+    analyst: 'Priya Shah', days: 1,
+    overrides: [{ field: 'sideSetback', ai: 5, final: 7.5, reason: 'Deed restrictions require 7.5 ft side setbacks' }],
+  },
+  'BOOL-022': {
+    analyst: 'Jordan Pike', days: 2,
+    overrides: [{ field: 'buildCost', ai: 485_000, reason: 'Lot sits below street grade; French drain and raised slab per civil' }],
+  },
+  'BOOL-023': {
+    analyst: 'Luis Ortega', days: 1,
+    overrides: [
+      { field: 'buildCost', ai: 445_000, reason: 'Soil report calls for a pier-and-beam foundation' },
+      { field: 'esp', ai: 790_000, reason: 'Lot backs to a commercial alley' },
+    ],
+  },
+  'BOOL-024': { analyst: 'Maya Chen', days: 2 },
+  'BOOL-025': {
+    analyst: 'Jordan Pike', days: 1,
+    overrides: [{ field: 'esp', ai: 830_000, reason: 'Busy-street discount: a block off Florida Ave' }],
+  },
+  'BOOL-026': { analyst: 'Elena Ruiz', days: 1 },
+  'BOOL-027': {
+    analyst: 'Elena Ruiz', days: 2,
+    overrides: [{ field: 'buildCost', ai: 1_270_000, reason: 'Arborist monitoring for two protected sycamores' }],
+  },
+  'BOOL-028': { analyst: 'Maya Chen', days: 1 },
+  'BOOL-042': {
+    analyst: 'Priya Shah', days: 1,
+    overrides: [{ field: 'compPricePerSqft', ai: 172, final: 168, reason: 'Excluded a renovated resale miscoded as new construction' }],
+  },
+  // For sale
+  'BOOL-029': { analyst: 'Elena Ruiz', days: 1 },
+  'BOOL-030': {
+    analyst: 'Jordan Pike', days: 2,
+    overrides: [{ field: 'esp', ai: 995_000, reason: 'Park-facing lot sells at a premium' }],
+  },
+  'BOOL-031': {
+    analyst: 'Elena Ruiz', days: 1,
+    overrides: [{ field: 'esp', ai: 1_175_000, reason: 'Sales flagged Dale Mabry traffic 0.3 mi away' }],
+  },
+  'BOOL-032': { analyst: 'Jordan Pike', days: 1 },
+  'BOOL-033': { analyst: 'Elena Ruiz', days: 2 },
+  'BOOL-034': {
+    analyst: 'Elena Ruiz', days: 1,
+    overrides: [
+      { field: 'esp', ai: 4_250_000, reason: 'Two Ocean Park comps have ocean views this lot lacks' },
+      { field: 'buildCost', ai: 1_620_000, reason: 'Coastal zone permit adds engineering and inspections' },
+    ],
+  },
+  'BOOL-043': { analyst: 'Jordan Pike', days: 1 },
+  'BOOL-044': {
+    analyst: 'Jordan Pike', days: 2,
+    overrides: [{ field: 'maxCoveragePct', ai: 50, final: 45, reason: 'Hillside ordinance caps coverage at 45%' }],
+  },
+  // Sold
+  'BOOL-035': { analyst: 'Elena Ruiz', days: 1 },
+  'BOOL-036': {
+    analyst: 'Elena Ruiz', days: 2,
+    overrides: [{ field: 'buildCost', ai: 535_000, reason: 'Procurement locked the framing package before a lumber increase' }],
+  },
+  'BOOL-037': { analyst: 'Jordan Pike', days: 1 },
+  'BOOL-038': {
+    analyst: 'Elena Ruiz', days: 1,
+    overrides: [{ field: 'esp', ai: 1_075_000, reason: 'Waterfront-adjacent comps support a higher ESP' }],
+  },
+  'BOOL-039': { analyst: 'Elena Ruiz', days: 2 },
+  'BOOL-045': { analyst: 'Jordan Pike', days: 1 },
+};
+
+// ── Contract diligence ─────────────────────────────────────────
+// Four sign-offs per contract, due a set number of days after signing.
+// A sign-off is pending until its date passes, and conditional while an
+// issue it raised is still open. Owners are fictional, by market.
+const SIGNOFF_SCHEDULE: { kind: DiligenceSignoffKind; days: number }[] = [
+  { kind: 'design_plan_fit', days: 2 },
+  { kind: 'site_visit', days: 3 },
+  { kind: 'sales_lot_feedback', days: 5 },
+  { kind: 'procurement_budget', days: 7 },
+];
+
+const SIGNOFF_OWNERS: Record<Market, Record<DiligenceSignoffKind, string>> = {
+  DFW: { design_plan_fit: 'Ana Brooks', site_visit: 'Marcus Lee', procurement_budget: 'Dev Patel', sales_lot_feedback: 'Kim Alvarez' },
+  Houston: { design_plan_fit: 'Ana Brooks', site_visit: 'Dana Whitfield', procurement_budget: 'Dev Patel', sales_lot_feedback: 'Brett Lowe' },
+  Tampa: { design_plan_fit: 'Tess Morgan', site_visit: 'Chris Vega', procurement_budget: 'Dev Patel', sales_lot_feedback: 'Jules Martin' },
+  'St. Pete': { design_plan_fit: 'Tess Morgan', site_visit: 'Chris Vega', procurement_budget: 'Dev Patel', sales_lot_feedback: 'Jules Martin' },
+  LA: { design_plan_fit: 'Rafael Ortiz', site_visit: 'Nora Kim', procurement_budget: 'Dev Patel', sales_lot_feedback: 'Sam Rivera' },
+};
+
+interface DiligenceSeed {
+  /** Dates that differ from the schedule (BOOL-001 follows its contract workflow). */
+  dates?: Partial<Record<DiligenceSignoffKind, string>>;
+  /** Still open past their due date. */
+  overdue?: DiligenceSignoffKind[];
+  issues?: DiligenceIssue[];
+}
+
+const DILIGENCE: Record<string, DiligenceSeed> = {
+  'BOOL-001': {
+    // Matches the Under Contract page: site visit due Apr 15, A&D procurement due Apr 17.
+    dates: { design_plan_fit: '2026-04-14', site_visit: '2026-04-15', procurement_budget: '2026-04-17', sales_lot_feedback: '2026-04-21' },
+    overdue: ['site_visit', 'procurement_budget'],
+    issues: [
+      { category: 'Commercial proximity', raisedBy: 'sales_lot_feedback', status: 'open',
+        notes: 'Gas station 190 ft NE, flagged at triage. Sales to confirm buyer impact before IC.' },
+    ],
+  },
+  'BOOL-012': {
+    issues: [
+      { category: 'Protected tree', raisedBy: 'site_visit', status: 'open',
+        notes: 'Coast live oak in the rear yard is protected; arborist report ordered and the footprint may shift 4 ft.' },
+    ],
+  },
+  'BOOL-040': {
+    issues: [
+      { category: 'Seller condition', raisedBy: 'sales_lot_feedback', status: 'open',
+        notes: 'Seller wants to keep the iron front gate; agreed to close with the backyard shed removed.' },
+    ],
+  },
+  'BOOL-013': {
+    issues: [
+      { category: 'Survey encroachment', raisedBy: 'site_visit', status: 'resolved',
+        notes: 'Neighbor’s fence sat 1.5 ft over the east line; boundary agreement signed before close.' },
+    ],
+  },
+  'BOOL-015': {
+    issues: [
+      { category: 'Protected tree', raisedBy: 'site_visit', status: 'resolved',
+        notes: 'Grand live oak (34 in DBH) near the front setback; driveway moved to save it, no removal permit needed.' },
+    ],
+  },
+  'BOOL-017': {
+    issues: [
+      { category: 'Utility conflict', raisedBy: 'site_visit', status: 'resolved',
+        notes: 'Overhead power line crosses the rear corner; LADWP relocation quoted at $18K and added to the budget.' },
+    ],
+  },
+  'BOOL-020': {
+    issues: [
+      { category: 'Design review', raisedBy: 'design_plan_fit', status: 'resolved',
+        notes: 'Lakewood conservation district required facade review; approved with the brick elevation.' },
+    ],
+  },
+  'BOOL-022': {
+    issues: [
+      { category: 'Drainage', raisedBy: 'site_visit', status: 'resolved',
+        notes: 'Lot sits 8 in below street grade; French drain and raised slab added per civil.' },
+    ],
+  },
+  'BOOL-024': {
+    issues: [
+      { category: 'Seller condition', raisedBy: 'sales_lot_feedback', status: 'resolved',
+        notes: 'Seller asked for a 30-day rent-back after close; granted, start pushed 3 weeks.' },
+    ],
+  },
+  'BOOL-027': {
+    issues: [
+      { category: 'Protected tree', raisedBy: 'site_visit', status: 'resolved',
+        notes: 'Two protected sycamores along the side yard; arborist monitors foundation work.' },
+    ],
+  },
+  'BOOL-031': {
+    issues: [
+      { category: 'Location', raisedBy: 'sales_lot_feedback', status: 'resolved',
+        notes: 'Sales flagged Dale Mabry traffic 0.3 mi away; ESP set below the AI draft.' },
+    ],
+  },
+  'BOOL-034': {
+    issues: [
+      { category: 'Seller condition', raisedBy: 'sales_lot_feedback', status: 'resolved',
+        notes: 'Seller kept the right to salvage the original Craftsman doors before demo.' },
+    ],
+  },
+  'BOOL-037': {
+    issues: [
+      { category: 'Soils', raisedBy: 'site_visit', status: 'resolved',
+        notes: 'Boring found an organic layer at 6 ft; budget held, but auger-cast piles later ran about $42K over.' },
+    ],
+  },
+  'BOOL-039': {
+    issues: [
+      { category: 'Retaining wall', raisedBy: 'site_visit', status: 'resolved',
+        notes: 'Grade change at the rear line needed a retaining wall; final engineering came in about $54K over budget.' },
+    ],
+  },
+  'BOOL-044': {
+    issues: [
+      { category: 'Grading permit', raisedBy: 'design_plan_fit', status: 'resolved',
+        notes: 'Driveway slope needed a hillside grading permit; approved with a 45% coverage cap.' },
+    ],
+  },
+};
+
+function buildDiligence(s: Seed, contractDate: string): AssetDiligence {
+  const seed = DILIGENCE[s.id];
+  const issues = seed?.issues ?? [];
+  const signoffs = SIGNOFF_SCHEDULE.map(({ kind, days }) => {
+    const date = iso(seed?.dates?.[kind] ?? addDays(contractDate, days));
+    const openIssue = issues.some((i) => i.raisedBy === kind && i.status === 'open');
+    const pending = date > DEMO_TODAY || seed?.overdue?.includes(kind);
+    const status = pending ? 'pending' : openIssue ? 'conditional' : 'signed_off';
+    return { kind, owner: SIGNOFF_OWNERS[s.market][kind], date, status } as const;
+  });
+  return { signoffs, issues };
+}
 
 export const ASSETS: Asset[] = [
   ...pipelineSeeds,

@@ -7,6 +7,15 @@ export const CLOSING_COST_PCT = 0.9;  // of land price
 export const CARRY_COST_PCT = 6;      // of build, construction-period financing and carry
 export const SELLING_COST_PCT = 5.5;  // of ESP, commissions and seller closing costs
 
+// Underwrites before this date assumed 0.5% closing costs; realized closings
+// ran ~0.9%, so the assumption was corrected from January 2026 on.
+export const LEGACY_CLOSING_COST_PCT = 0.5;
+export const CLOSING_COST_CORRECTED_ON = '2026-01-01';
+
+export function closingCostPctFor(underwrittenOn: string): number {
+  return underwrittenOn < CLOSING_COST_CORRECTED_ON ? LEGACY_CLOSING_COST_PCT : CLOSING_COST_PCT;
+}
+
 export interface CostStack {
   land: number;
   closing: number;
@@ -16,10 +25,24 @@ export interface CostStack {
   total: number;
 }
 
-export function costStack({ land, build, esp }: { land: number; build: number; esp: number }): CostStack {
-  const closing = Math.round(land * (CLOSING_COST_PCT / 100));
-  const carry = Math.round(build * (CARRY_COST_PCT / 100));
-  const selling = Math.round(esp * (SELLING_COST_PCT / 100));
+export function costStack({
+  land,
+  build,
+  esp,
+  closingPct = CLOSING_COST_PCT,
+  carryPct = CARRY_COST_PCT,
+  sellingPct = SELLING_COST_PCT,
+}: {
+  land: number;
+  build: number;
+  esp: number;          // or the sale price, for realized costs
+  closingPct?: number;
+  carryPct?: number;
+  sellingPct?: number;
+}): CostStack {
+  const closing = Math.round(land * (closingPct / 100));
+  const carry = Math.round(build * (carryPct / 100));
+  const selling = Math.round(esp * (sellingPct / 100));
   return { land, closing, build, carry, selling, total: land + closing + build + carry + selling };
 }
 

@@ -197,3 +197,14 @@
   color: #a3a3a3;
   font-size: 14px;
 }
+
+.oq-id-link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dotted #c4c4c4;
+}
+
+.oq-id-link:hover {
+  color: #1A6B4A;
+  border-bottom-color: #1A6B4A;
+}

@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
   CONTRACT_DEALS,
   daysRemaining,
@@ -163,6 +163,7 @@ export default function UnderContractPage() {
         </button>
         <span className="sc-breadcrumb-sep">›</span>
         <span className="sc-breadcrumb-current">Under Contract</span>
+        <Link to={`/asset/${deal.oppId}`} className="uc-record-link">View asset record →</Link>
       </div>
 
       <DealHeader deal={deal} />

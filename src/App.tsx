@@ -6,6 +6,7 @@ import OpportunityQueue from './pages/OpportunityQueue';
 import UnderwritePage from './pages/UnderwritePage';
 import UnderwriteBoard from './pages/UnderwriteBoard';
 import AIDraftPage from './pages/AIDraftPage';
+import AssetDetailPage from './pages/AssetDetailPage';
 import ScenarioEngine from './pages/ScenarioEngine';
 import CompSelectionPage from './pages/CompSelectionPage';
 import UnderContractPage from './pages/UnderContractPage';
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/underwrite/:id/scenario/comps" element={<CompSelectionPage />} />
           <Route path="/contract" element={<Navigate to={`/contract/${DEMO_DEAL_ID}`} replace />} />
           <Route path="/contract/:id" element={<UnderContractPage />} />
+          <Route path="/asset/:id" element={<AssetDetailPage />} />
           <Route path="/portfolio" element={<PortfolioPage />} />
           <Route path="/for-sale" element={<ForSalePage />} />
         </Routes>

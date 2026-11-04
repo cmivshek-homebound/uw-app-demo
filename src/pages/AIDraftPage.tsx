@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
 import { aduRuleText } from '../data/adu';
 import {
@@ -424,7 +424,11 @@ export default function AIDraftPage() {
             <span className="ad-meta-sep">·</span>
             <ProvenanceValue info={SFDC}>{sqft(asset.lotSqFt)} lot</ProvenanceValue>
           </p>
-          <p className="ad-drafted">Drafted by AI in {draft.draftedInSec}s</p>
+          <p className="ad-drafted">
+            Drafted by AI in {draft.draftedInSec}s
+            <span className="ad-meta-sep">·</span>
+            <Link to={`/asset/${asset.id}`} className="ad-record-link">View asset record</Link>
+          </p>
         </div>
         <div className={`ad-score ad-score--${overall}`}>
           <span className="ad-score-label">Overall confidence</span>
