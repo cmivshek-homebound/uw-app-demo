@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+import { getAIDraft } from '../data/aiDrafts';
 import type { Opportunity } from '../types';
 import './TriageCard.css';
 
@@ -83,6 +85,7 @@ interface Props {
 export default function TriageCard({ opp, onDQ, onProceed, onOverride }: Props) {
   const triage = TRIAGE_DATA[opp.id];
   const isAutoDQ = triage?.overallResult === 'fail';
+  const hasDraft = getAIDraft(opp.id) !== undefined;
 
   return (
     <div className="triage-card">
@@ -127,6 +130,11 @@ export default function TriageCard({ opp, onDQ, onProceed, onOverride }: Props) 
 
       {/* Actions */}
       <div className="triage-actions">
+        {hasDraft && (
+          <Link className="triage-btn triage-btn-draft" to={`/underwrite/${opp.id}/draft`}>
+            View AI draft
+          </Link>
+        )}
         {isAutoDQ ? (
           <>
             <button className="triage-btn triage-btn-auto-dq" onClick={onDQ}>

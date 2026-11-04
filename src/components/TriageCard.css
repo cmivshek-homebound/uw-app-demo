@@ -188,3 +188,11 @@
   color: #525252;
   border: 1px solid #e5e5e5;
 }
+
+.triage-btn-draft {
+  margin-right: auto;
+  background-color: #fff;
+  color: #1A6B4A;
+  border: 1px solid #b7d9c8;
+  text-decoration: none;
+}

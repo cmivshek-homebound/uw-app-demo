@@ -73,7 +73,7 @@ export function costBasisByStage(assets: Asset[] = ASSETS): Record<AssetStage, n
   return byStage(assets, (list) => list.reduce((sum, a) => sum + costBasis(a), 0));
 }
 
-/** Projected all-in cost: land plus the full vertical budget. Zero before close. */
+/** Projected land + full vertical budget (excludes closing, carry and selling). Zero before close. */
 export function projectedTotalCost(asset: Asset): number {
   if (!asset.owned || !asset.underwrite) return 0;
   return asset.underwrite.landPrice + asset.owned.budget;

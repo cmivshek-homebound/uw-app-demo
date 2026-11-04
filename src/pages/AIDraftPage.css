@@ -1,0 +1,349 @@
+/* ── AI draft underwrite ── */
+.ad-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ad-meta-sep {
+  margin: 0 7px;
+  color: #c4c4c4;
+}
+
+.ad-drafted {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #8a8a8a;
+}
+
+.ad-score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid #e5e5e5;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.ad-score-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #a3a3a3;
+}
+
+.ad-score-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #171717;
+}
+
+.ad-score-max {
+  font-size: 13px;
+  font-weight: 500;
+  color: #a3a3a3;
+  margin-left: 2px;
+}
+
+.ad-score--high   { border-color: #b7d9c8; }
+.ad-score--medium { border-color: #fde68a; }
+.ad-score--low    { border-color: #fecaca; }
+
+.ad-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Sections ── */
+.ad-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.ad-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #a3a3a3;
+  margin: 0;
+}
+
+.ad-chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ad-chip--high   { background: #eef6f1; color: #1A6B4A; border: 1px solid #b7d9c8; }
+.ad-chip--medium { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.ad-chip--low    { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+.ad-note {
+  margin: -4px 0 16px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ad-note--medium { background: #fffbeb; color: #92400e; }
+.ad-note--low    { background: #fef2f2; color: #991b1b; }
+
+.ad-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px 24px;
+}
+
+.ad-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ad-field-label {
+  font-size: 11.5px;
+  color: #a3a3a3;
+  font-weight: 500;
+}
+
+.ad-field-value {
+  font-size: 14px;
+  color: #171717;
+  font-weight: 500;
+}
+
+.ad-sub {
+  font-size: 12.5px;
+  color: #737373;
+}
+
+.ad-footnote {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: #a3a3a3;
+}
+
+/* ── Tables ── */
+.ad-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.ad-table th {
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #a3a3a3;
+  padding: 0 10px 8px;
+  border-bottom: 1px solid #e5e5e5;
+  white-space: nowrap;
+}
+
+.ad-table td {
+  padding: 10px;
+  border-bottom: 1px solid #f5f5f5;
+  color: #262626;
+}
+
+.ad-table th:first-child,
+.ad-table td:first-child { padding-left: 0; }
+
+.ad-table th:last-child,
+.ad-table td:last-child { padding-right: 0; }
+
+.ad-table tfoot td {
+  border-bottom: none;
+  border-top: 1px solid #e5e5e5;
+  font-weight: 600;
+}
+
+.ad-num {
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+.ad-plan-name {
+  font-weight: 600;
+  color: #171717;
+}
+
+.ad-plan-meta {
+  display: block;
+  font-size: 12px;
+  color: #a3a3a3;
+  margin-top: 2px;
+}
+
+.ad-rec-tag {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: #1A6B4A;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.ad-margin { color: #1A6B4A; font-weight: 600; }
+.ad-below-target { color: #dc2626; }
+
+/* ── ADU ── */
+.ad-adu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fafafa;
+  border: 1px solid #e5e5e5;
+  margin-bottom: 16px;
+}
+
+.ad-adu--fits {
+  background: #eef6f1;
+  border-color: #b7d9c8;
+}
+
+.ad-adu-flag {
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: #1A6B4A;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ad-adu-flag--none {
+  background: #e5e5e5;
+  color: #525252;
+}
+
+.ad-adu-text {
+  margin: 0;
+  font-size: 13.5px;
+  color: #262626;
+}
+
+/* ── Recommendation ── */
+.ad-rec-plan {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: #404040;
+}
+
+.ad-rec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.ad-rec-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+}
+
+.ad-rec-label {
+  font-size: 11.5px;
+  color: #a3a3a3;
+  font-weight: 500;
+}
+
+.ad-rec-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #171717;
+}
+
+.ad-rec-sub {
+  font-size: 11.5px;
+  color: #a3a3a3;
+}
+
+@media (max-width: 720px) {
+  .ad-page { padding: 20px 16px; }
+  .ad-section { overflow-x: auto; }
+  .uw-header { flex-direction: column; }
+  .ad-score { align-items: flex-start; }
+}
+
+/* ── AI summary ── */
+.ad-summary {
+  margin: -12px 0 20px;
+  padding: 12px 16px;
+  border-left: 3px solid #1A6B4A;
+  background: #fff;
+  border-radius: 0 8px 8px 0;
+}
+
+.ad-summary-line {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #262626;
+}
+
+/* ── Recommendation breakdown ── */
+.ad-rec-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px 32px;
+  margin-bottom: 20px;
+}
+
+.ad-rec-heading {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #a3a3a3;
+  margin: 0 0 8px;
+}
+
+.ad-calc {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 16px;
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.ad-calc dt { color: #404040; }
+
+.ad-calc dd {
+  margin: 0;
+  text-align: right;
+  white-space: nowrap;
+  color: #171717;
+  font-weight: 500;
+}
+
+.ad-calc-sub {
+  display: block;
+  font-size: 12px;
+  color: #8a8a8a;
+  margin-top: 2px;
+}
+
+.ad-calc-total {
+  padding-top: 8px;
+  border-top: 1px solid #e5e5e5;
+  font-weight: 700 !important;
+  color: #171717 !important;
+}

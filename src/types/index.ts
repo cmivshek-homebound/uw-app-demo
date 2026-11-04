@@ -62,7 +62,11 @@ export interface AssetIntake {
 export interface AssetUnderwrite {
   planName: string;
   landPrice: number;
-  totalCost: number;       // land + vertical
+  closingCosts: number;    // on land
+  buildCost: number;       // vertical budget
+  carryCosts: number;      // construction financing and carry
+  sellingCosts: number;    // commissions and seller closing costs
+  totalCost: number;       // land + closing + build + carry + selling (see data/underwriting.ts)
   esp: number;
   marginPct: number;       // (esp - totalCost) / esp, as a percent
   underwrittenOn: string;  // ISO
@@ -75,7 +79,7 @@ export interface AssetContract {
 
 export interface AssetOwned {
   closedOn: string;     // ISO
-  budget: number;       // vertical budget (totalCost - landPrice)
+  budget: number;       // vertical budget (underwrite.buildCost)
   costToDate: number;   // vertical spend to date
   pctComplete: number;  // 0–1
 }
