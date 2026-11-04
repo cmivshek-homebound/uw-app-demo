@@ -91,7 +91,7 @@ export default function AIDraftPage() {
       <div className="uw-page">
         <div className="uw-not-found">
           <p>No AI draft for <strong>{id}</strong>. Drafts exist only for opportunity- and underwriting-stage assets.</p>
-          <button className="uw-back-btn" onClick={() => navigate('/queue')}>← Back to Queue</button>
+          <button className="uw-back-btn" onClick={() => navigate('/underwrite')}>← Back to Underwrite</button>
         </div>
       </div>
     );
@@ -105,7 +105,7 @@ export default function AIDraftPage() {
   return (
     <div className="uw-page ad-page">
       <div className="uw-breadcrumb">
-        <button className="uw-breadcrumb-link" onClick={() => navigate('/queue')}>Opportunity Queue</button>
+        <button className="uw-breadcrumb-link" onClick={() => navigate('/underwrite')}>Underwrite</button>
         <span className="uw-breadcrumb-sep">›</span>
         <button className="uw-breadcrumb-link" onClick={() => navigate(`/underwrite/${asset.id}`)}>{asset.id}</button>
         <span className="uw-breadcrumb-sep">›</span>

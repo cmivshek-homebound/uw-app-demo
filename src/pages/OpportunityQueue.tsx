@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { mockOpportunities } from '../data/opportunities';
 import type { Opportunity } from '../types';
 import './OpportunityQueue.css';
@@ -29,7 +29,10 @@ function formatSqFt(n: number) {
 
 export default function OpportunityQueue() {
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<string>('all');
+  const [params] = useSearchParams();
+  // ?status= preselects a filter, e.g. the Underwrite board's DQ'd link.
+  const initialFilter = FILTERS.some((f) => f.value === params.get('status')) ? params.get('status')! : 'all';
+  const [filter, setFilter] = useState<string>(initialFilter);
 
   const filtered = filter === 'all'
     ? mockOpportunities

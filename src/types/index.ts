@@ -43,6 +43,9 @@ export interface ProvenanceInfo {
 
 export type PipelineStatus = Opportunity['status'];
 
+/** Where a pipeline asset sits on the Underwrite board. */
+export type UnderwritingStatus = 'ai_drafting' | 'draft_ready' | 'analyst_review' | 'submitted_to_growth';
+
 export type MarkMethod = 'Asset Valuation' | 'Post-listing';
 
 export interface MonthlyMark {
@@ -107,6 +110,9 @@ export interface Asset {
   stage: AssetStage;
   lotSqFt: number;
   pipelineStatus?: PipelineStatus; // opportunity / underwriting stages only
+  underwritingStatus?: UnderwritingStatus; // pipeline assets not DQ'd
+  underwritingSince?: string;              // ISO, when it entered its current status
+  analyst?: string;                        // assigned underwriting analyst
   intake?: AssetIntake;
   underwrite?: AssetUnderwrite;
   contract?: AssetContract;

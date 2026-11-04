@@ -7,31 +7,14 @@ export default function UnderwritePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const opp = id ? mockOpportunities.find((o) => o.id === id) : null;
+  const opp = mockOpportunities.find((o) => o.id === id);
 
-  if (!opp && id) {
+  if (!opp) {
     return (
       <div className="uw-page">
         <div className="uw-not-found">
           <p>Opportunity <strong>{id}</strong> not found.</p>
           <button className="uw-back-btn" onClick={() => navigate('/queue')}>← Back to Queue</button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!opp) {
-    return (
-      <div className="uw-page">
-        <div className="uw-empty-state">
-          <div className="uw-empty-icon">
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              <path d="M24 4L44 16V44H30V32H18V44H4V16L24 4Z" fill="#e5e5e5" />
-            </svg>
-          </div>
-          <h2>No opportunity selected</h2>
-          <p>Select a property from the queue to begin underwriting.</p>
-          <button className="uw-back-btn" onClick={() => navigate('/queue')}>← Go to Queue</button>
         </div>
       </div>
     );

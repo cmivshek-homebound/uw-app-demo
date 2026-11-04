@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import homeboundLogo from '../assets/homebound-logo.png';
 import { daysRemaining } from '../data/dates';
-import { assetsByStage, countByStage, pipelineAssets } from '../data/selectors';
+import { assetsByStage, countByStage, pipelineAssets, underwritingBoard } from '../data/selectors';
 import './NavBar.css';
 
 export default function NavBar() {
@@ -12,7 +12,7 @@ export default function NavBar() {
   const stageCounts = countByStage();
   const pipelineCount = pipeline.length;
   const pendingCount = pipeline.filter((a) => a.pipelineStatus === 'pending_review').length;
-  const inReviewCount = pipeline.filter((a) => a.pipelineStatus === 'in_review').length;
+  const draftReadyCount = underwritingBoard().draft_ready.length;
   const contractCount = stageCounts.under_contract;
   const portfolioCount = stageCounts.precon + stageCounts.construction;
   const forSaleCount = stageCounts.for_sale;
@@ -38,9 +38,9 @@ export default function NavBar() {
       to: '/underwrite',
       label: 'Underwrite',
       active: pathname.startsWith('/underwrite'),
-      count: inReviewCount,
-      tone: 'muted',
-      title: `${inReviewCount} in review`,
+      count: draftReadyCount,
+      tone: draftReadyCount > 0 ? 'attention' : 'muted',
+      title: `${draftReadyCount} AI drafts ready for review`,
     },
     {
       to: '/contract',

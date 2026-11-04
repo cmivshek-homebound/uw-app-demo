@@ -5,6 +5,7 @@ import type {
   Market,
   MonthlyMark,
   PipelineStatus,
+  UnderwritingStatus,
 } from '../types';
 import { DEMO_TODAY, daysRemaining } from './dates';
 import { buildForMargin, costStack, marginPct } from './underwriting';
@@ -26,6 +27,8 @@ interface Seed {
   stage: AssetStage;
   lotSqFt: number;
   pipelineStatus?: PipelineStatus;
+  /** Underwrite board column, the date it entered it, and the assigned analyst. */
+  uwBoard?: { status: UnderwritingStatus; since: string; analyst: string };
   intake?: AssetIntake;
   /** Underwrite inputs; the rest of the cost stack is derived. `on` defaults to a week before contract. */
   uw?: { plan: string; esp: number; land: number; build: number; on?: string };
@@ -125,6 +128,11 @@ function buildAsset(s: Seed): Asset {
   };
   if (s.pipelineStatus) asset.pipelineStatus = s.pipelineStatus;
   if (s.intake) asset.intake = { ...s.intake, dateReceived: iso(s.intake.dateReceived) };
+  if (s.uwBoard) {
+    asset.underwritingStatus = s.uwBoard.status;
+    asset.underwritingSince = iso(s.uwBoard.since);
+    asset.analyst = s.uwBoard.analyst;
+  }
 
   const contractDate = s.contractDate ?? (s.closedOn ? addDays(s.closedOn, -30) : undefined);
 
@@ -185,17 +193,20 @@ const pipelineSeeds: Seed[] = [
   {
     id: 'BOOL-002', address: '5102 Ridgecrest Ln', city: 'Dallas', state: 'TX', zip: '75228',
     market: 'DFW', stage: 'underwriting', lotSqFt: 7100, pipelineStatus: 'in_review',
+    uwBoard: { status: 'analyst_review', since: '2026-04-16', analyst: 'Maya Chen' },
     intake: { source: 'MLS', sdrOwner: 'Ben Teters', dateReceived: '2026-04-14' },
     uw: { plan: 'The Emerson', esp: 900_000, land: 215_000, build: 455_000, on: '2026-04-16' },
   },
   {
     id: 'BOOL-003', address: '8834 Sunbrook Ct', city: 'Houston', state: 'TX', zip: '77055',
     market: 'Houston', stage: 'opportunity', lotSqFt: 5800, pipelineStatus: 'pending_review',
+    uwBoard: { status: 'draft_ready', since: '2026-04-17', analyst: 'Priya Shah' },
     intake: { source: 'Off-Market', sdrOwner: 'Ryan Weiss', dateReceived: '2026-04-13' },
   },
   {
     id: 'BOOL-004', address: '4710 Elmwood Pass', city: 'Tampa', state: 'FL', zip: '33606',
     market: 'Tampa', stage: 'underwriting', lotSqFt: 6500, pipelineStatus: 'ready_for_offer',
+    uwBoard: { status: 'submitted_to_growth', since: '2026-04-17', analyst: 'Luis Ortega' },
     intake: { source: 'MLS', sdrOwner: 'Danny Gaule', dateReceived: '2026-04-12' },
     uw: { plan: 'The Daniel', esp: 1_210_000, land: 320_000, build: 530_000, on: '2026-04-15' },
   },
@@ -207,34 +218,40 @@ const pipelineSeeds: Seed[] = [
   {
     id: 'BOOL-006', address: '7734 Lawndale St', city: 'Houston', state: 'TX', zip: '77023',
     market: 'Houston', stage: 'underwriting', lotSqFt: 6800, pipelineStatus: 'ready_for_offer',
+    uwBoard: { status: 'submitted_to_growth', since: '2026-04-16', analyst: 'Maya Chen' },
     intake: { source: 'Off-Market', sdrOwner: 'Ryan Weiss', dateReceived: '2026-04-10' },
     uw: { plan: 'The Benjamin', esp: 730_000, land: 150_000, build: 420_000, on: '2026-04-13' },
   },
   {
     id: 'BOOL-007', address: '2241 Cove Cay Dr', city: 'Clearwater', state: 'FL', zip: '33760',
     market: 'St. Pete', stage: 'opportunity', lotSqFt: 7200, pipelineStatus: 'pending_review',
+    uwBoard: { status: 'draft_ready', since: '2026-04-15', analyst: 'Luis Ortega' },
     intake: { source: 'MLS', sdrOwner: 'Karsten Thompson', dateReceived: '2026-04-09' },
   },
   {
     id: 'BOOL-008', address: '4892 Chevy Chase Dr', city: 'Dallas', state: 'TX', zip: '75225',
     market: 'DFW', stage: 'underwriting', lotSqFt: 8100, pipelineStatus: 'in_review',
+    uwBoard: { status: 'analyst_review', since: '2026-04-14', analyst: 'Luis Ortega' },
     intake: { source: 'Off-Market', sdrOwner: 'Grady Knipper', dateReceived: '2026-04-09' },
-    uw: { plan: 'The Daniel', esp: 1_355_000, land: 420_000, build: 570_000, on: '2026-04-12' },
+    uw: { plan: 'The Daniel', esp: 1_355_000, land: 420_000, build: 570_000, on: '2026-04-14' },
   },
   {
     id: 'BOOL-009', address: '11234 Gorham Ave', city: 'Los Angeles', state: 'CA', zip: '90049',
     market: 'LA', stage: 'opportunity', lotSqFt: 4900, pipelineStatus: 'pending_review',
+    uwBoard: { status: 'draft_ready', since: '2026-04-13', analyst: 'Maya Chen' },
     intake: { source: 'MLS', sdrOwner: 'Danny Gaule', dateReceived: '2026-04-08' },
   },
   {
     id: 'BOOL-010', address: '5523 Morningside Dr', city: 'Houston', state: 'TX', zip: '77005',
     market: 'Houston', stage: 'underwriting', lotSqFt: 5600, pipelineStatus: 'in_review',
+    uwBoard: { status: 'analyst_review', since: '2026-04-13', analyst: 'Priya Shah' },
     intake: { source: 'Off-Market', sdrOwner: 'Ryan Weiss', dateReceived: '2026-04-08' },
-    uw: { plan: 'The Ryan', esp: 1_095_000, land: 290_000, build: 555_000, on: '2026-04-11' },
+    uw: { plan: 'The Ryan', esp: 1_095_000, land: 290_000, build: 555_000, on: '2026-04-13' },
   },
   {
     id: 'BOOL-011', address: '2706 W Prospect Rd', city: 'Tampa', state: 'FL', zip: '33629',
     market: 'Tampa', stage: 'opportunity', lotSqFt: 6900, pipelineStatus: 'pending_review',
+    uwBoard: { status: 'ai_drafting', since: '2026-04-18', analyst: 'Priya Shah' },
     intake: { source: 'Off-Market', sdrOwner: 'Danny Gaule', dateReceived: '2026-04-16' },
   },
 ];

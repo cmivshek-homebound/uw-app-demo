@@ -3,6 +3,7 @@ import NavBar from './components/NavBar';
 import Dashboard from './pages/Dashboard';
 import OpportunityQueue from './pages/OpportunityQueue';
 import UnderwritePage from './pages/UnderwritePage';
+import UnderwriteBoard from './pages/UnderwriteBoard';
 import AIDraftPage from './pages/AIDraftPage';
 import ScenarioEngine from './pages/ScenarioEngine';
 import CompSelectionPage from './pages/CompSelectionPage';
@@ -18,7 +19,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/queue" element={<OpportunityQueue />} />
-        <Route path="/underwrite" element={<UnderwritePage />} />
+        <Route path="/underwrite" element={<UnderwriteBoard />} />
         <Route path="/underwrite/:id" element={<UnderwritePage />} />
         <Route path="/underwrite/:id/draft" element={<AIDraftPage />} />
         <Route path="/underwrite/:id/scenario" element={<ScenarioEngine />} />

@@ -1,6 +1,6 @@
-import type { Asset, AssetStage, Market, MonthlyMark } from '../types';
+import type { Asset, AssetStage, Market, MonthlyMark, UnderwritingStatus } from '../types';
 import { ASSETS } from './assets';
-import { DEMO_TODAY } from './dates';
+import { DEMO_TODAY, daysSince } from './dates';
 
 // ── Portfolio selectors ────────────────────────────────────────
 // Pure functions over the asset list. Every selector defaults to the full
@@ -49,6 +49,43 @@ export function filterAssets(
 
 export function pipelineAssets(assets: Asset[] = ASSETS): Asset[] {
   return assets.filter((a) => PIPELINE_STAGES.includes(a.stage));
+}
+
+/** Underwrite board columns, left to right. */
+export const UNDERWRITING_STATUSES: UnderwritingStatus[] = [
+  'ai_drafting',
+  'draft_ready',
+  'analyst_review',
+  'submitted_to_growth',
+];
+
+/** Days in the current board column turn amber, then red, after these thresholds. */
+export const BOARD_WARN_DAYS = 2;
+export const BOARD_LATE_DAYS = 4;
+
+/** Pipeline assets grouped by board column, longest-waiting first. DQ'd assets are left out. */
+export function underwritingBoard(assets: Asset[] = ASSETS): Record<UnderwritingStatus, Asset[]> {
+  return Object.fromEntries(
+    UNDERWRITING_STATUSES.map((status) => [
+      status,
+      pipelineAssets(assets)
+        .filter((a) => a.underwritingStatus === status)
+        .sort((a, b) => daysInColumn(b) - daysInColumn(a)),
+    ]),
+  ) as Record<UnderwritingStatus, Asset[]>;
+}
+
+export function daysInColumn(asset: Asset, asOf: string = DEMO_TODAY): number {
+  return asset.underwritingSince ? daysSince(asset.underwritingSince, asOf) : 0;
+}
+
+export function disqualifiedPipeline(assets: Asset[] = ASSETS): Asset[] {
+  return pipelineAssets(assets).filter((a) => a.pipelineStatus === 'dqd');
+}
+
+/** Analysts with at least one asset on the board, alphabetical. */
+export function boardAnalysts(assets: Asset[] = ASSETS): string[] {
+  return [...new Set(pipelineAssets(assets).flatMap((a) => (a.underwritingStatus && a.analyst ? [a.analyst] : [])))].sort();
 }
 
 export function assetsByStage(assets: Asset[] = ASSETS): Record<AssetStage, Asset[]> {
