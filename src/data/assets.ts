@@ -12,6 +12,7 @@ import type {
   UnderwritingStatus,
 } from '../types';
 import { DEMO_TODAY, daysRemaining } from './dates';
+import { buildMarkProposal } from './markProposals';
 import { buildForMargin, closingCostPctFor, costStack, marginPct } from './underwriting';
 
 // ── Unified asset portfolio ────────────────────────────────────
@@ -65,7 +66,7 @@ const SDR_BY_MARKET: Record<Market, string> = {
   LA: 'Danny Gaule',
 };
 const STARTED_STAGES: AssetStage[] = ['construction', 'for_sale', 'sold'];
-const MAX_DRIFT = 9_500; // keeps routine monthly drift under the $10K approval threshold
+const MAX_DRIFT = 9_500; // keeps routine monthly drift under the $10K approval threshold (markProposals.ts)
 
 // ── Helpers ────────────────────────────────────────────────────
 function iso(date: string): string {
@@ -106,8 +107,11 @@ function seededRandom(key: string): () => number {
   };
 }
 
+/** Last finished month-end. April 2026 is still open, so its mark is a proposal. */
+export const LAST_MARK_MONTH = '2026-03';
+
 function buildMarks(s: Seed, esp: number): MonthlyMark[] {
-  const end = monthOf(s.sale?.soldOn ?? DEMO_TODAY);
+  const end = s.sale ? monthOf(s.sale.soldOn) : LAST_MARK_MONTH;
   const listedMonth = s.listing ? monthOf(s.listing.listedOn) : null;
   const rand = seededRandom(s.id);
   const marks: MonthlyMark[] = [];
@@ -444,8 +448,6 @@ const constructionSeeds: Seed[] = [
     market: 'Houston', stage: 'construction', lotSqFt: 6250,
     uw: { plan: 'The Daniel', esp: 1_095_000, land: 310_000, build: 510_000 },
     closedOn: '2025-04-22', pct: 0.88,
-    // Strong West U new-construction closings this month; awaiting approval.
-    markOverrides: [{ month: '2026-04', change: 12_000 }],
   },
   {
     id: 'BOOL-023', address: '1022 Wakefield Dr', city: 'Houston', state: 'TX', zip: '77018',
@@ -499,8 +501,8 @@ const forSaleSeeds: Seed[] = [
     uw: { plan: 'The Daniel', esp: 1_060_000, land: 285_000, build: 540_000 },
     closedOn: '2024-11-14',
     listing: { listedOn: '2026-02-06', listPrice: 1_075_000, showings: 18, priceDrops: 0 },
-    // No offers past 60 days on market; post-listing mark cut to recent Preston Hollow closings.
-    markOverrides: [{ month: '2026-04', change: -68_000, approvedBy: 'J. Park' }],
+    // No offers in ~50 days on market; March post-listing mark cut to recent Preston Hollow closings.
+    markOverrides: [{ month: '2026-03', change: -68_000, approvedBy: 'J. Park' }],
   },
   {
     id: 'BOOL-030', address: '3527 Rice Blvd', city: 'Houston', state: 'TX', zip: '77005',
@@ -515,8 +517,8 @@ const forSaleSeeds: Seed[] = [
     uw: { plan: 'The Dakota', esp: 1_150_000, land: 310_000, build: 585_000 },
     closedOn: '2024-09-20',
     listing: { listedOn: '2026-01-16', listPrice: 1_075_000, showings: 24, priceDrops: 2 },
-    // Two price drops over 90+ days on market. March cut approved; April cut awaiting approval.
-    markOverrides: [{ month: '2026-03', change: -69_500, approvedBy: 'J. Park' }, { month: '2026-04', change: -16_500 }],
+    // Price drops in February and March; March cut approved. April's further cut is a proposal.
+    markOverrides: [{ month: '2026-03', change: -69_500, approvedBy: 'J. Park' }],
   },
   {
     id: 'BOOL-032', address: '1127 Arlington Ave N', city: 'St. Petersburg', state: 'FL', zip: '33705',
@@ -531,8 +533,8 @@ const forSaleSeeds: Seed[] = [
     uw: { plan: 'The Kendall', esp: 3_280_000, land: 1_120_000, build: 1_340_000 },
     closedOn: '2024-10-04',
     listing: { listedOn: '2026-02-20', listPrice: 3_199_000, showings: 15, priceDrops: 1 },
-    // Price drop in April after soft showing feedback; mark follows the new list price.
-    markOverrides: [{ month: '2026-04', change: -173_000, approvedBy: 'J. Park' }],
+    // Price drop in March after soft showing feedback; mark follows the new list price.
+    markOverrides: [{ month: '2026-03', change: -173_000, approvedBy: 'J. Park' }],
   },
   {
     id: 'BOOL-034', address: '818 Pacific St', city: 'Santa Monica', state: 'CA', zip: '90405',
@@ -877,3 +879,10 @@ export const ASSETS: Asset[] = [
   ...forSaleSeeds,
   ...soldSeeds,
 ].map(buildAsset);
+
+// April month-end proposals read March's mark and our sold assets, so they
+// attach once every asset is built.
+for (const asset of ASSETS) {
+  const proposal = buildMarkProposal(asset, ASSETS);
+  if (proposal) asset.markProposal = proposal;
+}

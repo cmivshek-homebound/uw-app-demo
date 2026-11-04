@@ -56,6 +56,40 @@ export interface MonthlyMark {
   approvedBy?: string;
 }
 
+export type MarkProposalStatus = 'ai_proposed' | 'analyst_reviewed' | 'needs_approval' | 'approved';
+
+export type MarkDriverKind = 'newComps' | 'homeboundSales' | 'seasonality' | 'listingDemand';
+
+export interface MarkComp {
+  address: string;
+  salePrice: number;
+  sqft: number;
+  soldOn: string;     // ISO
+  distanceMi: number;
+}
+
+export interface MarkDriver {
+  kind: MarkDriverKind;
+  amount: number;          // $ adjustment to the prior month's mark
+  explanation: string;     // one line
+  comps?: MarkComp[];      // newComps: the non-Homebound sales referenced
+  assetIds?: string[];     // homeboundSales: our sold assets referenced (/asset/:id)
+}
+
+/** Proposed month-end mark: prior month's mark plus driver adjustments. */
+export interface MarkProposal {
+  month: string;           // YYYY-MM being proposed
+  priorMonth: string;      // YYYY-MM it builds from
+  priorValue: number;
+  drivers: MarkDriver[];
+  change: number;          // sum of driver amounts
+  proposedValue: number;
+  method: MarkMethod;
+  status: MarkProposalStatus; // needs_approval whenever |change| > $10K and not yet approved
+  analyst: string;         // assigned by market
+  approvedBy?: string;
+}
+
 export interface AssetIntake {
   source: Opportunity['source'];
   sdrOwner: string;
@@ -169,6 +203,7 @@ export interface Asset {
   contract?: AssetContract;
   owned?: AssetOwned;
   marks?: MonthlyMark[];
+  markProposal?: MarkProposal; // owned, unsold assets: the open month-end
   listing?: AssetListing;
   sale?: AssetSale;
 }

@@ -1,5 +1,7 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ASSETS } from '../data/assets';
 import { DEMO_TODAY, daysRemaining, daysSince } from '../data/dates';
+import { useMarkReviews, withMarkReviews } from '../data/markReview';
 import {
   ASSET_STAGES,
   BALANCE_SHEET_STAGES,
@@ -10,7 +12,6 @@ import {
   assetsNeedingApproval,
   balanceSheet,
   filterAssets,
-  latestMark,
   lifecycleByStage,
   pipelineAssets,
   staleListings,
@@ -117,7 +118,10 @@ export default function Dashboard() {
     setParams(next, { replace: true });
   };
 
-  const assets = filterAssets(undefined, { market });
+  // Month-end review state applies: approved moves leave Needs attention, and
+  // once April is published the balance sheet marks to it.
+  const { reviews: markReviews, published } = useMarkReviews();
+  const assets = filterAssets(withMarkReviews(ASSETS, markReviews, published), { market });
 
   // ── Lifecycle ──
   const lifecycle = lifecycleByStage(assets);
@@ -149,9 +153,9 @@ export default function Dashboard() {
         asset, reason: 'inspection' as const, detail: `${plural(days, 'day')} left`, severity: -days, to: assetPath(asset),
       })),
     ...assetsNeedingApproval(assets).map((asset) => {
-      const change = latestMark(asset)!.changeFromPrior;
+      const change = asset.markProposal!.change;
       return {
-        asset, reason: 'mark_approval' as const, detail: `${signedUsd(change)} latest mark`,
+        asset, reason: 'mark_approval' as const, detail: `${signedUsd(change)} April proposal`,
         severity: Math.abs(change), to: assetPath(asset),
       };
     }),

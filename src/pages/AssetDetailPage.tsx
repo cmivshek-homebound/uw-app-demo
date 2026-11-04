@@ -5,7 +5,9 @@ import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue
 import { getAIDraft } from '../data/aiDrafts';
 import { ASSETS } from '../data/assets';
 import { DEMO_TODAY } from '../data/dates';
-import { APPROVAL_THRESHOLD, PIPELINE_STAGES, stageHistory } from '../data/selectors';
+import { useMarkReviews, withMarkReviews } from '../data/markReview';
+import { APPROVAL_THRESHOLD, PIPELINE_STAGES, stageHistory, underwritingGap } from '../data/selectors';
+import type { GapLine } from '../data/selectors';
 import { CARRY_COST_PCT, SELLING_COST_PCT, closingCostPctFor } from '../data/underwriting';
 import type {
   Asset,
@@ -462,32 +464,23 @@ function ListingSection({ asset }: { asset: Asset }) {
 }
 
 // ── 6. Underwritten vs realized ────────────────────────────────
-interface GapLine {
-  label: string;
-  uw: number;
-  realized: number;
-  marginImpact: number; // + helps margin dollars
-  isRevenue?: boolean;
-}
-
-function driverSentence(asset: Asset, lines: GapLine[], marginPts: number): string {
-  const driver = lines.reduce((top, l) => (Math.abs(l.marginImpact) > Math.abs(top.marginImpact) ? l : top));
+function driverSentence(asset: Asset, driver: GapLine, marginPts: number): string {
   const gap = Math.abs(driver.realized - driver.uw);
   const move = `${Math.abs(marginPts).toFixed(1)}-point margin ${marginPts < 0 ? 'drop' : 'gain'}`;
   const sale = asset.sale!;
   const uw = asset.underwrite!;
-  switch (driver.label) {
-    case 'Sale price':
+  switch (driver.key) {
+    case 'salePrice':
       return driver.marginImpact < 0
         ? `Selling ${usd(gap)} below ESP after ${asset.listing!.priceDrops} price ${asset.listing!.priceDrops === 1 ? 'drop' : 'drops'} was the biggest driver of the ${move}.`
         : `Selling ${usd(gap)} above ESP was the biggest driver of the ${move}.`;
-    case 'Build':
+    case 'build':
       return driver.marginImpact < 0
         ? `Build ran ${usd(gap)} (${((gap / uw.buildCost) * 100).toFixed(1)}%) over budget, the biggest driver of the ${move}.`
         : `Build came in ${usd(gap)} under budget, the biggest driver of the ${move}.`;
-    case 'Carry / financing':
+    case 'carry':
       return `Carry ran ${usd(gap)} over plan on a ${asset.listing!.daysOnMarket}-day sale, the biggest driver of the ${move}.`;
-    case 'Closing costs':
+    case 'closing':
       return `Closing costs ran ${((sale.closingCosts / sale.landPrice) * 100).toFixed(2)}% of land against ${closingCostPctFor(uw.underwrittenOn)}% underwritten, the biggest driver of the ${move}.`;
     default:
       return `${driver.label} moved ${usd(gap)}, the biggest driver of the ${move}.`;
@@ -497,18 +490,7 @@ function driverSentence(asset: Asset, lines: GapLine[], marginPts: number): stri
 function RealizedSection({ asset }: { asset: Asset }) {
   const uw = asset.underwrite!;
   const sale = asset.sale!;
-  const costLine = (label: string, u: number, r: number): GapLine => ({ label, uw: u, realized: r, marginImpact: u - r });
-  const lines: GapLine[] = [
-    { label: 'Sale price', uw: uw.esp, realized: sale.salePrice, marginImpact: sale.salePrice - uw.esp, isRevenue: true },
-    costLine('Land', uw.landPrice, sale.landPrice),
-    costLine('Closing costs', uw.closingCosts, sale.closingCosts),
-    costLine('Build', uw.buildCost, sale.buildCost),
-    costLine('Carry / financing', uw.carryCosts, sale.carryCosts),
-    costLine('Selling costs', uw.sellingCosts, sale.sellingCosts),
-  ];
-  const uwMargin = uw.esp - uw.totalCost;
-  const realizedMargin = sale.salePrice - sale.totalCost;
-  const marginPts = sale.marginPct - uw.marginPct;
+  const { lines, uwMargin, realizedMargin, marginPts, driver } = underwritingGap(asset)!;
 
   const diffCell = (l: GapLine) => {
     const diff = l.realized - l.uw;
@@ -518,7 +500,7 @@ function RealizedSection({ asset }: { asset: Asset }) {
 
   return (
     <Card title="Underwritten vs realized" aside={<span className="as-card-caption">Sold {shortDate(sale.soldOn)}</span>}>
-      <p className="as-driver">{driverSentence(asset, lines, marginPts)}</p>
+      <p className="as-driver">{driverSentence(asset, driver, marginPts)}</p>
       <div className="as-table-scroll">
         <table className="as-table">
           <thead>
@@ -531,10 +513,10 @@ function RealizedSection({ asset }: { asset: Asset }) {
           </thead>
           <tbody>
             {lines.map((l) => (
-              <tr key={l.label} className={l.isRevenue ? 'as-row--revenue' : ''}>
+              <tr key={l.label} className={l.key === 'salePrice' ? 'as-row--revenue' : ''}>
                 <td>{l.label}</td>
                 <td className="as-num"><ProvenanceValue info={{ provenance: 'human', note: `Reviewed by ${uw.review?.analyst ?? 'analyst'}` }}>{usd(l.uw)}</ProvenanceValue></td>
-                <td className="as-num"><ProvenanceValue info={l.isRevenue ? MLS : TAPE}>{usd(l.realized)}</ProvenanceValue></td>
+                <td className="as-num"><ProvenanceValue info={l.key === 'salePrice' ? MLS : TAPE}>{usd(l.realized)}</ProvenanceValue></td>
                 {diffCell(l)}
               </tr>
             ))}
@@ -569,7 +551,8 @@ function RealizedSection({ asset }: { asset: Asset }) {
 export default function AssetDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const asset = ASSETS.find((a) => a.id === id);
+  const { reviews, published } = useMarkReviews();
+  const asset = withMarkReviews(ASSETS, reviews, published).find((a) => a.id === id);
 
   if (!asset) {
     return (

@@ -31,8 +31,7 @@ export const SOLD_WINDOW_MONTHS = 6;
 /** For-sale listings older than this many days on market are flagged as stale. */
 export const STALE_LISTING_DAYS = 60;
 
-/** Latest-mark moves larger than this (either direction) need sign-off. */
-export const APPROVAL_THRESHOLD = 10_000;
+export { APPROVAL_THRESHOLD } from './markProposals';
 
 function byStage<T>(assets: Asset[], value: (stageAssets: Asset[]) => T): Record<AssetStage, T> {
   return Object.fromEntries(
@@ -108,6 +107,50 @@ export function stageHistory(asset: Asset): { stage: AssetStage; date?: string; 
   return ASSET_STAGES.map((stage, i) => ({ stage, date: i <= current ? dates[stage] : undefined, reached: i <= current }));
 }
 
+// ── Underwritten vs realized ───────────────────────────────────
+export type GapLineKey = 'salePrice' | 'land' | 'closing' | 'build' | 'carry' | 'selling';
+
+export interface GapLine {
+  key: GapLineKey;
+  label: string;
+  uw: number;
+  realized: number;
+  marginImpact: number; // + helps margin dollars
+}
+
+export interface UnderwritingGap {
+  lines: GapLine[];       // sale price first, then each cost line
+  uwMargin: number;       // $
+  realizedMargin: number; // $
+  marginPts: number;      // realized − underwritten margin %
+  driver: GapLine;        // line with the largest margin impact
+}
+
+/** Line-by-line underwritten vs realized for a sold asset. */
+export function underwritingGap(asset: Asset): UnderwritingGap | undefined {
+  const uw = asset.underwrite;
+  const sale = asset.sale;
+  if (!uw || !sale) return undefined;
+  const cost = (key: GapLineKey, label: string, u: number, r: number): GapLine => ({
+    key, label, uw: u, realized: r, marginImpact: u - r,
+  });
+  const lines: GapLine[] = [
+    { key: 'salePrice', label: 'Sale price', uw: uw.esp, realized: sale.salePrice, marginImpact: sale.salePrice - uw.esp },
+    cost('land', 'Land', uw.landPrice, sale.landPrice),
+    cost('closing', 'Closing costs', uw.closingCosts, sale.closingCosts),
+    cost('build', 'Build', uw.buildCost, sale.buildCost),
+    cost('carry', 'Carry / financing', uw.carryCosts, sale.carryCosts),
+    cost('selling', 'Selling costs', uw.sellingCosts, sale.sellingCosts),
+  ];
+  return {
+    lines,
+    uwMargin: uw.esp - uw.totalCost,
+    realizedMargin: sale.salePrice - sale.totalCost,
+    marginPts: Math.round((sale.marginPct - uw.marginPct) * 10) / 10,
+    driver: lines.reduce((top, l) => (Math.abs(l.marginImpact) > Math.abs(top.marginImpact) ? l : top)),
+  };
+}
+
 export function assetsByStage(assets: Asset[] = ASSETS): Record<AssetStage, Asset[]> {
   return byStage(assets, (list) => list);
 }
@@ -145,11 +188,9 @@ export function currentMarkByStage(assets: Asset[] = ASSETS): Record<AssetStage,
   return byStage(assets, (list) => list.reduce((sum, a) => sum + (latestMark(a)?.value ?? 0), 0));
 }
 
+/** Assets whose open month-end mark proposal moves more than the threshold and isn't approved. */
 export function assetsNeedingApproval(assets: Asset[] = ASSETS): Asset[] {
-  return assets.filter((a) => {
-    const mark = latestMark(a);
-    return mark !== undefined && Math.abs(mark.changeFromPrior) > APPROVAL_THRESHOLD && !mark.approvedBy;
-  });
+  return assets.filter((a) => a.markProposal?.status === 'needs_approval');
 }
 
 export function staleListings(assets: Asset[] = ASSETS, days: number = STALE_LISTING_DAYS): Asset[] {
