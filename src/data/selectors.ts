@@ -88,6 +88,11 @@ export function boardAnalysts(assets: Asset[] = ASSETS): string[] {
   return [...new Set(pipelineAssets(assets).flatMap((a) => (a.underwritingStatus && a.analyst ? [a.analyst] : [])))].sort();
 }
 
+/** Plan names already underwritten on assets in a market (non-DFW markets use these). */
+export function marketPlanNames(market: Market, assets: Asset[] = ASSETS): Set<string> {
+  return new Set(assets.filter((a) => a.market === market && a.underwrite).map((a) => a.underwrite!.planName));
+}
+
 export function assetsByStage(assets: Asset[] = ASSETS): Record<AssetStage, Asset[]> {
   return byStage(assets, (list) => list);
 }

@@ -347,3 +347,352 @@
   font-weight: 700 !important;
   color: #171717 !important;
 }
+
+/* ── Review layout ── */
+.ad-page {
+  max-width: 1340px;
+}
+
+.ad-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1080px) {
+  .ad-layout { grid-template-columns: 1fr; }
+}
+
+/* ── Section actions ── */
+.ad-section-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ad-section--confirmed,
+.ad-section--overridden {
+  border-color: #b7d9c8;
+}
+
+.ad-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e5e5;
+  background: #fff;
+  color: #404040;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.ad-btn:hover:not(:disabled) {
+  border-color: #1A6B4A;
+  color: #1A6B4A;
+}
+
+.ad-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.ad-btn--primary {
+  background: #1A6B4A;
+  border-color: #1A6B4A;
+  color: #fff;
+}
+
+.ad-btn--primary:hover:not(:disabled) {
+  color: #fff;
+  opacity: 0.9;
+}
+
+.ad-status {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ad-status--confirmed  { background: #1A6B4A; color: #fff; }
+.ad-status--overridden { background: #262626; color: #fff; }
+
+.ad-nofit-tag {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+/* ── Override form ── */
+.ad-override {
+  margin: 0 0 16px;
+  padding: 14px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.ad-override-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+}
+
+.ad-override-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #737373;
+}
+
+.ad-override-field--value { width: 150px; }
+.ad-override-field--reason { flex: 1; min-width: 220px; }
+
+.ad-override-field input,
+.ad-override-field select {
+  padding: 7px 10px;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: #171717;
+  outline: none;
+}
+
+.ad-override-field input:focus,
+.ad-override-field select:focus {
+  border-color: #1A6B4A;
+}
+
+.ad-override-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #8a8a8a;
+}
+
+.ad-override-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* ── Needs a human panel ── */
+.ad-panel {
+  position: sticky;
+  top: 16px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.ad-panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #171717;
+  margin: 0 0 4px;
+}
+
+.ad-panel-progress {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #525252;
+}
+
+.ad-panel-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: #f0f0f0;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.ad-panel-bar span {
+  display: block;
+  height: 100%;
+  background: #1A6B4A;
+  transition: width 0.2s;
+}
+
+.ad-panel-heading {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #a3a3a3;
+  margin: 18px 0 8px;
+}
+
+.ad-panel-empty {
+  margin: 0;
+  font-size: 12.5px;
+  color: #8a8a8a;
+}
+
+.ad-checklist,
+.ad-unsure,
+.ad-questions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ad-check {
+  display: grid;
+  grid-template-columns: 16px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.ad-check:last-child { border-bottom: none; }
+
+.ad-check-icon { color: #c4c4c4; text-align: center; }
+.ad-check--confirmed .ad-check-icon,
+.ad-check--overridden .ad-check-icon { color: #1A6B4A; font-weight: 700; }
+
+.ad-check-name { color: #262626; }
+
+.ad-check-level {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+.ad-check-level--high   { background: #eef6f1; color: #1A6B4A; }
+.ad-check-level--medium { background: #fffbeb; color: #b45309; }
+.ad-check-level--low    { background: #fef2f2; color: #dc2626; }
+
+.ad-check-status {
+  font-size: 11.5px;
+  color: #a3a3a3;
+  min-width: 72px;
+  text-align: right;
+}
+
+.ad-check--confirmed .ad-check-status,
+.ad-check--overridden .ad-check-status { color: #1A6B4A; font-weight: 600; }
+
+.ad-unsure li {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #404040;
+  padding: 6px 0;
+}
+
+.ad-question {
+  padding: 8px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.ad-question:last-child { border-bottom: none; }
+
+.ad-question-text {
+  display: block;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #262626;
+  margin-bottom: 6px;
+}
+
+.ad-answer {
+  width: 100%;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  padding: 7px 9px;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: #171717;
+  background: #fafafa;
+  resize: vertical;
+  outline: none;
+}
+
+.ad-answer:focus {
+  border-color: #1A6B4A;
+  background: #fff;
+}
+
+.ad-answer[readonly] {
+  background: #fff;
+  border-color: #f0f0f0;
+  color: #404040;
+}
+
+.ad-submit {
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 7px;
+  background: #1A6B4A;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.ad-submit:hover:not(:disabled) { opacity: 0.9; }
+
+.ad-submit:disabled {
+  background: #e5e5e5;
+  color: #a3a3a3;
+  cursor: not-allowed;
+}
+
+.ad-submit-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #8a8a8a;
+  text-align: center;
+}
+
+.ad-submitted {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: #eef6f1;
+  color: #1A6B4A;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* ── ADU verdict ── */
+.ad-adu-verdict {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ad-adu-verdict--adds { background: #1A6B4A; color: #fff; }
+.ad-adu-verdict--thin { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+
+.ad-adu-reasons {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12.5px;
+  color: #525252;
+  line-height: 1.5;
+}

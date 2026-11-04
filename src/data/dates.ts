@@ -14,3 +14,17 @@ export function daysRemaining(until: string, from: string = DEMO_TODAY): number 
 export function daysSince(since: string, from: string = DEMO_TODAY): number {
   return daysRemaining(from, since);
 }
+
+/** The demo date at the current local time of day, for timestamps logged in-session. */
+export function demoNow(): string {
+  const today = new Date(DEMO_TODAY);
+  const now = new Date();
+  return new Date(
+    today.getUTCFullYear(),
+    today.getUTCMonth(),
+    today.getUTCDate(),
+    now.getHours(),
+    now.getMinutes(),
+    now.getSeconds(),
+  ).toISOString();
+}

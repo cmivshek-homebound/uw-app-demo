@@ -1,6 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import homeboundLogo from '../assets/homebound-logo.png';
 import { daysRemaining } from '../data/dates';
+import { ASSETS } from '../data/assets';
+import { useDraftReviews, withReviewStatus } from '../data/review';
 import { assetsByStage, countByStage, pipelineAssets, underwritingBoard } from '../data/selectors';
 import './NavBar.css';
 
@@ -12,7 +14,8 @@ export default function NavBar() {
   const stageCounts = countByStage();
   const pipelineCount = pipeline.length;
   const pendingCount = pipeline.filter((a) => a.pipelineStatus === 'pending_review').length;
-  const draftReadyCount = underwritingBoard().draft_ready.length;
+  const { reviews } = useDraftReviews();
+  const draftReadyCount = underwritingBoard(withReviewStatus(ASSETS, reviews)).draft_ready.length;
   const contractCount = stageCounts.under_contract;
   const portfolioCount = stageCounts.precon + stageCounts.construction;
   const forSaleCount = stageCounts.for_sale;

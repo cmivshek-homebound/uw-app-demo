@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import ProvenanceValue from '../components/ProvenanceValue';
 import { getAIDraft } from '../data/aiDrafts';
+import { useDraftReviews, withReviewStatus } from '../data/review';
 import {
   BOARD_LATE_DAYS,
   BOARD_WARN_DAYS,
@@ -111,7 +112,8 @@ export default function UnderwriteBoard() {
     setParams(next, { replace: true });
   };
 
-  const marketAssets = filterAssets(undefined, { market });
+  const { reviews } = useDraftReviews();
+  const marketAssets = filterAssets(withReviewStatus(filterAssets(), reviews), { market });
   const scoped = marketAssets.filter((a) => !analyst || a.analyst === analyst);
   const board = underwritingBoard(scoped);
   const onBoard = UNDERWRITING_STATUSES.reduce((sum, s) => sum + board[s].length, 0);

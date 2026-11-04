@@ -109,6 +109,7 @@ export interface Asset {
   market: Market;
   stage: AssetStage;
   lotSqFt: number;
+  floodZone?: boolean;            // lot is in a FEMA flood zone (Salesforce)
   pipelineStatus?: PipelineStatus; // opportunity / underwriting stages only
   underwritingStatus?: UnderwritingStatus; // pipeline assets not DQ'd
   underwritingSince?: string;              // ISO, when it entered its current status

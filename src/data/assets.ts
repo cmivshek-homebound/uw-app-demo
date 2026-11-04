@@ -26,6 +26,7 @@ interface Seed {
   market: Market;
   stage: AssetStage;
   lotSqFt: number;
+  floodZone?: boolean;
   pipelineStatus?: PipelineStatus;
   /** Underwrite board column, the date it entered it, and the assigned analyst. */
   uwBoard?: { status: UnderwritingStatus; since: string; analyst: string };
@@ -126,6 +127,7 @@ function buildAsset(s: Seed): Asset {
     stage: s.stage,
     lotSqFt: s.lotSqFt,
   };
+  if (s.floodZone) asset.floodZone = true;
   if (s.pipelineStatus) asset.pipelineStatus = s.pipelineStatus;
   if (s.intake) asset.intake = { ...s.intake, dateReceived: iso(s.intake.dateReceived) };
   if (s.uwBoard) {
@@ -199,7 +201,7 @@ const pipelineSeeds: Seed[] = [
   },
   {
     id: 'BOOL-003', address: '8834 Sunbrook Ct', city: 'Houston', state: 'TX', zip: '77055',
-    market: 'Houston', stage: 'opportunity', lotSqFt: 5800, pipelineStatus: 'pending_review',
+    market: 'Houston', stage: 'opportunity', lotSqFt: 5800, floodZone: true, pipelineStatus: 'pending_review',
     uwBoard: { status: 'draft_ready', since: '2026-04-17', analyst: 'Priya Shah' },
     intake: { source: 'Off-Market', sdrOwner: 'Ryan Weiss', dateReceived: '2026-04-13' },
   },
@@ -224,7 +226,7 @@ const pipelineSeeds: Seed[] = [
   },
   {
     id: 'BOOL-007', address: '2241 Cove Cay Dr', city: 'Clearwater', state: 'FL', zip: '33760',
-    market: 'St. Pete', stage: 'opportunity', lotSqFt: 7200, pipelineStatus: 'pending_review',
+    market: 'St. Pete', stage: 'opportunity', lotSqFt: 9000, pipelineStatus: 'pending_review',
     uwBoard: { status: 'draft_ready', since: '2026-04-15', analyst: 'Luis Ortega' },
     intake: { source: 'MLS', sdrOwner: 'Karsten Thompson', dateReceived: '2026-04-09' },
   },
@@ -237,7 +239,7 @@ const pipelineSeeds: Seed[] = [
   },
   {
     id: 'BOOL-009', address: '11234 Gorham Ave', city: 'Los Angeles', state: 'CA', zip: '90049',
-    market: 'LA', stage: 'opportunity', lotSqFt: 4900, pipelineStatus: 'pending_review',
+    market: 'LA', stage: 'opportunity', lotSqFt: 7000, pipelineStatus: 'pending_review',
     uwBoard: { status: 'draft_ready', since: '2026-04-13', analyst: 'Maya Chen' },
     intake: { source: 'MLS', sdrOwner: 'Danny Gaule', dateReceived: '2026-04-08' },
   },
@@ -250,7 +252,7 @@ const pipelineSeeds: Seed[] = [
   },
   {
     id: 'BOOL-011', address: '2706 W Prospect Rd', city: 'Tampa', state: 'FL', zip: '33629',
-    market: 'Tampa', stage: 'opportunity', lotSqFt: 6900, pipelineStatus: 'pending_review',
+    market: 'Tampa', stage: 'opportunity', lotSqFt: 8460, pipelineStatus: 'pending_review',
     uwBoard: { status: 'ai_drafting', since: '2026-04-18', analyst: 'Priya Shah' },
     intake: { source: 'Off-Market', sdrOwner: 'Danny Gaule', dateReceived: '2026-04-16' },
   },
@@ -315,7 +317,7 @@ const preconSeeds: Seed[] = [
   },
   {
     id: 'BOOL-016', address: '4415 3rd Ave N', city: 'St. Petersburg', state: 'FL', zip: '33713',
-    market: 'St. Pete', stage: 'precon', lotSqFt: 6200,
+    market: 'St. Pete', stage: 'precon', lotSqFt: 6200, floodZone: true,
     uw: { plan: 'The Benjamin', esp: 845_000, land: 205_000, build: 445_000 },
     closedOn: '2026-01-09', pct: 0.03,
   },
@@ -389,7 +391,7 @@ const constructionSeeds: Seed[] = [
   },
   {
     id: 'BOOL-026', address: '2541 Dartmouth Ave N', city: 'St. Petersburg', state: 'FL', zip: '33713',
-    market: 'St. Pete', stage: 'construction', lotSqFt: 5900,
+    market: 'St. Pete', stage: 'construction', lotSqFt: 5900, floodZone: true,
     uw: { plan: 'The Ryan', esp: 870_000, land: 200_000, build: 470_000 },
     closedOn: '2025-05-30', pct: 0.79,
   },

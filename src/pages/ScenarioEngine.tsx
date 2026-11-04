@@ -3,7 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { mockOpportunities } from '../data/opportunities';
 import { ASSETS } from '../data/assets';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
-import type { ProvenanceInfo } from '../types';
+import { evaluateAdus, aduRuleText } from '../data/adu';
+import type { AduEconomics, LotForFit } from '../data/adu';
+import { getAIDraft } from '../data/aiDrafts';
+import type { AIDraft } from '../data/aiDrafts';
+import { marketPlanNames } from '../data/selectors';
+import { CARRY_COST_PCT, SELLING_COST_PCT } from '../data/underwriting';
+import type { Market, ProvenanceInfo } from '../types';
 import {
   DFW_PLANS,
   ADD_ON_OPTIONS,
@@ -32,28 +38,62 @@ const usd = (n: number) =>
 
 const pct = (n: number) => n.toFixed(1) + '%';
 
-// ── Opportunity → lot dimensions (BOOL-001 = 52 × 120) ─────────
-const LOT_DIMS: Record<string, FeasibilityLot> = {
-  'BOOL-001': { widthFt: 52, depthFt: 120 },
-  'BOOL-002': { widthFt: 58, depthFt: 122 },
-  'BOOL-003': { widthFt: 48, depthFt: 121 },
-  'BOOL-004': { widthFt: 55, depthFt: 118 },
+// ── Lot data ───────────────────────────────────────────────────
+// Pipeline lots come from their AI draft (Salesforce lot data). BOOL-001 is
+// under contract and has no draft, so its lot (52 × 120) lives here.
+const FALLBACK_LOT: Omit<LotForFit, 'lotSqFt' | 'floodZone'> = {
+  widthFt: 52,
+  depthFt: 120,
+  setbacks: { front: 25, side: 5, rear: 10 },
+  maxCoveragePct: 50,
 };
+
+const AI: ProvenanceInfo = { provenance: 'ai' };
+const SFDC: ProvenanceInfo = { provenance: 'system', source: 'Salesforce' };
+
+// ── Market calibration ─────────────────────────────────────────
+// The plan library is priced for DFW. Outside DFW, scale each plan's ESP and
+// spec-level build costs so the recommended plan matches the lot's AI draft.
+interface Calibration {
+  esp: number;
+  build: number;
+}
+
+function draftCalibration(draft: AIDraft): Calibration {
+  const rec = draft.recommendation.plan;
+  const spec = rec.plan.specLevels[defaultSpecIdx(rec.plan)];
+  return {
+    esp: draft.recommendation.esp / rec.sqft / rec.plan.espPerSqft,
+    build: rec.build / rec.sqft / spec.costPerSqft,
+  };
+}
+
+function calibrate(plan: Plan, c: Calibration | undefined): Plan {
+  if (!c) return plan;
+  return {
+    ...plan,
+    espPerSqft: Math.round(plan.espPerSqft * c.esp),
+    specLevels: plan.specLevels.map((s) => ({ ...s, costPerSqft: Math.round(s.costPerSqft * c.build) })),
+  };
+}
 
 // ── Analyst overrides of AI-drafted comp $/sqft ────────────────
 // The Daniel sits on BOOL-001's corner; the analyst bumped its comps.
-const COMP_OVERRIDES: Record<string, { espPerSqft: number; reason: string }> = {
+// DFW pricing only; calibrated markets price from the lot's AI draft.
+type CompOverrides = Record<string, { espPerSqft: number; reason: string }>;
+
+const COMP_OVERRIDES: CompOverrides = {
   daniel: { espPerSqft: 282, reason: 'corner lot premium' },
 };
 
 /** Plan with any analyst comp override applied, for calcFinancials. */
-function withOverrides(plan: Plan): Plan {
-  const override = COMP_OVERRIDES[plan.id];
+function withOverrides(plan: Plan, overrides: CompOverrides): Plan {
+  const override = overrides[plan.id];
   return override ? { ...plan, espPerSqft: override.espPerSqft } : plan;
 }
 
-function compProvenance(plan: Plan): ProvenanceInfo {
-  const override = COMP_OVERRIDES[plan.id];
+function compProvenance(plan: Plan, overrides: CompOverrides): ProvenanceInfo {
+  const override = overrides[plan.id];
   if (!override) return { provenance: 'ai' };
   return {
     provenance: 'human',
@@ -61,8 +101,8 @@ function compProvenance(plan: Plan): ProvenanceInfo {
   };
 }
 
-function espProvenance(plan: Plan): ProvenanceInfo {
-  const override = COMP_OVERRIDES[plan.id];
+function espProvenance(plan: Plan, overrides: CompOverrides): ProvenanceInfo {
+  const override = overrides[plan.id];
   if (!override) return { provenance: 'ai' };
   return { provenance: 'human', note: `Uses analyst comp $/sqft: ${override.reason}` };
 }
@@ -364,7 +404,7 @@ interface ProFormaRow {
   key: keyof PlanFinancials | 'compPerSqft' | 'landPrice';
   format: (n: number) => string;
   style?: string;
-  provenance?: (plan: Plan) => ProvenanceInfo;
+  provenance?: (plan: Plan, overrides: CompOverrides) => ProvenanceInfo;
 }
 
 const PROFORMA_ROWS: ProFormaRow[] = [
@@ -378,9 +418,16 @@ const PROFORMA_ROWS: ProFormaRow[] = [
   { label: 'Homebound Fee (5%)',   key: 'homeboundFee',     format: usd,                                  style: 'sub' },
   { label: 'Total Cost Ex-Land',   key: 'totalCostExLand',  format: usd,                                  style: 'total' },
   { label: 'Max Lot Offer',        key: 'maxLotOffer',      format: usd,                                  style: 'highlight' },
-  { label: 'Land Price',           key: 'landPrice',        format: usd,                                  provenance: () => ({ provenance: 'system', source: 'Salesforce' }) },
+  { label: 'Land Price',           key: 'landPrice',        format: usd,                                  provenance: () => SFDC },
   { label: 'Projected Margin',     key: 'projectedMargin',  format: pct,                                  style: 'margin' },
 ];
+
+interface ExtraRow {
+  label: string;
+  value: string;          // selected plan only
+  provenance: ProvenanceInfo;
+  style?: string;
+}
 
 function ProFormaTable({
   plans,
@@ -388,12 +435,16 @@ function ProFormaTable({
   recommendedId,
   selectedId,
   landPrice,
+  compOverrides,
+  extraRows = [],
 }: {
   plans: Plan[];
   financials: PlanFinancials[];
   recommendedId: string;
   selectedId: string;
   landPrice?: number;
+  compOverrides: CompOverrides;
+  extraRows?: ExtraRow[];
 }) {
   const rows = PROFORMA_ROWS.filter((row) => row.key !== 'landPrice' || landPrice !== undefined);
   const cellValue = (row: ProFormaRow, fin: PlanFinancials): number => {
@@ -426,12 +477,22 @@ function ProFormaTable({
                   className={plans[i].id === selectedId ? 'sc-table-col--selected' : ''}
                 >
                   {row.provenance ? (
-                    <ProvenanceValue info={row.provenance(plans[i])}>
+                    <ProvenanceValue info={row.provenance(plans[i], compOverrides)}>
                       {row.format(cellValue(row, fin))}
                     </ProvenanceValue>
                   ) : (
                     row.format(cellValue(row, fin))
                   )}
+                </td>
+              ))}
+            </tr>
+          ))}
+          {extraRows.map((row) => (
+            <tr key={row.label} className={`sc-table-row--adu ${row.style ? `sc-table-row--${row.style}` : ''}`}>
+              <td className="sc-table-label">{row.label}</td>
+              {plans.map((p) => (
+                <td key={p.id} className={p.id === selectedId ? 'sc-table-col--selected' : ''}>
+                  {p.id === selectedId ? <ProvenanceValue info={row.provenance}>{row.value}</ProvenanceValue> : '—'}
                 </td>
               ))}
             </tr>
@@ -556,22 +617,213 @@ function ExcludedPlansSection({
   );
 }
 
+// ── ADU Section ────────────────────────────────────────────────
+const signedUsd = (n: number) => (n < 0 ? '−' : '+') + usd(Math.abs(n));
+
+interface AduImpact {
+  name: string;
+  economics: AduEconomics;
+  maxLotOffer: number;
+  estSalePrice: number;
+  projectedMargin: number;
+}
+
+/** Engine margin is max lot offer ÷ ESP; the ADU adds its net margin and uplift. */
+function aduImpact(fin: PlanFinancials, name: string, economics: AduEconomics): AduImpact {
+  const maxLotOffer = fin.maxLotOffer + economics.marginDelta;
+  const estSalePrice = fin.estSalePrice + economics.uplift;
+  return { name, economics, maxLotOffer, estSalePrice, projectedMargin: (maxLotOffer / estSalePrice) * 100 };
+}
+
+function VerdictChip({ economics }: { economics: AduEconomics }) {
+  return economics.verdict === 'adds' ? (
+    <span className="sc-adu-verdict sc-adu-verdict--adds">
+      Adds <ProvenanceValue info={AI}>{usd(economics.marginDelta)}</ProvenanceValue> margin
+    </span>
+  ) : (
+    <span className="sc-adu-verdict sc-adu-verdict--thin">
+      Fits but thin · <ProvenanceValue info={AI}>{signedUsd(economics.marginDelta)}</ProvenanceValue>
+    </span>
+  );
+}
+
+function AduSection({
+  market,
+  lot,
+  plan,
+  elevationIdx,
+  fin,
+  addedTypeId,
+  onAdd,
+  onRemove,
+}: {
+  market: Market;
+  lot: LotForFit;
+  plan: Plan;
+  elevationIdx: number;
+  fin: PlanFinancials;
+  addedTypeId: string | null;
+  onAdd: (typeId: string) => void;
+  onRemove: () => void;
+}) {
+  const elevation = plan.elevations[elevationIdx];
+  const evaluation = evaluateAdus(market, lot, elevation);
+  const { geometry } = evaluation;
+  const added = evaluation.offered ? evaluation.options.find((o) => o.type.id === addedTypeId && o.fits) : undefined;
+  const impact = added && aduImpact(fin, `${added.type.name} ${added.type.sqft.toLocaleString()} sqft`, added.economics);
+  const e = added?.economics;
+
+  return (
+    <section className="sc-section">
+      <div className="sc-section-header">
+        <h2 className="sc-section-title">ADU — {market}</h2>
+        {!evaluation.offered ? (
+          <span className="sc-adu-verdict sc-adu-verdict--none">Not offered in this market</span>
+        ) : e ? (
+          <VerdictChip economics={e} />
+        ) : (
+          <span className="sc-section-caption">Add an ADU that fits to see its effect on the pro forma</span>
+        )}
+      </div>
+
+      <div className="sc-adu-card">
+        <p className="sc-adu-context">
+          For <strong>{plan.name}</strong> ({elevation.name}, {elevation.widthFt.toFixed(1)} × {elevation.depthFt.toFixed(1)} ft):
+          remaining buildable area <ProvenanceValue info={AI}>{geometry.remainingSqFt.toLocaleString()} sqft</ProvenanceValue>
+          <span className="sc-adu-sep">·</span>
+          rear yard <ProvenanceValue info={AI}>{geometry.rearYardFt} ft</ProvenanceValue>
+          <span className="sc-adu-sep">·</span>
+          flood zone <ProvenanceValue info={SFDC}>{lot.floodZone ? 'Yes' : 'No'}</ProvenanceValue>
+        </p>
+
+        {!evaluation.offered ? (
+          <p className="sc-adu-reason">{evaluation.reason}</p>
+        ) : (
+          <>
+            {evaluation.note && <p className="sc-adu-note">{evaluation.note}</p>}
+            <ul className="sc-adu-list">
+              {evaluation.options.map((o) => {
+                const isAdded = o.type.id === added?.type.id;
+                return (
+                  <li key={o.type.id} className={`sc-adu-row ${o.fits ? '' : 'sc-adu-row--nofit'} ${isAdded ? 'sc-adu-row--added' : ''}`}>
+                    <div className="sc-adu-type">
+                      <span className="sc-adu-name">{o.type.name}</span>
+                      <span className="sc-adu-size">
+                        {o.type.sqft.toLocaleString()} sqft · {o.type.footprint.widthFt} × {o.type.footprint.depthFt} ft footprint
+                      </span>
+                    </div>
+                    {o.fits ? (
+                      <>
+                        <span className="sc-adu-fit sc-adu-fit--yes">
+                          <ProvenanceValue info={AI}>Fits</ProvenanceValue>
+                        </span>
+                        <VerdictChip economics={o.economics} />
+                        {isAdded ? (
+                          <button className="sc-adu-btn sc-adu-btn--added" onClick={onRemove}>✓ Added · Remove</button>
+                        ) : (
+                          <button className="sc-adu-btn" onClick={() => onAdd(o.type.id)}>Add</button>
+                        )}
+                      </>
+                    ) : (
+                      <span className="sc-adu-fit sc-adu-fit--no">
+                        Doesn’t fit: <ProvenanceValue info={AI}>{o.reason}</ProvenanceValue>
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            {addedTypeId && !added && (
+              <p className="sc-adu-note">The ADU you added doesn’t fit {plan.name} with this elevation, so it’s left out.</p>
+            )}
+          </>
+        )}
+
+        {impact && e && (
+          <div className="sc-adu-impact">
+            <dl className="sc-adu-lines">
+              <dt>ADU build ({e.sqft.toLocaleString()} sqft)</dt>
+              <dd><ProvenanceValue info={AI}>{usd(e.build)}</ProvenanceValue></dd>
+              <dt>Permits &amp; fees</dt>
+              <dd><ProvenanceValue info={AI}>{usd(e.fees)}</ProvenanceValue></dd>
+              {e.flood > 0 && (
+                <>
+                  <dt>Flood-zone elevation</dt>
+                  <dd><ProvenanceValue info={AI}>{usd(e.flood)}</ProvenanceValue></dd>
+                </>
+              )}
+              <dt>Carry ({CARRY_COST_PCT}% of build)</dt>
+              <dd><ProvenanceValue info={AI}>{usd(e.carry)}</ProvenanceValue></dd>
+              <dt>ESP uplift</dt>
+              <dd><ProvenanceValue info={AI}>+{usd(e.uplift)}</ProvenanceValue></dd>
+              <dt>Selling costs ({SELLING_COST_PCT}% of uplift)</dt>
+              <dd><ProvenanceValue info={AI}>{usd(e.selling)}</ProvenanceValue></dd>
+              <dt className="sc-adu-total">Change in margin</dt>
+              <dd className="sc-adu-total"><ProvenanceValue info={AI}>{signedUsd(e.marginDelta)}</ProvenanceValue></dd>
+            </dl>
+            <div className="sc-adu-stats">
+              <div>
+                <span className="sc-adu-stat-label">Max lot offer</span>
+                <span className="sc-adu-stat-value">
+                  {usd(fin.maxLotOffer)} → <ProvenanceValue info={AI}>{usd(impact.maxLotOffer)}</ProvenanceValue>
+                </span>
+              </div>
+              <div>
+                <span className="sc-adu-stat-label">Projected margin</span>
+                <span className="sc-adu-stat-value">
+                  {pct(fin.projectedMargin)} → <ProvenanceValue info={AI}>{pct(impact.projectedMargin)}</ProvenanceValue>
+                </span>
+              </div>
+              <div>
+                <span className="sc-adu-stat-label">Schedule</span>
+                <span className="sc-adu-stat-value">
+                  <ProvenanceValue info={AI}>+{e.addedDays} days</ProvenanceValue>
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+        <p className="sc-adu-rule">{aduRuleText(market)}</p>
+      </div>
+    </section>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────
 export default function ScenarioEngine() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const opp = id ? mockOpportunities.find((o) => o.id === id) : null;
-  const landPrice = ASSETS.find((a) => a.id === id)?.underwrite?.landPrice;
-  const lot: FeasibilityLot = (id && LOT_DIMS[id]) || { widthFt: 52, depthFt: 120 };
+  const asset = ASSETS.find((a) => a.id === id);
+  const landPrice = asset?.underwrite?.landPrice;
+  const draft = id ? getAIDraft(id) : undefined;
+  const market: Market = asset?.market ?? 'DFW';
+  const lot: LotForFit = {
+    ...(draft?.lot ?? FALLBACK_LOT),
+    lotSqFt: asset?.lotSqFt ?? 0,
+    floodZone: asset?.floodZone ?? false,
+  };
+  const feasibilityLot: FeasibilityLot = { widthFt: lot.widthFt, depthFt: lot.depthFt };
+
+  // DFW uses the full plan library at DFW pricing. Other markets use the plans
+  // already underwritten there, priced to the lot's AI draft.
+  const calibration = market !== 'DFW' && draft ? draftCalibration(draft) : undefined;
+  const compOverrides: CompOverrides = calibration ? {} : COMP_OVERRIDES;
+  const marketPlans = useMemo(() => {
+    const names = marketPlanNames(market);
+    return DFW_PLANS.filter((p) => market === 'DFW' || names.has(p.name)).map((p) => calibrate(p, calibration));
+    // calibration is derived from the stable route id
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [market, id]);
 
   // Compute feasibility for every plan.
   const feasibilityMap = useMemo(() => {
-    return DFW_PLANS.map((plan) => ({
+    return marketPlans.map((plan) => ({
       plan,
-      reason: checkFeasibility(plan, lot),
+      reason: checkFeasibility(plan, feasibilityLot),
     }));
-  }, [lot]);
+  }, [marketPlans, feasibilityLot.widthFt, feasibilityLot.depthFt]);
 
   const feasiblePlans = feasibilityMap.filter((f) => f.reason === 'ok').map((f) => f.plan);
   const excludedPlans = feasibilityMap.filter((f) => f.reason !== 'ok');
@@ -587,7 +839,7 @@ export default function ScenarioEngine() {
   const financials = feasiblePlans.map((plan) => {
     const s = cardStates[plan.id] ?? initialCardState(plan);
     return calcFinancials({
-      plan: withOverrides(plan),
+      plan: withOverrides(plan, compOverrides),
       elevationIdx: s.elevationIdx,
       specLevelIdx: s.specSelectedIdx,
       selectedOptionIds: s.selectedOptionIds,
@@ -606,6 +858,28 @@ export default function ScenarioEngine() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedPlan = feasiblePlans.find((p) => p.id === selectedId) ?? recommendedPlan;
   const selectedFin = financials[feasiblePlans.indexOf(selectedPlan)];
+
+  // One ADU at a time, on the selected plan.
+  const [aduTypeId, setAduTypeId] = useState<string | null>(null);
+  const selectedState = selectedPlan ? cardStates[selectedPlan.id] ?? initialCardState(selectedPlan) : undefined;
+  const aduEvaluation = selectedPlan && selectedState
+    ? evaluateAdus(market, lot, selectedPlan.elevations[selectedState.elevationIdx])
+    : undefined;
+  const addedAdu = aduEvaluation?.offered
+    ? aduEvaluation.options.find((o) => o.type.id === aduTypeId && o.fits)
+    : undefined;
+  const addedImpact = addedAdu && selectedFin
+    ? aduImpact(selectedFin, `${addedAdu.type.name} ${addedAdu.type.sqft.toLocaleString()} sqft`, addedAdu.economics)
+    : undefined;
+  const aduRows: ExtraRow[] = addedImpact
+    ? [
+        { label: `ADU: ${addedImpact.name}`, value: `${usd(addedImpact.economics.hardCost)} cost`, provenance: AI, style: 'sub' },
+        { label: 'ADU ESP uplift', value: '+' + usd(addedImpact.economics.uplift), provenance: AI, style: 'sub' },
+        { label: 'ADU change in margin', value: signedUsd(addedImpact.economics.marginDelta), provenance: AI },
+        { label: 'Max Lot Offer with ADU', value: usd(addedImpact.maxLotOffer), provenance: AI, style: 'highlight' },
+        { label: 'Projected Margin with ADU', value: pct(addedImpact.projectedMargin), provenance: AI, style: 'margin' },
+      ]
+    : [];
 
   const patchCard = (planId: string, patch: Partial<PlanCardState>) => {
     setCardStates((prev) => ({
@@ -653,7 +927,7 @@ export default function ScenarioEngine() {
           <div className="sc-header-summary-item">
             <span className="sc-header-summary-label">Feasible Plans</span>
             <span className="sc-header-summary-value">
-              {feasiblePlans.length} of {DFW_PLANS.length}
+              {feasiblePlans.length} of {marketPlans.length}
             </span>
           </div>
           {recommendedPlan && (
@@ -670,9 +944,10 @@ export default function ScenarioEngine() {
       {/* Plan cards */}
       <section className="sc-section">
         <div className="sc-section-header">
-          <h2 className="sc-section-title">Feasible Plans — DFW Market</h2>
+          <h2 className="sc-section-title">Feasible Plans — {market} Market</h2>
           <span className="sc-section-caption">
             Filtered by lot: {lot.widthFt}ft W × {lot.depthFt}ft D
+            {calibration && ' · priced to this lot’s AI draft'}
           </span>
         </div>
         <div className={`sc-plan-grid sc-plan-grid--n${feasiblePlans.length}`}>
@@ -701,6 +976,20 @@ export default function ScenarioEngine() {
         )}
       </section>
 
+      {/* ADU */}
+      {selectedPlan && selectedState && selectedFin && (
+        <AduSection
+          market={market}
+          lot={lot}
+          plan={selectedPlan}
+          elevationIdx={selectedState.elevationIdx}
+          fin={selectedFin}
+          addedTypeId={aduTypeId}
+          onAdd={setAduTypeId}
+          onRemove={() => setAduTypeId(null)}
+        />
+      )}
+
       {/* Pro forma */}
       {feasiblePlans.length > 0 && (
         <section className="sc-section">
@@ -712,6 +1001,8 @@ export default function ScenarioEngine() {
             recommendedId={recommendedPlan.id}
             selectedId={selectedPlan.id}
             landPrice={landPrice}
+            compOverrides={compOverrides}
+            extraRows={aduRows}
           />
         </section>
       )}
