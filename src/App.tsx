@@ -1,5 +1,8 @@
-import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AppFooter from './components/AppFooter';
+import DemoPresenter from './components/DemoPresenter';
+import DemoProvider from './components/DemoProvider';
+import RoleProvider from './components/RoleProvider';
 import NavBar from './components/NavBar';
 import DraftReviewProvider from './components/DraftReviewProvider';
 import MarkReviewProvider from './components/MarkReviewProvider';
@@ -12,11 +15,13 @@ import AIDraftPage from './pages/AIDraftPage';
 import AssetDetailPage from './pages/AssetDetailPage';
 import ScenarioEngine from './pages/ScenarioEngine';
 import CompSelectionPage from './pages/CompSelectionPage';
+import ApprovalsPage from './pages/ApprovalsPage';
+import ContractListPage from './pages/ContractListPage';
 import UnderContractPage from './pages/UnderContractPage';
 import PortfolioPage from './pages/PortfolioPage';
 import ForSalePage from './pages/ForSalePage';
 import IntegrationsPage from './pages/IntegrationsPage';
-import { DEMO_DEAL_ID } from './data/contracts';
+import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
   return (
@@ -24,6 +29,8 @@ export default function App() {
       <DraftReviewProvider>
         <MarkReviewProvider>
           <ListingActionProvider>
+            <DemoProvider>
+            <RoleProvider>
             <NavBar />
             <Routes>
               <Route path="/" element={<Dashboard />} />
@@ -33,14 +40,19 @@ export default function App() {
               <Route path="/underwrite/:id/draft" element={<AIDraftPage />} />
               <Route path="/underwrite/:id/scenario" element={<ScenarioEngine />} />
               <Route path="/underwrite/:id/scenario/comps" element={<CompSelectionPage />} />
-              <Route path="/contract" element={<Navigate to={`/contract/${DEMO_DEAL_ID}`} replace />} />
+              <Route path="/contract" element={<ContractListPage />} />
               <Route path="/contract/:id" element={<UnderContractPage />} />
               <Route path="/asset/:id" element={<AssetDetailPage />} />
               <Route path="/portfolio" element={<PortfolioPage />} />
               <Route path="/for-sale" element={<ForSalePage />} />
               <Route path="/integrations" element={<IntegrationsPage />} />
+              <Route path="/approvals" element={<ApprovalsPage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
             <AppFooter />
+            <DemoPresenter />
+            </RoleProvider>
+            </DemoProvider>
           </ListingActionProvider>
         </MarkReviewProvider>
       </DraftReviewProvider>

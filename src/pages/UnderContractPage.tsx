@@ -4,13 +4,15 @@ import { ASSETS } from '../data/assets';
 import {
   CONTRACT_DEALS,
   daysRemaining,
+  inspectionTone,
+  underwriteInfo,
   type ContractDeal,
   type ItemState,
   type TimelineStep,
   type WorkflowCard,
 } from '../data/contracts';
-import { AI, SFDC, computed } from '../data/provenance';
-import type { ProvenanceInfo, UnderwriteOverrideField } from '../types';
+import { SFDC, computed } from '../data/provenance';
+import type { UnderwriteOverrideField } from '../types';
 import './UnderContractPage.css';
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -32,26 +34,6 @@ const ITEM_GLYPH: Record<ItemState, string> = {
   waiting: '○',
 };
 
-/** Amber under 7 days, red under 3. */
-function countdownTone(days: number): 'ok' | 'warn' | 'urgent' {
-  if (days < 3) return 'urgent';
-  if (days < 7) return 'warn';
-  return 'ok';
-}
-
-// Underwrite values read as analyst-confirmed once reviewed, or as overrides with their reason.
-function reviewOf(deal: ContractDeal) {
-  return ASSETS.find((a) => a.id === deal.oppId)?.underwrite?.review;
-}
-
-function underwriteInfo(deal: ContractDeal, field: UnderwriteOverrideField): ProvenanceInfo {
-  const review = reviewOf(deal);
-  const o = review?.overrides.find((x) => x.field === field);
-  if (o) return { provenance: 'human', note: `${review!.analyst} overrode AI ${usd(o.aiValue)}: ${o.reason}` };
-  if (review) return { provenance: 'human', note: `Reviewed by ${review.analyst}` };
-  return AI;
-}
-
 // ── Workflow card ──────────────────────────────────────────────
 function WorkflowCardView({ card, deal }: { card: WorkflowCard; deal: ContractDeal }) {
   return (
@@ -71,7 +53,7 @@ function WorkflowCardView({ card, deal }: { card: WorkflowCard; deal: ContractDe
               {item.field && item.value !== undefined && (
                 <>
                   {' — '}
-                  <ProvenanceValue info={underwriteInfo(deal, item.field)}>{usd(item.value)}</ProvenanceValue>
+                  <ProvenanceValue info={underwriteInfo(deal.oppId, item.field)}>{usd(item.value)}</ProvenanceValue>
                 </>
               )}
             </span>
@@ -112,12 +94,12 @@ function Timeline({ steps }: { steps: TimelineStep[] }) {
 // ── Deal header ────────────────────────────────────────────────
 function DealHeader({ deal }: { deal: ContractDeal }) {
   const days = daysRemaining(deal.inspectionExpires);
-  const tone = countdownTone(days);
+  const tone = inspectionTone(days);
 
-  const review = reviewOf(deal);
-  const pv = (field: UnderwriteOverrideField) => underwriteInfo(deal, field);
+  const review = ASSETS.find((a) => a.id === deal.oppId)?.underwrite?.review;
+  const pv = (field: UnderwriteOverrideField) => underwriteInfo(deal.oppId, field);
   const offerInfo = review?.overrides.some((o) => o.field === 'landPrice') ? pv('landPrice') : SFDC;
-  const marginInfo: ProvenanceInfo = review ? { provenance: 'human', note: `Reviewed by ${review.analyst}` } : AI;
+  const marginInfo = underwriteInfo(deal.oppId, 'marginPct');
 
   return (
     <div className="uc-deal-header">
@@ -174,7 +156,7 @@ export default function UnderContractPage() {
         <div className="uc-empty-state">
           <h2>{id ? `No contract found for ${id}.` : 'No deal under contract selected.'}</h2>
           <p>Deals appear here once an offer is accepted and the lot goes under contract.</p>
-          <button className="uc-back-btn" onClick={() => navigate('/queue')}>← Back to Queue</button>
+          <button className="uc-back-btn" onClick={() => navigate('/contract')}>← All deals under contract</button>
         </div>
       </div>
     );
@@ -184,15 +166,11 @@ export default function UnderContractPage() {
     <div className="uc-page">
       {/* Breadcrumb — reuse sc- classes from ScenarioEngine.css */}
       <div className="sc-breadcrumb">
-        <button className="sc-breadcrumb-link" onClick={() => navigate('/queue')}>
-          Opportunity Queue
+        <button className="sc-breadcrumb-link" onClick={() => navigate('/contract')}>
+          Under Contract
         </button>
         <span className="sc-breadcrumb-sep">›</span>
-        <button className="sc-breadcrumb-link" onClick={() => navigate(`/underwrite/${deal.oppId}`)}>
-          {deal.oppId}
-        </button>
-        <span className="sc-breadcrumb-sep">›</span>
-        <span className="sc-breadcrumb-current">Under Contract</span>
+        <span className="sc-breadcrumb-current">{deal.oppId}</span>
         <Link to={`/asset/${deal.oppId}`} className="uc-record-link">View asset record →</Link>
       </div>
 

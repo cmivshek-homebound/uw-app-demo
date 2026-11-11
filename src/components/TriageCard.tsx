@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { getAIDraft } from '../data/aiDrafts';
 import { AI, SFDC } from '../data/provenance';
+import { useCanAct } from '../data/role';
+import AssetLink from './AssetLink';
 import ProvenanceValue from './ProvenanceValue';
 import type { Opportunity } from '../types';
 import './TriageCard.css';
@@ -98,6 +100,7 @@ interface Props {
 export default function TriageCard({ opp, onDQ, onProceed, onOverride }: Props) {
   const triage = TRIAGE_DATA[opp.id];
   const isAutoDQ = triage?.overallResult === 'fail';
+  const canAct = useCanAct();
   const hasDraft = getAIDraft(opp.id) !== undefined;
 
   return (
@@ -112,6 +115,8 @@ export default function TriageCard({ opp, onDQ, onProceed, onOverride }: Props) 
             {opp.market}
             <span className="triage-meta-sep">·</span>
             <ProvenanceValue info={SFDC}>{opp.lotSqFt.toLocaleString()} sqft</ProvenanceValue>
+            <span className="triage-meta-sep">·</span>
+            <AssetLink id={opp.id} record />
           </p>
         </div>
         {triage && (
@@ -148,7 +153,7 @@ export default function TriageCard({ opp, onDQ, onProceed, onOverride }: Props) 
             View AI draft
           </Link>
         )}
-        {isAutoDQ ? (
+        {!canAct ? null : isAutoDQ ? (
           <>
             <button className="triage-btn triage-btn-auto-dq" onClick={onDQ}>
               Confirm Auto-DQ

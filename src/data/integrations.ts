@@ -14,13 +14,15 @@ export type ScreenId =
   | 'aiDraft'
   | 'scenario'
   | 'comps'
+  | 'contractList'
   | 'contract'
   | 'asset'
   | 'portfolio'
   | 'marks'
   | 'accuracy'
   | 'construction'
-  | 'forSale';
+  | 'forSale'
+  | 'approvals';
 
 /** Screen names, with an example link for routes that take an asset id. */
 export const SCREENS: Record<ScreenId, { label: string; example: string }> = {
@@ -31,13 +33,15 @@ export const SCREENS: Record<ScreenId, { label: string; example: string }> = {
   aiDraft: { label: 'AI draft', example: '/underwrite/BOOL-003/draft' },
   scenario: { label: 'Scenario engine', example: '/underwrite/BOOL-002/scenario' },
   comps: { label: 'Comp selection', example: '/underwrite/BOOL-002/scenario/comps' },
-  contract: { label: 'Under contract', example: '/contract/BOOL-001' },
+  contractList: { label: 'Under contract list', example: '/contract' },
+  contract: { label: 'Under contract deal', example: '/contract/BOOL-001' },
   asset: { label: 'Asset detail', example: '/asset/BOOL-022' },
   portfolio: { label: 'Portfolio · Assets', example: '/portfolio' },
   marks: { label: 'Portfolio · Month-end marks', example: '/portfolio?tab=marks' },
   accuracy: { label: 'Portfolio · Underwriting accuracy', example: '/portfolio?tab=accuracy' },
   construction: { label: 'Portfolio · Construction', example: '/portfolio?tab=construction' },
   forSale: { label: 'For sale', example: '/for-sale' },
+  approvals: { label: 'Needs your approval', example: '/approvals' },
 };
 
 export type IntegrationId = 'salesforce' | 'tape' | 'blueprint' | 'mls' | 'ai';
@@ -62,7 +66,7 @@ export const INTEGRATIONS: Integration[] = [
       { field: 'Lot sqft', screens: ['queue', 'underwriteBoard', 'underwrite', 'aiDraft', 'scenario', 'asset'] },
       { field: 'Lot dimensions (width × depth)', screens: ['underwrite', 'aiDraft', 'scenario'] },
       { field: 'Setbacks and max lot coverage', screens: ['aiDraft'] },
-      { field: 'Asking or contracted land price', screens: ['aiDraft', 'scenario', 'contract', 'asset'] },
+      { field: 'Asking or contracted land price', screens: ['aiDraft', 'scenario', 'contractList', 'contract', 'asset'] },
     ],
   },
   {
@@ -87,7 +91,7 @@ export const INTEGRATIONS: Integration[] = [
     fields: [
       { field: 'Vertical budget and budget lines', screens: ['construction', 'asset'] },
       { field: 'Spend to date and % complete', screens: ['construction', 'asset'] },
-      { field: 'Schedule: planned and forecast CO, milestones, weeks late', screens: ['construction', 'asset'] },
+      { field: 'Schedule: planned and forecast CO, milestones, weeks late', screens: ['construction', 'asset', 'approvals'] },
       { field: 'Change orders', screens: ['construction', 'asset'] },
       { field: 'Construction loan draws', screens: ['construction', 'asset'] },
     ],
@@ -100,8 +104,8 @@ export const INTEGRATIONS: Integration[] = [
     marker: MLS,
     fields: [
       { field: 'Comp sales (price, sqft, $/sqft, distance)', screens: ['aiDraft', 'comps', 'marks'] },
-      { field: 'List price and price drops', screens: ['forSale', 'asset'] },
-      { field: 'Days on market', screens: ['forSale', 'asset', 'dashboard'] },
+      { field: 'List price and price drops', screens: ['forSale', 'asset', 'approvals'] },
+      { field: 'Days on market', screens: ['forSale', 'asset', 'dashboard', 'approvals'] },
       { field: 'Showings, views and saves', screens: ['forSale', 'asset'] },
       { field: 'Offers and concessions', screens: ['forSale', 'asset'] },
       { field: 'Sale price', screens: ['asset', 'accuracy'] },
@@ -115,14 +119,14 @@ export const INTEGRATIONS: Integration[] = [
     marker: AI,
     fields: [
       { field: 'Pre-screen detections and draft confidence', screens: ['underwriteBoard', 'underwrite', 'aiDraft'] },
-      { field: 'Underwrite draft: ESP, build, cost stack, margin, max land price', screens: ['aiDraft', 'scenario', 'contract', 'asset'] },
+      { field: 'Underwrite draft: ESP, build, cost stack, margin, max land price', screens: ['aiDraft', 'scenario', 'contractList', 'contract', 'asset', 'approvals'] },
       { field: 'Lot feasibility: buildable area, coverage, plan and ADU fit', screens: ['aiDraft', 'scenario'] },
       { field: 'ADU economics', screens: ['aiDraft', 'scenario', 'asset'] },
       { field: 'Comp adjustments and ML ESP', screens: ['comps'] },
-      { field: 'Month-end mark proposals and drivers', screens: ['marks', 'dashboard', 'portfolio', 'asset'] },
-      { field: 'Listing health diagnosis and recommendations', screens: ['forSale'] },
-      { field: 'Estimate at completion and cost to complete', screens: ['construction', 'asset'] },
-      { field: 'Margin impact of build overruns and slips', screens: ['construction', 'asset'] },
+      { field: 'Month-end mark proposals and drivers', screens: ['marks', 'dashboard', 'portfolio', 'asset', 'approvals'] },
+      { field: 'Listing health diagnosis and recommendations', screens: ['forSale', 'approvals'] },
+      { field: 'Estimate at completion and cost to complete', screens: ['construction', 'asset', 'approvals'] },
+      { field: 'Margin impact of build overruns and slips', screens: ['construction', 'asset', 'approvals'] },
     ],
   },
 ];

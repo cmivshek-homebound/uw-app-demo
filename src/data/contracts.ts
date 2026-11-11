@@ -1,12 +1,14 @@
-import type { AssetUnderwrite, UnderwriteOverrideField } from '../types';
+import type { Asset, AssetUnderwrite, DiligenceSignoffKind, ProvenanceInfo, UnderwriteOverrideField } from '../types';
 import { ASSETS } from './assets';
+import { DEMO_TODAY, daysRemaining } from './dates';
+import { AI } from './provenance';
 
 // ── Under-contract deals ───────────────────────────────────────
 // Post-offer workflow state, derived from under-contract assets in
-// assets.ts. Workflow cards and timeline detail are hardcoded below,
-// keyed by asset id.
+// assets.ts. BOOL-001 (the scripted walkthrough) has hand-written workflow
+// cards and timeline below; other deals get theirs from diligence sign-offs.
 
-export { DEMO_TODAY, daysRemaining } from './dates';
+export { DEMO_TODAY, daysRemaining };
 
 export type ItemState = 'done' | 'due' | 'waiting';
 
@@ -122,10 +124,97 @@ function underwriteValue(uw: AssetUnderwrite, field: NonNullable<WorkflowItem['f
   return { buildCost: uw.buildCost, esp: uw.esp, landPrice: uw.landPrice }[field];
 }
 
+export const SIGNOFF_LABELS: Record<DiligenceSignoffKind, string> = {
+  design_plan_fit: 'Design / plan fit',
+  site_visit: 'Site visit',
+  sales_lot_feedback: 'Sales lot feedback',
+  procurement_budget: 'Procurement budget',
+};
+
+/** Signed-off counts conditional sign-offs, which are signed with an open issue. */
+export function diligenceProgress(asset: Asset): { signed: number; total: number; openIssues: number } {
+  const d = asset.contract?.diligence;
+  return {
+    signed: d?.signoffs.filter((s) => s.status !== 'pending').length ?? 0,
+    total: d?.signoffs.length ?? 0,
+    openIssues: d?.issues.filter((i) => i.status === 'open').length ?? 0,
+  };
+}
+
+/** Inspection countdown tone: amber under 7 days, red under 3. */
+export function inspectionTone(days: number): 'ok' | 'warn' | 'urgent' {
+  if (days < 3) return 'urgent';
+  if (days < 7) return 'warn';
+  return 'ok';
+}
+
+/** Underwrite values read as analyst-confirmed once reviewed, or as overrides with their reason. */
+export function underwriteInfo(assetId: string, field: UnderwriteOverrideField | 'marginPct'): ProvenanceInfo {
+  const review = ASSETS.find((a) => a.id === assetId)?.underwrite?.review;
+  const o = review?.overrides.find((x) => x.field === field);
+  if (o) return { provenance: 'human', note: `${review!.analyst} overrode AI $${o.aiValue.toLocaleString('en-US')}: ${o.reason}` };
+  if (review) return { provenance: 'human', note: `Reviewed by ${review.analyst}` };
+  return AI;
+}
+
+function shortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
+/** Workflow cards and timeline for deals without a scripted walkthrough, from their diligence. */
+function derivedDetail(a: Asset): ContractDetail {
+  const { signoffs, issues } = a.contract!.diligence!;
+  const { signed, total } = diligenceProgress(a);
+  const items: WorkflowItem[] = signoffs.map((s) => {
+    const label = SIGNOFF_LABELS[s.kind];
+    if (s.status === 'signed_off') return { state: 'done', label, note: `${s.owner} · ${shortDate(s.date)}` };
+    if (s.status === 'conditional') {
+      const issue = issues.find((i) => i.raisedBy === s.kind && i.status === 'open');
+      return { state: 'due', label, note: `open issue: ${issue?.category.toLowerCase() ?? 'see asset record'}` };
+    }
+    return { state: s.date <= DEMO_TODAY ? 'due' : 'waiting', label, note: `${s.owner} · due ${shortDate(s.date)}` };
+  });
+  const allSigned = signed === total;
+  const inspection = a.contract!.inspectionExpires;
+  return {
+    planLine: a.underwrite!.planName,
+    cards: [
+      {
+        id: 'diligence',
+        title: 'Diligence Sign-offs',
+        status: `${signed} of ${total} signed off`,
+        tone: allSigned ? 'progress' : 'review',
+        items,
+      },
+      {
+        id: 'ctc',
+        title: 'Clear to Close',
+        status: 'Not yet available',
+        tone: 'locked',
+        items: [
+          { state: allSigned ? 'done' : 'waiting', label: 'All diligence signed off', note: 'prerequisite' },
+          { state: 'waiting', label: 'Blueprint budget confirmed', note: 'prerequisite' },
+          { state: 'waiting', label: 'Inspection period ends', note: shortDate(inspection) },
+        ],
+      },
+    ],
+    timeline: [
+      { label: 'Contract signed', date: shortDate(a.contract!.contractDate), state: 'done' },
+      ...signoffs.map((s): TimelineStep => ({
+        label: SIGNOFF_LABELS[s.kind],
+        date: shortDate(s.date),
+        state: s.status === 'pending' ? 'pending' : 'done',
+      })),
+      { label: 'Inspection expires', date: shortDate(inspection), state: daysRemaining(inspection) === 0 ? 'done' : 'pending' },
+      { label: 'Clear to Close', date: 'TBD', state: 'tbd' },
+    ],
+  };
+}
+
 export const CONTRACT_DEALS: Record<string, ContractDeal> = Object.fromEntries(
   ASSETS.filter((a) => a.stage === 'under_contract' && a.underwrite && a.contract).map((a) => {
     const uw = a.underwrite!;
-    const detail = CONTRACT_DETAILS[a.id];
+    const detail = CONTRACT_DETAILS[a.id] ?? (a.contract!.diligence ? derivedDetail(a) : undefined);
     const deal: ContractDeal = {
       oppId: a.id,
       address: a.address,

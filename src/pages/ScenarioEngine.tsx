@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mockOpportunities } from '../data/opportunities';
 import { ASSETS } from '../data/assets';
+import AssetLink from '../components/AssetLink';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
 import { evaluateAdus, aduRuleText } from '../data/adu';
 import type { AduEconomics, LotForFit } from '../data/adu';
@@ -53,8 +54,10 @@ const FALLBACK_LOT: Omit<LotForFit, 'lotSqFt' | 'floodZone'> = {
 const ASSUMPTION = human('Underwriting assumption');
 
 // ── Market calibration ─────────────────────────────────────────
-// The plan library is priced for DFW. Outside DFW, scale each plan's ESP and
-// spec-level build costs so the recommended plan matches the lot's AI draft.
+// The plan library is priced for DFW. For any lot with an AI draft (DFW
+// included), scale each plan's ESP and spec-level build costs so the draft's
+// recommended plan shows exactly the draft's ESP and build. Unrounded, so the
+// ESP matches the AI draft and asset page to the dollar.
 interface Calibration {
   esp: number;
   build: number;
@@ -73,8 +76,8 @@ function calibrate(plan: Plan, c: Calibration | undefined): Plan {
   if (!c) return plan;
   return {
     ...plan,
-    espPerSqft: Math.round(plan.espPerSqft * c.esp),
-    specLevels: plan.specLevels.map((s) => ({ ...s, costPerSqft: Math.round(s.costPerSqft * c.build) })),
+    espPerSqft: plan.espPerSqft * c.esp,
+    specLevels: plan.specLevels.map((s) => ({ ...s, costPerSqft: s.costPerSqft * c.build })),
   };
 }
 
@@ -301,7 +304,7 @@ function PlanCard({
                   onClick={() => onChange({ specSelectedIdx: globalIdx })}
                 >
                   <span className="sc-spec-chip-name">{s.level}</span>
-                  <span className="sc-spec-chip-price">${s.costPerSqft}/sqft</span>
+                  <span className="sc-spec-chip-price">${Math.round(s.costPerSqft)}/sqft</span>
                 </button>
               );
             })}
@@ -371,7 +374,7 @@ function PlanCard({
           <span><ProvenanceValue info={espInfo}>{usd(fin.maxLotOffer)}</ProvenanceValue></span>
         </div>
         <div className={`sc-fin-row sc-fin-row--margin ${fin.projectedMargin < 0 ? 'sc-fin-row--margin-neg' : ''}`}>
-          <span>Projected Margin</span>
+          <span>Margin Before Land</span>
           <span><ProvenanceValue info={espInfo}>{pct(fin.projectedMargin)}</ProvenanceValue></span>
         </div>
       </div>
@@ -460,7 +463,7 @@ const PROFORMA_ROWS: ProFormaRow[] = [
   { label: 'Total Cost Ex-Land',   key: 'totalCostExLand',  format: usd,                                  style: 'total', provenance: espProvenance },
   { label: 'Max Lot Offer',        key: 'maxLotOffer',      format: usd,                                  style: 'highlight', provenance: espProvenance },
   { label: 'Land Price',           key: 'landPrice',        format: usd,                                  provenance: () => SFDC, fixed: true },
-  { label: 'Projected Margin',     key: 'projectedMargin',  format: pct,                                  style: 'margin', provenance: espProvenance },
+  { label: 'Margin Before Land',   key: 'projectedMargin',  format: pct,                                  style: 'margin', provenance: espProvenance },
 ];
 
 interface ExtraRow {
@@ -837,7 +840,7 @@ function AduSection({
                 </span>
               </div>
               <div>
-                <span className="sc-adu-stat-label">Projected margin</span>
+                <span className="sc-adu-stat-label">Margin before land</span>
                 <span className="sc-adu-stat-value">
                   <ProvenanceValue info={finInfo}>{pct(fin.projectedMargin)}</ProvenanceValue> →{' '}
                   <ProvenanceValue info={SCENARIO_OUTPUT}>{pct(impact.projectedMargin)}</ProvenanceValue>
@@ -875,9 +878,9 @@ export default function ScenarioEngine() {
   };
   const feasibilityLot: FeasibilityLot = { widthFt: lot.widthFt, depthFt: lot.depthFt };
 
-  // DFW uses the full plan library at DFW pricing. Other markets use the plans
-  // already underwritten there, priced to the lot's AI draft.
-  const calibration = market !== 'DFW' && draft ? draftCalibration(draft) : undefined;
+  // DFW uses the full plan library; other markets use the plans already
+  // underwritten there. Lots with an AI draft are priced to it.
+  const calibration = draft ? draftCalibration(draft) : undefined;
   const compOverrides: CompOverrides = calibration ? {} : COMP_OVERRIDES;
   const marketPlans = useMemo(() => {
     const names = marketPlanNames(market);
@@ -959,7 +962,7 @@ export default function ScenarioEngine() {
         { key: 'adu-uplift', label: 'ADU ESP uplift', value: '+' + usd(addedImpact.economics.uplift), provenance: AI, style: 'sub' },
         { key: 'adu-margin-delta', label: 'ADU change in margin', value: signedUsd(addedImpact.economics.marginDelta), provenance: AI },
         { key: 'adu-max-lot', label: 'Max Lot Offer with ADU', value: usd(addedImpact.maxLotOffer), provenance: SCENARIO_OUTPUT, style: 'highlight' },
-        { key: 'adu-margin', label: 'Projected Margin with ADU', value: pct(addedImpact.projectedMargin), provenance: SCENARIO_OUTPUT, style: 'margin' },
+        { key: 'adu-margin', label: 'Margin Before Land with ADU', value: pct(addedImpact.projectedMargin), provenance: SCENARIO_OUTPUT, style: 'margin' },
       ]
     : [];
   const cardStateList = feasiblePlans.map((plan) => cardStates[plan.id] ?? initialCardState(plan));
@@ -984,7 +987,7 @@ export default function ScenarioEngine() {
       <div className="sc-page">
         <p className="sc-not-found">
           Opportunity not found.{' '}
-          <button onClick={() => navigate('/queue')}>← Back to Queue</button>
+          <button onClick={() => navigate('/queue')}>← Back to Pipeline</button>
         </p>
       </div>
     );
@@ -995,7 +998,7 @@ export default function ScenarioEngine() {
       {/* Breadcrumb */}
       <div className="sc-breadcrumb">
         <button className="sc-breadcrumb-link" onClick={() => navigate('/queue')}>
-          Opportunity Queue
+          Pipeline
         </button>
         <span className="sc-breadcrumb-sep">›</span>
         <button className="sc-breadcrumb-link" onClick={() => navigate(`/underwrite/${opp.id}`)}>
@@ -1013,6 +1016,11 @@ export default function ScenarioEngine() {
             {opp.address}, {opp.city} {opp.state} &nbsp;·&nbsp; {opp.market} &nbsp;·&nbsp;{' '}
             <ProvenanceValue info={SFDC}>{opp.lotSqFt.toLocaleString()} sqft</ProvenanceValue> lot (
             <ProvenanceValue info={SFDC}>{lot.widthFt}ft × {lot.depthFt}ft</ProvenanceValue>)
+            {asset && (
+              <>
+                &nbsp;·&nbsp; <AssetLink id={asset.id} record />
+              </>
+            )}
           </p>
         </div>
         <div className="sc-header-summary">
@@ -1024,7 +1032,7 @@ export default function ScenarioEngine() {
           </div>
           {recommendedPlan && recommendedInfo && (
             <div className="sc-header-summary-item">
-              <span className="sc-header-summary-label">Top Margin</span>
+              <span className="sc-header-summary-label">Top Margin Before Land</span>
               <span className="sc-header-summary-value sc-header-summary-value--margin">
                 {recommendedPlan.name} ·{' '}
                 <ProvenanceValue info={recommendedInfo.esp}>{pct(recommendedFin.projectedMargin)}</ProvenanceValue>

@@ -1,7 +1,8 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { latestMark } from '../data/selectors';
 import type { Asset, AssetStage } from '../types';
 import { markProvenance } from '../data/provenance';
+import AssetLink from './AssetLink';
 import ProvenanceValue from './ProvenanceValue';
 // Reuse the queue's page and table classes (oq-*).
 import '../pages/OpportunityQueue.css';
@@ -45,8 +46,8 @@ export default function AssetStageTable({ assets }: { assets: Asset[] }) {
             const mark = latestMark(asset);
             return (
               <tr key={asset.id} className="oq-row" onClick={() => navigate(`/asset/${asset.id}`)}>
-                <td className="oq-id">{asset.id}</td>
-                <td className="oq-address">{asset.address}, {asset.city}, {asset.state} {asset.zip}</td>
+                <td className="oq-id"><AssetLink id={asset.id}>{asset.id}</AssetLink></td>
+                <td className="oq-address"><AssetLink id={asset.id}>{asset.address}</AssetLink>, {asset.city}, {asset.state} {asset.zip}</td>
                 <td>{asset.market}</td>
                 <td>{STAGE_LABELS[asset.stage]}</td>
                 <td>
@@ -61,7 +62,9 @@ export default function AssetStageTable({ assets }: { assets: Asset[] }) {
           })}
         </tbody>
       </table>
-      {assets.length === 0 && <div className="oq-empty">No assets in this stage.</div>}
+      {assets.length === 0 && <div className="oq-empty">
+          No assets in this stage. <Link to="/" className="link-button">Back to the dashboard</Link>
+        </div>}
     </div>
   );
 }

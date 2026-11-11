@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import ProvenanceValue from '../components/ProvenanceValue';
 import { ASSETS } from '../data/assets';
 import { DEMO_TODAY, daysRemaining, daysSince } from '../data/dates';
 import { useMarkReviews, withMarkReviews } from '../data/markReview';
+import { useDraftReviews, withReviewStatus } from '../data/review';
 import { MLS, computed } from '../data/provenance';
 import {
   ASSET_STAGES,
@@ -22,6 +23,11 @@ import type { BalanceSheetRow } from '../data/selectors';
 import type { Asset, AssetStage, Market, PipelineStatus, ProvenanceInfo } from '../types';
 // Reuse the queue's pill filter buttons (.filter-btn).
 import './OpportunityQueue.css';
+import '../components/AssetLink.css';
+import RoleBanner from '../components/RoleBanner';
+import { useRole } from '../data/role';
+import UnderwritingAccuracyTab from './UnderwritingAccuracyTab';
+import './PortfolioPage.css';
 import './Dashboard.css';
 
 const STATUS_ORDER: PipelineStatus[] = ['pending_review', 'in_review', 'ready_for_offer', 'dqd'];
@@ -124,6 +130,7 @@ function BalanceCells({ row }: { row: BalanceSheetRow }) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
+  const { role } = useRole();
 
   // ── Filters (kept in the URL so they survive navigating away and back) ──
   const marketParam = params.get('market');
@@ -139,7 +146,9 @@ export default function Dashboard() {
   // Month-end review state applies: approved moves leave Needs attention, and
   // once April is published the balance sheet marks to it.
   const { reviews: markReviews, published } = useMarkReviews();
-  const assets = filterAssets(withMarkReviews(ASSETS, markReviews, published), { market });
+  // Drafts submitted to Growth this session count as Ready for Offer, as on the board.
+  const { reviews: draftReviews } = useDraftReviews();
+  const assets = filterAssets(withReviewStatus(withMarkReviews(ASSETS, markReviews, published), draftReviews), { market });
 
   // ── Lifecycle ──
   const lifecycle = lifecycleByStage(assets);
@@ -204,12 +213,18 @@ export default function Dashboard() {
     <div className="db-page">
       <div className="db-header">
         <div>
-          <h1 className="db-title">Portfolio Overview</h1>
+          <h1 className="db-title">Dashboard</h1>
           <p className="db-subtitle">
             {plural(assets.length, 'asset')} · {scope} · as of {asOf}
           </p>
         </div>
       </div>
+
+      {role === 'executive' && (
+        <RoleBanner next={{ to: '#underwriting-accuracy', label: 'Jump to underwriting accuracy' }}>
+          Executive view: portfolio health first, then how underwriting held up on sold homes. Action buttons are hidden.
+        </RoleBanner>
+      )}
 
       {/* Filters */}
       <div className="db-filters">
@@ -306,7 +321,10 @@ export default function Dashboard() {
           </span>
         </div>
         {attention.length === 0 ? (
-          <p className="db-empty db-empty--padded">Nothing needs attention for these filters.</p>
+          <p className="db-empty db-empty--padded">
+            Nothing needs attention{market ? ` in ${market}` : ''}.
+            {market && <button className="link-button" onClick={() => setMarket(undefined)}>Show all markets</button>}
+          </p>
         ) : (
           <ul className="db-list">
             {attention.map(({ asset, reason, detail, to }) => (
@@ -342,7 +360,12 @@ export default function Dashboard() {
           </div>
         </div>
         {pipeline.length === 0 ? (
-          <p className="db-empty db-empty--padded">No pipeline opportunities match these filters.</p>
+          <p className="db-empty db-empty--padded">
+            No pipeline opportunities{market ? ` in ${market}` : ''}.
+            {market
+              ? <button className="link-button" onClick={() => setMarket(undefined)}>Show all markets</button>
+              : <Link to="/queue" className="link-button">Open the pipeline</Link>}
+          </p>
         ) : (
           <table className="db-table">
             <thead>
@@ -386,6 +409,13 @@ export default function Dashboard() {
           </table>
         )}
       </section>
+
+      {role === 'executive' && (
+        <section id="underwriting-accuracy" className="db-accuracy">
+          <h2 className="db-accuracy-title">Underwriting accuracy</h2>
+          <UnderwritingAccuracyTab />
+        </section>
+      )}
     </div>
   );
 }

@@ -1,13 +1,29 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import homeboundLogo from '../assets/homebound-logo.png';
 import { daysRemaining } from '../data/dates';
 import { ASSETS } from '../data/assets';
 import { useDraftReviews, withReviewStatus } from '../data/review';
 import { assetsByStage, countByStage, pipelineAssets, underwritingBoard } from '../data/selectors';
+import { useDemo } from '../data/demo';
+import { ROLE_LABELS, VIEWABLE_ANALYSTS, roleLanding, useRole } from '../data/role';
+import type { Role } from '../data/role';
 import './NavBar.css';
 
 export default function NavBar() {
   const { pathname } = useLocation();
+  const demo = useDemo();
+  const navigate = useNavigate();
+  const { role, analyst, setRole, setAnalyst } = useRole();
+
+  // Switching view lands on that role's starting page.
+  const viewAs = (next: Role) => {
+    setRole(next);
+    navigate(roleLanding(next, analyst));
+  };
+  const viewAsAnalyst = (name: string) => {
+    setAnalyst(name);
+    navigate(roleLanding('analyst', name));
+  };
 
   // Counts shown beside each destination so the bar reports live workload.
   const pipeline = pipelineAssets();
@@ -96,6 +112,39 @@ export default function NavBar() {
             <span className={`nav-count nav-count--${link.tone}`}>{link.count}</span>
           </Link>
         ))}
+        <label className="nav-view">
+          <span className="nav-view-label">View as</span>
+          <select
+            className="nav-select"
+            value={role ?? ''}
+            onChange={(e) => viewAs(e.target.value as Role)}
+          >
+            {!role && <option value="" disabled>Choose…</option>}
+            {(Object.keys(ROLE_LABELS) as Role[]).map((r) => (
+              <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+            ))}
+          </select>
+        </label>
+        {role === 'analyst' && (
+          <select
+            className="nav-select"
+            aria-label="Analyst"
+            value={analyst}
+            onChange={(e) => viewAsAnalyst(e.target.value)}
+          >
+            {VIEWABLE_ANALYSTS.map((a) => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+        )}
+        <button
+          className={`nav-demo ${demo.on ? 'nav-demo--on' : ''}`}
+          aria-pressed={demo.on}
+          onClick={() => demo.setOn(!demo.on)}
+          title={demo.on ? 'Hide the demo presenter' : 'Show the guided demo presenter'}
+        >
+          Demo
+        </button>
       </div>
     </nav>
   );

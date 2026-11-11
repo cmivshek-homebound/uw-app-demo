@@ -1,7 +1,7 @@
 .triage-card {
   background: #ffffff;
   border: 1px solid #e5e5e5;
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
 }
 
@@ -40,18 +40,18 @@
 .triage-overall-badge {
   display: inline-block;
   padding: 5px 14px;
-  border-radius: 20px;
+  border-radius: 14px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
   margin-top: 3px;
 }
 
 .overall-pass {
-  background-color: #ecfdf5;
-  color: #059669;
-  border: 1px solid #a7f3d0;
+  background-color: #eef6f1;
+  color: #1A6B4A;
+  border: 1px solid #b7d9c8;
 }
 
 .overall-review_required {
@@ -118,9 +118,9 @@
   flex-shrink: 0;
 }
 
-.dot-pass { background-color: #10b981; }
-.dot-fail { background-color: #ef4444; }
-.dot-flag { background-color: #f59e0b; }
+.dot-pass { background-color: #1A6B4A; }
+.dot-fail { background-color: #dc2626; }
+.dot-flag { background-color: #d97706; }
 
 .check-label {
   font-size: 13px;
@@ -174,7 +174,7 @@
 }
 
 .triage-btn-proceed {
-  background-color: #059669;
+  background-color: #1A6B4A;
   color: #ffffff;
 }
 

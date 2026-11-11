@@ -26,6 +26,7 @@ import { seededRandom } from './random';
 //   BOOL-028  5 wks late  LADBS permit held in plan check
 //   BOOL-026  4 wks late  October tropical storms stopped framing
 //   BOOL-042  −3.4%  foundation rebid came in under
+//   BOOL-027  +1.8%  sycamore root-zone work (over, but inside the 2% tolerance)
 
 /** Pre-con runs this long before construction starts unless a seed says otherwise. */
 export const DEFAULT_PRECON_DAYS = 45;
@@ -151,6 +152,9 @@ const SEEDS: Record<string, BuildSeed> = {
     slip: { from: 'framing', days: 28, note: 'Back-to-back October tropical systems stopped framing for about four weeks.' },
   },
   'BOOL-027': {
+    // Demo story: slightly over budget, still inside tolerance.
+    variancePct: 1.8,
+    lines: { foundation: { amount: 9_800, note: 'Hand-dug footings inside the sycamore root zones per the arborist.' } },
     changeOrders: [
       { date: '2025-07-08', category: 'foundation', amount: 5_200, reason: 'Unforeseen condition',
         description: 'Arborist-directed root bridge where the footing crossed sycamore roots' },

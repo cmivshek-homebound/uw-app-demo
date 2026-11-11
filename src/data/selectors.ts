@@ -67,7 +67,7 @@ export function underwritingBoard(assets: Asset[] = ASSETS): Record<Underwriting
     UNDERWRITING_STATUSES.map((status) => [
       status,
       pipelineAssets(assets)
-        .filter((a) => a.underwritingStatus === status)
+        .filter((a) => a.underwritingStatus === status && a.pipelineStatus !== 'dqd')
         .sort((a, b) => daysInColumn(b) - daysInColumn(a)),
     ]),
   ) as Record<UnderwritingStatus, Asset[]>;

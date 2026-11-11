@@ -1,8 +1,10 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import ProvenanceValue from '../components/ProvenanceValue';
+import RoleBanner from '../components/RoleBanner';
 import { getAIDraft } from '../data/aiDrafts';
 import { AI, SFDC, computed } from '../data/provenance';
 import { useDraftReviews, withReviewStatus } from '../data/review';
+import { analystMarksPath, useRole } from '../data/role';
 import {
   BOARD_LATE_DAYS,
   BOARD_WARN_DAYS,
@@ -96,6 +98,7 @@ function BoardCard({ asset }: { asset: Asset }) {
 
 export default function UnderwriteBoard() {
   const [params, setParams] = useSearchParams();
+  const { role, analyst: roleAnalyst } = useRole();
 
   // ── Filters (kept in the URL so they survive navigating to a draft and back) ──
   const marketParam = params.get('market');
@@ -129,6 +132,12 @@ export default function UnderwriteBoard() {
           </p>
         </div>
       </div>
+
+      {role === 'analyst' && analyst === roleAnalyst && (
+        <RoleBanner next={{ to: analystMarksPath(roleAnalyst), label: 'Next: your month-end marks' }}>
+          Your cards, {roleAnalyst}: {scoped.length} on the board.
+        </RoleBanner>
+      )}
 
       {/* Filters */}
       <div className="ub-filters">

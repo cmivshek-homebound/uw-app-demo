@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import '../components/AssetLink.css';
 import ProvenanceValue from '../components/ProvenanceValue';
 import { mockOpportunities } from '../data/opportunities';
+import { useDraftReviews, withReviewedQueueStatus } from '../data/review';
 import { SFDC } from '../data/provenance';
 import type { Opportunity } from '../types';
 import './OpportunityQueue.css';
@@ -36,18 +38,22 @@ export default function OpportunityQueue() {
   const initialFilter = FILTERS.some((f) => f.value === params.get('status')) ? params.get('status')! : 'all';
   const [filter, setFilter] = useState<string>(initialFilter);
 
-  const filtered = filter === 'all'
-    ? mockOpportunities
-    : mockOpportunities.filter((o) => o.status === filter);
+  // Drafts submitted to Growth this session read Ready for Offer, as on the Underwrite board.
+  const { reviews } = useDraftReviews();
+  const opportunities = withReviewedQueueStatus(mockOpportunities, reviews);
 
-  const pendingCount = mockOpportunities.filter(o => o.status === 'pending_review').length;
+  const filtered = filter === 'all'
+    ? opportunities
+    : opportunities.filter((o) => o.status === filter);
+
+  const pendingCount = opportunities.filter(o => o.status === 'pending_review').length;
 
   return (
     <div className="oq-page">
       <div className="oq-header">
         <div>
-          <h1 className="oq-title">BOOL Opportunity Queue</h1>
-          <p className="oq-subtitle">{mockOpportunities.length} opportunities · {pendingCount} pending review</p>
+          <h1 className="oq-title">Pipeline</h1>
+          <p className="oq-subtitle">{opportunities.length} opportunities · {pendingCount} pending review</p>
         </div>
         <div className="oq-filters">
           {FILTERS.map(({ value, label }) => (
@@ -90,7 +96,9 @@ export default function OpportunityQueue() {
                     {opp.id}
                   </Link>
                 </td>
-                <td className="oq-address">{opp.address}, {opp.city}, {opp.state} {opp.zip}</td>
+                <td className="oq-address">
+                  <Link to={`/underwrite/${opp.id}`} className="asset-link" onClick={(e) => e.stopPropagation()}>{opp.address}</Link>, {opp.city}, {opp.state} {opp.zip}
+                </td>
                 <td>{opp.market}</td>
                 <td><ProvenanceValue info={SFDC}>{formatSqFt(opp.lotSqFt)}</ProvenanceValue></td>
                 <td>
@@ -118,7 +126,10 @@ export default function OpportunityQueue() {
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <div className="oq-empty">No opportunities match this filter.</div>
+          <div className="oq-empty">
+            No opportunities match this filter.
+            <button className="link-button" onClick={() => setFilter('all')}>Show all</button>
+          </div>
         )}
       </div>
     </div>

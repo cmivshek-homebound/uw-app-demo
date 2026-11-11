@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import AssetLink from '../components/AssetLink';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
 import { ASSETS } from '../data/assets';
 import { TAPE, computed, human } from '../data/provenance';
@@ -104,7 +105,7 @@ export default function UnderwritingAccuracyTab() {
                 <tr key={asset.id}>
                   <td>
                     <Link to={`/asset/${asset.id}`} className="pf-asset-id">{asset.id}</Link>
-                    <span className="pf-asset-address">{asset.address} · {asset.market}</span>
+                    <span className="pf-asset-address"><AssetLink id={asset.id}>{asset.address}</AssetLink> · {asset.market}</span>
                   </td>
                   <td>{shortDate(asset.sale!.soldOn)}</td>
                   <td className="pf-num"><ProvenanceValue info={UW}>{asset.underwrite!.marginPct.toFixed(1)}%</ProvenanceValue></td>

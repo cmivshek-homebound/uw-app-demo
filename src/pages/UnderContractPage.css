@@ -42,9 +42,9 @@
 /* Countdown badge */
 .uc-countdown {
   flex-shrink: 0;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 12.5px;
+  padding: 5px 14px;
+  border-radius: 14px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
   border: 1px solid transparent;
@@ -52,9 +52,9 @@
 }
 
 .uc-countdown--ok {
-  background-color: #ecfdf5;
-  color: #059669;
-  border-color: #a7f3d0;
+  background-color: #eef6f1;
+  color: #1A6B4A;
+  border-color: #b7d9c8;
 }
 
 .uc-countdown--warn {
@@ -186,7 +186,7 @@
   text-align: center;
 }
 
-.uc-item-glyph--done    { color: #059669; }
+.uc-item-glyph--done    { color: #1A6B4A; }
 .uc-item-glyph--due     { color: #b45309; }
 .uc-item-glyph--waiting { color: #c4c4c4; }
 

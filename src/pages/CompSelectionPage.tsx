@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import ProvenanceValue from '../components/ProvenanceValue';
-import { DFW_PLANS } from '../data/plans';
+import { CONTRACT_DEALS } from '../data/contracts';
+import { DFW_PLANS, calcFinancials, defaultSpecIdx } from '../data/plans';
 import { AI, MLS, computed, human } from '../data/provenance';
+import { useCanAct } from '../data/role';
 import type { ProvenanceInfo } from '../types';
 import './CompSelectionPage.css';
 
 // ── Constants ──────────────────────────────────────────────────
 const SPEC_LEVELS = ['Entry', 'Deluxe', 'Premium', 'Premium Plus'] as const;
 type SpecLevel = (typeof SPEC_LEVELS)[number];
-
-const ML_ESP = 571_000;
-const MAX_LOT_OFFER = 152_760;
 
 // Fallback when no ?plan= is passed from the scenario engine. BOOL-001 recommends
 // The Emerson (highest projected margin of the lot-feasible plans).
@@ -117,8 +116,8 @@ function computeAdjValue(comp: CompDef): number {
 
 // ── Offer Published Screen ─────────────────────────────────────
 function OfferPublishedScreen(
-  { esp, espInfo, planName, onReturn, onViewContract }:
-  { esp: number; espInfo: ProvenanceInfo; planName: string; onReturn: () => void; onViewContract: () => void },
+  { esp, espInfo, planName, maxLotOffer, onReturn, onViewContract }:
+  { esp: number; espInfo: ProvenanceInfo; planName: string; maxLotOffer: number; onReturn: () => void; onViewContract: () => void },
 ) {
   return (
     <div className="cs-published-wrapper">
@@ -137,7 +136,7 @@ function OfferPublishedScreen(
           <div className="cs-pub-row">
             <span className="cs-pub-label">Max Lot Offer</span>
             <span className="cs-pub-value cs-pub-value--highlight">
-              <ProvenanceValue info={AI}>{usd(MAX_LOT_OFFER)}</ProvenanceValue>
+              <ProvenanceValue info={AI}>{usd(maxLotOffer)}</ProvenanceValue>
             </span>
           </div>
           <div className="cs-pub-row">
@@ -154,7 +153,7 @@ function OfferPublishedScreen(
             Confirm &amp; Publish Offer →
           </button>
           <button className="cs-return-btn" onClick={onReturn}>
-            ← Return to Queue
+            ← Back to Pipeline
           </button>
         </div>
       </div>
@@ -166,6 +165,7 @@ function OfferPublishedScreen(
 interface CompCardProps {
   comp: CompDef;
   adjustedValue: number;
+  pricePerSqft: number;    // adjusted value ÷ comp sqft
   weight: number;
   specLevel: string;
   onWeightChange: (w: number) => void;
@@ -173,7 +173,7 @@ interface CompCardProps {
 }
 
 function CompCard({
-  comp, adjustedValue, weight, specLevel, onWeightChange, onSpecChange,
+  comp, adjustedValue, pricePerSqft, weight, specLevel, onWeightChange, onSpecChange,
 }: CompCardProps) {
   const weightIsDefault = weight === comp.startingWeight;
   return (
@@ -289,7 +289,7 @@ function CompCard({
         </span>
         <span className="cs-weight-contrib">
           ={' '}
-          <ProvenanceValue info={weightIsDefault ? AI : SCENARIO_OUTPUT}>{usd(adjustedValue * weight / 100)}</ProvenanceValue>
+          <ProvenanceValue info={weightIsDefault ? AI : SCENARIO_OUTPUT}>{usd(pricePerSqft * weight / 100)}/sqft</ProvenanceValue>
           {' '}contribution
         </span>
       </div>
@@ -305,24 +305,32 @@ function CompCard({
 // ── Page ───────────────────────────────────────────────────────
 export default function CompSelectionPage() {
   const { id } = useParams<{ id: string }>();
+  const canAct = useCanAct();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const confirmedPlan = DFW_PLANS.find((p) => p.id === searchParams.get('plan'));
-  const planName = confirmedPlan?.name ?? DEFAULT_PLAN_NAME;
+  const plan = confirmedPlan ?? DFW_PLANS.find((p) => p.name === DEFAULT_PLAN_NAME)!;
+  const planName = plan.name;
+  // The scenario engine's AI pricing of this plan (first elevation, default
+  // spec): the same ESP and max lot offer it showed, and that the underwrite carries.
+  const model = calcFinancials({ plan, elevationIdx: 0, specLevelIdx: defaultSpecIdx(plan), selectedOptionIds: [] });
+  const mlEsp = model.estSalePrice;
 
   const [weights, setWeights] = useState<number[]>(COMPS.map(c => c.startingWeight));
   const [specLevels, setSpecLevels] = useState<string[]>(COMPS.map(c => c.spec));
   const [published, setPublished] = useState(false);
 
   const adjustedValues = COMPS.map(computeAdjValue);
+  const pricesPerSqft = COMPS.map((c, i) => adjustedValues[i] / c.sqft);
   const weightTotal = weights.reduce((a, b) => a + b, 0);
 
+  // Weighted adjusted $/sqft × the plan's sqft, the same method as the AI draft's ESP.
   const displayESP = weightTotal > 0
-    ? COMPS.reduce((sum, _, i) => sum + adjustedValues[i] * weights[i], 0) / weightTotal
+    ? (COMPS.reduce((sum, _, i) => sum + pricesPerSqft[i] * weights[i], 0) / weightTotal) * model.sqft
     : 0;
 
   const divergencePct = displayESP > 0
-    ? Math.abs((displayESP - ML_ESP) / ML_ESP) * 100
+    ? Math.abs((displayESP - mlEsp) / mlEsp) * 100
     : 0;
 
   const weightsValid = weightTotal === 100;
@@ -335,8 +343,9 @@ export default function CompSelectionPage() {
         esp={displayESP}
         espInfo={espInfo}
         planName={planName}
+        maxLotOffer={model.maxLotOffer}
         onReturn={() => navigate('/queue')}
-        onViewContract={() => navigate(`/contract/${id ?? 'BOOL-001'}`)}
+        onViewContract={() => navigate(id && CONTRACT_DEALS[id] ? `/contract/${id}` : '/contract')}
       />
     );
   }
@@ -348,7 +357,7 @@ export default function CompSelectionPage() {
       {/* Breadcrumb — reuse sc- classes from ScenarioEngine.css */}
       <div className="sc-breadcrumb">
         <button className="sc-breadcrumb-link" onClick={() => navigate('/queue')}>
-          Opportunity Queue
+          Pipeline
         </button>
         <span className="sc-breadcrumb-sep">›</span>
         <button className="sc-breadcrumb-link" onClick={() => navigate(`/underwrite/${id}`)}>
@@ -368,13 +377,13 @@ export default function CompSelectionPage() {
           <h1 className="cs-page-title">Comp Selection &amp; Adjustment</h1>
           <p className="cs-page-subtitle">
             4821 Maple Creek Dr &nbsp;·&nbsp; {planName} &nbsp;·&nbsp;
-            <ProvenanceValue info={AI}>2,100 sqft</ProvenanceValue> &nbsp;·&nbsp; Premium &nbsp;·&nbsp; DFW
+            <ProvenanceValue info={AI}>{model.sqft.toLocaleString()} sqft</ProvenanceValue> &nbsp;·&nbsp; Premium &nbsp;·&nbsp; DFW
           </p>
         </div>
         <div className="cs-esp-panel">
           <div className="cs-esp-panel-label">Weighted ESP</div>
           <div className="cs-esp-panel-value"><ProvenanceValue info={espInfo}>{usd(displayESP)}</ProvenanceValue></div>
-          <div className="cs-esp-ml-ref">ML ESP v2: <ProvenanceValue info={AI}>{usd(ML_ESP)}</ProvenanceValue></div>
+          <div className="cs-esp-ml-ref">ML ESP v2: <ProvenanceValue info={AI}>{usd(mlEsp)}</ProvenanceValue></div>
           {divergencePct > 5 && (
             <div className="cs-diverge-warn">
               ⚠ Review — &gt;5% divergence from ML estimate
@@ -390,6 +399,7 @@ export default function CompSelectionPage() {
             key={comp.rank}
             comp={comp}
             adjustedValue={adjustedValues[i]}
+            pricePerSqft={pricesPerSqft[i]}
             weight={weights[i]}
             specLevel={specLevels[i]}
             onWeightChange={w => {
@@ -430,14 +440,14 @@ export default function CompSelectionPage() {
           <span className="cs-sum-value">3 selected</span>
         </div>
         <div className="cs-sum-actions">
-          <button className="cs-add-comp-btn">+ Add Comp</button>
-          <button
+          {canAct && <button className="cs-add-comp-btn">+ Add Comp</button>}
+          {canAct && <button
             className="cs-publish-btn"
             disabled={!weightsValid}
             onClick={() => setPublished(true)}
           >
             Confirm &amp; Publish Offer
-          </button>
+          </button>}
         </div>
       </div>
     </div>

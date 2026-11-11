@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import AssetLink from '../components/AssetLink';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
 import { ASSETS } from '../data/assets';
 import { AI, MLS, computed, human, markProvenance } from '../data/provenance';
+import { useCanAct } from '../data/role';
 import { useListingActions, withListingActions } from '../data/listingActions';
 import { DIAGNOSIS_LABELS, DIAGNOSIS_URGENCY, evaluateOffer, listingHealth } from '../data/listingHealth';
 import type { ListingHealth } from '../data/listingHealth';
@@ -123,6 +125,7 @@ function OfferEvaluation({ asset, offer }: { asset: Asset; offer: ListingOffer }
 // ── Row ────────────────────────────────────────────────────────
 function ListingRow({ asset, health }: { asset: Asset; health: ListingHealth }) {
   const { actions, acceptDrop, dismiss } = useListingActions();
+  const canAct = useCanAct();
   const [dismissing, setDismissing] = useState(false);
   const [reason, setReason] = useState('');
   const [evaluating, setEvaluating] = useState(false);
@@ -139,7 +142,7 @@ function ListingRow({ asset, health }: { asset: Asset; health: ListingHealth }) 
       <div className="fs-row-main">
         <div className="fs-cell fs-cell--asset">
           <Link to={`/asset/${asset.id}`} className="fs-address">{asset.address}</Link>
-          <span className="fs-sub">{asset.id} · {asset.city}, {asset.market}</span>
+          <span className="fs-sub"><AssetLink id={asset.id}>{asset.id}</AssetLink> · {asset.city}, {asset.market}</span>
         </div>
         <div className="fs-cell">
           <span className="fs-label">List price</span>
@@ -215,7 +218,7 @@ function ListingRow({ asset, health }: { asset: Asset; health: ListingHealth }) 
                   </span>
                 )}
               </span>
-              {rec.kind === 'drop' && !dismissing && (
+              {canAct && rec.kind === 'drop' && !dismissing && (
                 <>
                   <button className="pf-btn pf-btn--small pf-btn--primary" onClick={() => acceptDrop(asset, rec.newPrice)}>Accept</button>
                   <button className="pf-btn pf-btn--small" onClick={() => setDismissing(true)}>Dismiss</button>

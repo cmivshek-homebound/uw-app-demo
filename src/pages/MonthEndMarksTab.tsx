@@ -1,8 +1,10 @@
 import { Fragment, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import AssetLink from '../components/AssetLink';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
 import { ASSETS } from '../data/assets';
 import { AI, MLS, markProvenance } from '../data/provenance';
+import { useCanAct } from '../data/role';
 import { APPROVAL_THRESHOLD } from '../data/markProposals';
 import {
   MARKS_MANAGER,
@@ -201,7 +203,7 @@ function ApprovalItem({ asset, p, onApprove, disabled }: {
     <li className="pf-approval">
       <div className="pf-approval-main">
         <Link to={`/asset/${asset.id}`} className="pf-asset-id">{asset.id}</Link>
-        <span className="pf-approval-address">{asset.address} · {asset.market}</span>
+        <span className="pf-approval-address"><AssetLink id={asset.id}>{asset.address}</AssetLink> · {asset.market}</span>
         <span className={`pf-change ${p.change < 0 ? 'pf-change--down' : 'pf-change--up'}`}>
           <ProvenanceValue info={proposalProvenance(p)}>{signedUsd(p.change)}</ProvenanceValue>
         </span>
@@ -237,15 +239,30 @@ export default function MonthEndMarksTab() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [overriding, setOverriding] = useState<string | null>(null);
 
-  const assets = withMarkReviews(ASSETS, reviews, published).filter((a) => a.markProposal);
+  const [params, setParams] = useSearchParams();
+  const canAct = useCanAct();
+
+  const allAssets = withMarkReviews(ASSETS, reviews, published).filter((a) => a.markProposal);
   const proposal = (a: Asset) => a.markProposal as ReviewedMarkProposal;
-  const month = proposal(assets[0]).month;
+  const month = proposal(allAssets[0]).month;
+
+  // ?analyst= scopes the list to the proposals assigned to one analyst (their markets).
+  const analystParam = params.get('analyst');
+  const analyst = allAssets.some((a) => proposal(a).analyst === analystParam) ? analystParam : null;
+  const assets = analyst ? allAssets.filter((a) => proposal(a).analyst === analyst) : allAssets;
+  const analystMarkets = [...new Set(assets.map((a) => a.market))];
+  const showAll = () => {
+    const next = new URLSearchParams(params);
+    next.delete('analyst');
+    setParams(next, { replace: true });
+  };
 
   const reviewed = assets.filter((a) => isResolved(proposal(a))).length;
-  const progress = marketProgress(assets.map((a) => ({ market: a.market, proposal: proposal(a) })));
+  const allReviewed = allAssets.filter((a) => isResolved(proposal(a))).length;
+  const progress = marketProgress(allAssets.map((a) => ({ market: a.market, proposal: proposal(a) })));
   const bulkable = assets.filter((a) => proposal(a).status === 'ai_proposed' && Math.abs(proposal(a).change) <= APPROVAL_THRESHOLD);
   const awaiting = assets.filter((a) => proposal(a).status === 'needs_approval');
-  const canPublish = !published && reviewed === assets.length;
+  const canPublish = !published && allReviewed === allAssets.length;
   const locked = published !== undefined;
 
   return (
@@ -254,6 +271,12 @@ export default function MonthEndMarksTab() {
       <div className="pf-marks-header">
         <div>
           <h2 className="pf-heading">{monthName(month)} month-end</h2>
+          {analyst && (
+            <p className="pf-sub">
+              Showing {analyst}’s markets: {analystMarkets.join(', ')}.
+              <button className="link-button" onClick={showAll}>Show all markets</button>
+            </p>
+          )}
           <p className="pf-sub">
             {reviewed} of {assets.length} reviewed
             {published && ` · published by ${published.by} on ${new Date(published.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`}
@@ -263,14 +286,14 @@ export default function MonthEndMarksTab() {
           </div>
         </div>
         <div className="pf-header-actions">
-          <button
+          {canAct && <button
             className="pf-btn"
             disabled={locked || bulkable.length === 0}
             onClick={() => accept(bulkable)}
             title="Accept every AI-proposed change of $10K or less"
           >
             Accept all under $10K ({bulkable.length})
-          </button>
+          </button>}
           <button className="pf-btn pf-btn--publish" disabled={!canPublish} onClick={publish}>
             {published ? 'Published' : 'Publish April marks'}
           </button>
@@ -341,7 +364,7 @@ export default function MonthEndMarksTab() {
                     </td>
                     <td>
                       <Link to={`/asset/${a.id}`} className="pf-asset-id">{a.id}</Link>
-                      <span className="pf-asset-address">{a.address} · {a.market}</span>
+                      <span className="pf-asset-address"><AssetLink id={a.id}>{a.address}</AssetLink> · {a.market}</span>
                     </td>
                     <td>{STAGE_LABELS[a.stage]}</td>
                     <td className="pf-num"><ProvenanceValue info={markProvenance(prior)}>{usd(p.priorValue)}</ProvenanceValue></td>
@@ -364,10 +387,10 @@ export default function MonthEndMarksTab() {
                     </td>
                     <td><StatusPill p={p} /></td>
                     <td className="pf-actions">
-                      {!locked && p.status === 'ai_proposed' && (
+                      {canAct && !locked && p.status === 'ai_proposed' && (
                         <button className="pf-btn pf-btn--small pf-btn--primary" onClick={() => accept([a])}>Accept</button>
                       )}
-                      {!locked && p.status !== 'approved' && (
+                      {canAct && !locked && p.status !== 'approved' && (
                         <button
                           className="pf-btn pf-btn--small"
                           onClick={() => {

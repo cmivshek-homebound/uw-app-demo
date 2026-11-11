@@ -1,0 +1,23 @@
+.role-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: -12px 0 18px;
+  padding: 10px 14px;
+  border-left: 3px solid #1A6B4A;
+  border-radius: 0 8px 8px 0;
+  background: #eef6f1;
+  font-size: 13px;
+  color: #262626;
+}
+
+.role-banner-next {
+  font-weight: 600;
+  color: #1A6B4A;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.role-banner-next:hover { text-decoration: underline; }

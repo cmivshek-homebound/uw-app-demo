@@ -10,6 +10,7 @@ import { ASSETS } from '../data/assets';
 import { DEMO_TODAY } from '../data/dates';
 import { useListingActions, withListingActions } from '../data/listingActions';
 import { useMarkReviews, withMarkReviews } from '../data/markReview';
+import { useDraftReviews, withReviewStatus } from '../data/review';
 import { APPROVAL_THRESHOLD, PIPELINE_STAGES, constructionStatus, constructionSummary, stageHistory, underwritingGap } from '../data/selectors';
 import type { GapLine } from '../data/selectors';
 import { CARRY_COST_PCT, SELLING_COST_PCT, closingCostPctFor } from '../data/underwriting';
@@ -655,7 +656,8 @@ export default function AssetDetailPage() {
   const navigate = useNavigate();
   const { reviews, published } = useMarkReviews();
   const { actions } = useListingActions();
-  const asset = withListingActions(withMarkReviews(ASSETS, reviews, published), actions).find((a) => a.id === id);
+  const { reviews: draftReviews } = useDraftReviews();
+  const asset = withListingActions(withReviewStatus(withMarkReviews(ASSETS, reviews, published), draftReviews), actions).find((a) => a.id === id);
 
   if (!asset) {
     return (

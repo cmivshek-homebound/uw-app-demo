@@ -23,6 +23,7 @@ import {
 } from '../data/review';
 import type { DraftReview, SectionStatus } from '../data/review';
 import { AI, MLS, SFDC, human } from '../data/provenance';
+import { useCanAct } from '../data/role';
 import { PIPELINE_STAGES } from '../data/selectors';
 import { CARRY_COST_PCT, CLOSING_COST_PCT, SELLING_COST_PCT } from '../data/underwriting';
 import type { ProvenanceInfo } from '../types';
@@ -264,8 +265,9 @@ function ReviewPanel({
   onSubmit: () => void;
 }) {
   const progress = reviewProgress(draft, review);
+  const canAct = useCanAct();
   const unsure = DRAFT_SECTIONS.filter((s) => draft.confidence[s] !== 'high');
-  const readOnly = drafting || review.submitted !== undefined;
+  const readOnly = drafting || review.submitted !== undefined || !canAct;
   const totalItems = DRAFT_SECTIONS.length + draft.openQuestions.length;
   const resolvedPct = Math.round(((totalItems - progress.itemsNeedingYou) / totalItems) * 100);
 
@@ -350,6 +352,8 @@ function ReviewPanel({
           Submitted to Growth by <strong>{review.submitted.by}</strong> on{' '}
           {submittedAt(review.submitted.at, review.submitted.timeKnown)}
         </p>
+      ) : !canAct ? (
+        <p className="ad-submit-hint">Executive view: review actions are hidden.</p>
       ) : (
         <>
           <button className="ad-submit" disabled={!progress.canSubmit} onClick={onSubmit}>
@@ -368,6 +372,7 @@ export default function AIDraftPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { reviews, updateReview } = useDraftReviews();
+  const canAct = useCanAct();
   const aiDraft = id ? getAIDraft(id) : undefined;
 
   if (!aiDraft || !PIPELINE_STAGES.includes(aiDraft.asset.stage)) {
@@ -386,7 +391,7 @@ export default function AIDraftPage() {
   const { asset, lot, plans, adu, comps, recommendation: rec } = draft;
   const analyst = asset.analyst ?? 'Analyst';
   const drafting = asset.underwritingStatus === 'ai_drafting';
-  const readOnly = drafting || review.submitted !== undefined;
+  const readOnly = drafting || review.submitted !== undefined || !canAct;
   const pv = makeProvenance(review, analyst);
 
   const overall = draft.overallConfidence;

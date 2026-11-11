@@ -1,0 +1,112 @@
+/* ── Under contract list ── */
+.cl-table-wrap {
+  margin-top: 16px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  overflow-x: auto;
+  position: relative;
+}
+
+.cl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.cl-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #a3a3a3;
+  border-bottom: 1px solid #e5e5e5;
+  white-space: nowrap;
+}
+
+.cl-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f5f5f5;
+  color: #262626;
+  vertical-align: top;
+}
+
+.cl-table tbody tr:last-child td { border-bottom: none; }
+
+.cl-num { text-align: right !important; white-space: nowrap; }
+
+.cl-address {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1A6B4A;
+  text-decoration: none;
+}
+
+.cl-address:hover { text-decoration: underline; }
+
+.cl-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #737373;
+}
+
+.cl-id {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11.5px;
+  color: #1A6B4A;
+  text-decoration: none;
+}
+
+.cl-id:hover { text-decoration: underline; }
+
+.cl-warn { color: #b45309; font-weight: 600; }
+
+.cl-countdown {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cl-countdown--ok     { background: #eef6f1; color: #1A6B4A; }
+.cl-countdown--warn   { background: #fffbeb; color: #b45309; }
+.cl-countdown--urgent { background: #fef2f2; color: #dc2626; }
+
+.cl-diligence { font-weight: 600; white-space: nowrap; }
+
+.cl-bar {
+  display: block;
+  width: 96px;
+  height: 4px;
+  margin-top: 5px;
+  border-radius: 2px;
+  background: #f0f0f0;
+  overflow: hidden;
+}
+
+.cl-bar span { display: block; height: 100%; background: #1A6B4A; }
+
+.cl-link {
+  color: #1A6B4A;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.cl-link:hover { text-decoration: underline; }
+
+.cl-empty {
+  margin-top: 16px;
+  padding: 28px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  font-size: 13.5px;
+  color: #525252;
+}
+
+.cl-empty p { margin: 0 0 8px; }

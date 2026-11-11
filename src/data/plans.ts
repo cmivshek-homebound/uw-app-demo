@@ -238,7 +238,8 @@ export interface PlanFinancials {
   transactionCosts: number;
   homeboundFee: number;
   totalCostExLand: number;
-  maxLotOffer: number;
+  maxLotOffer: number;     // break-even land: ESP − total cost ex-land
+  /** Max lot offer ÷ ESP: margin before land. The underwrite margin (underwriting.ts) is after land. */
   projectedMargin: number;
 }
 

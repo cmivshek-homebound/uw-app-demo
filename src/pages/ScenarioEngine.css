@@ -57,7 +57,7 @@
   padding: 10px 16px;
   background: #fff;
   border: 1px solid #e5e5e5;
-  border-radius: 8px;
+  border-radius: 10px;
   min-width: 140px;
 }
 
@@ -76,7 +76,7 @@
 }
 
 .sc-header-summary-value--margin {
-  color: #059669;
+  color: #1A6B4A;
 }
 
 .sc-page-title {
@@ -254,9 +254,9 @@
 .sc-recommended-badge {
   display: inline-block;
   padding: 3px 10px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 700;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
   background-color: #EDF5F1;
   color: #1A6B4A;
   white-space: nowrap;
@@ -312,7 +312,7 @@
 .sc-fin-row--margin {
   font-size: 12.5px;
   font-weight: 600;
-  color: #059669;
+  color: #1A6B4A;
   padding-bottom: 2px;
 }
 
@@ -466,7 +466,7 @@
 
 .sc-table-row--margin td {
   font-weight: 700;
-  color: #059669;
+  color: #1A6B4A;
 }
 
 /* ── Sensitivity Panel ── */
@@ -1113,7 +1113,7 @@
 .sc-adu-verdict {
   padding: 3px 10px;
   border-radius: 12px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   white-space: nowrap;
 }

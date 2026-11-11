@@ -2,15 +2,19 @@ import { Fragment, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ConstructionDetail, { MarginImpactLine, StatusChip, VarianceBar } from '../components/ConstructionDetail';
 import { AI, BLUEPRINT, MILESTONE_LABELS, shortDate, signedPct, usdK, weeksLate } from '../components/constructionFormat';
+import AssetLink from '../components/AssetLink';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
 import { ASSETS } from '../data/assets';
+import { useMarkReviews, withMarkReviews } from '../data/markReview';
 import { constructionByRisk, constructionStatus, constructionSummary, nextMilestone } from '../data/selectors';
 
 const COLUMNS = 8;
 
 export default function ConstructionTab() {
   const [open, setOpen] = useState<Set<string>>(new Set());
-  const assets = constructionByRisk(ASSETS);
+  // Same marks as the asset page: once April is published, margin impact reads it.
+  const { reviews, published } = useMarkReviews();
+  const assets = constructionByRisk(withMarkReviews(ASSETS, reviews, published));
   const rows = assets.map((asset) => ({
     asset,
     summary: constructionSummary(asset)!,
@@ -108,7 +112,7 @@ export default function ConstructionTab() {
                       </td>
                       <td>
                         <Link to={`/asset/${asset.id}`} className="cx-address">{asset.address}</Link>
-                        <span className="pf-asset-address">{asset.id} · {asset.market} · {asset.underwrite?.planName}</span>
+                        <span className="pf-asset-address"><AssetLink id={asset.id}>{asset.id}</AssetLink> · {asset.market} · {asset.underwrite?.planName}</span>
                       </td>
                       <td>
                         <ProvenanceValue info={BLUEPRINT}>{pct}%</ProvenanceValue>
