@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { mockOpportunities, updateOpportunityStatus } from '../data/opportunities';
+import { findOpportunity, updateOpportunityStatus } from '../data/opportunities';
 import TriageCard from '../components/TriageCard';
 import './UnderwritePage.css';
 
@@ -7,7 +7,7 @@ export default function UnderwritePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const opp = mockOpportunities.find((o) => o.id === id);
+  const opp = id ? findOpportunity(id) : undefined;
 
   if (!opp) {
     return (

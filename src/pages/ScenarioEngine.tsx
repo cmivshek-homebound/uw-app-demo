@@ -1,20 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { mockOpportunities } from '../data/opportunities';
+import { findOpportunity } from '../data/opportunities';
 import { ASSETS } from '../data/assets';
 import AssetLink from '../components/AssetLink';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
 import { evaluateAdus, aduRuleText } from '../data/adu';
 import type { AduEconomics, LotForFit } from '../data/adu';
 import { getAIDraft } from '../data/aiDrafts';
-import type { AIDraft } from '../data/aiDrafts';
 import { AI, SFDC, computed, human } from '../data/provenance';
-import { marketPlanNames } from '../data/selectors';
+import { compOverridesFor, lotPlans, pricingCalibration, withOverrides } from '../data/scenarioPricing';
+import type { CompOverrides } from '../data/scenarioPricing';
 import { CARRY_COST_PCT, SELLING_COST_PCT } from '../data/underwriting';
 import type { Market, ProvenanceInfo } from '../types';
 import {
-  DFW_PLANS,
   ADD_ON_OPTIONS,
   DESIGN_PACKAGES,
   calcFinancials,
@@ -52,49 +51,6 @@ const FALLBACK_LOT: Omit<LotForFit, 'lotSqFt' | 'floodZone'> = {
 };
 
 const ASSUMPTION = human('Underwriting assumption');
-
-// ── Market calibration ─────────────────────────────────────────
-// The plan library is priced for DFW. For any lot with an AI draft (DFW
-// included), scale each plan's ESP and spec-level build costs so the draft's
-// recommended plan shows exactly the draft's ESP and build. Unrounded, so the
-// ESP matches the AI draft and asset page to the dollar.
-interface Calibration {
-  esp: number;
-  build: number;
-}
-
-function draftCalibration(draft: AIDraft): Calibration {
-  const rec = draft.recommendation.plan;
-  const spec = rec.plan.specLevels[defaultSpecIdx(rec.plan)];
-  return {
-    esp: draft.recommendation.esp / rec.sqft / rec.plan.espPerSqft,
-    build: rec.build / rec.sqft / spec.costPerSqft,
-  };
-}
-
-function calibrate(plan: Plan, c: Calibration | undefined): Plan {
-  if (!c) return plan;
-  return {
-    ...plan,
-    espPerSqft: plan.espPerSqft * c.esp,
-    specLevels: plan.specLevels.map((s) => ({ ...s, costPerSqft: s.costPerSqft * c.build })),
-  };
-}
-
-// ── Analyst overrides of AI-drafted comp $/sqft ────────────────
-// The Daniel sits on BOOL-001's corner; the analyst bumped its comps.
-// DFW pricing only; calibrated markets price from the lot's AI draft.
-type CompOverrides = Record<string, { espPerSqft: number; reason: string }>;
-
-const COMP_OVERRIDES: CompOverrides = {
-  daniel: { espPerSqft: 282, reason: 'corner lot premium' },
-};
-
-/** Plan with any analyst comp override applied, for calcFinancials. */
-function withOverrides(plan: Plan, overrides: CompOverrides): Plan {
-  const override = overrides[plan.id];
-  return override ? { ...plan, espPerSqft: override.espPerSqft } : plan;
-}
 
 function compProvenance(plan: Plan, overrides: CompOverrides): ProvenanceInfo {
   const override = overrides[plan.id];
@@ -866,7 +822,7 @@ export default function ScenarioEngine() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const opp = id ? mockOpportunities.find((o) => o.id === id) : null;
+  const opp = id ? findOpportunity(id) : null;
   const asset = ASSETS.find((a) => a.id === id);
   const landPrice = asset?.underwrite?.landPrice;
   const draft = id ? getAIDraft(id) : undefined;
@@ -879,23 +835,17 @@ export default function ScenarioEngine() {
   const feasibilityLot: FeasibilityLot = { widthFt: lot.widthFt, depthFt: lot.depthFt };
 
   // DFW uses the full plan library; other markets use the plans already
-  // underwritten there. Lots with an AI draft are priced to it.
-  const calibration = draft ? draftCalibration(draft) : undefined;
-  const compOverrides: CompOverrides = calibration ? {} : COMP_OVERRIDES;
-  const marketPlans = useMemo(() => {
-    const names = marketPlanNames(market);
-    return DFW_PLANS.filter((p) => market === 'DFW' || names.has(p.name)).map((p) => calibrate(p, calibration));
-    // calibration is derived from the stable route id
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [market, id]);
+  // underwritten there. Lots with an AI draft (else an underwrite) are priced
+  // to it; see data/scenarioPricing.ts. A handful of plans, so no memoization.
+  const calibration = pricingCalibration(id);
+  const compOverrides: CompOverrides = compOverridesFor(id);
+  const marketPlans = lotPlans(id, market);
 
   // Compute feasibility for every plan.
-  const feasibilityMap = useMemo(() => {
-    return marketPlans.map((plan) => ({
-      plan,
-      reason: checkFeasibility(plan, feasibilityLot),
-    }));
-  }, [marketPlans, feasibilityLot.widthFt, feasibilityLot.depthFt]);
+  const feasibilityMap = marketPlans.map((plan) => ({
+    plan,
+    reason: checkFeasibility(plan, feasibilityLot),
+  }));
 
   const feasiblePlans = feasibilityMap.filter((f) => f.reason === 'ok').map((f) => f.plan);
   const excludedPlans = feasibilityMap.filter((f) => f.reason !== 'ok');
@@ -1048,7 +998,7 @@ export default function ScenarioEngine() {
           <h2 className="sc-section-title">Feasible Plans — {market} Market</h2>
           <span className="sc-section-caption">
             Filtered by lot: <ProvenanceValue info={SFDC}>{lot.widthFt}ft W × {lot.depthFt}ft D</ProvenanceValue>
-            {calibration && ' · priced to this lot’s AI draft'}
+            {calibration && (draft ? ' · priced to this lot’s AI draft' : ' · priced to this lot’s underwrite')}
           </span>
         </div>
         <div className={`sc-plan-grid sc-plan-grid--n${feasiblePlans.length}`}>

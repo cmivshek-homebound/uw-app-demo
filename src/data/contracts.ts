@@ -58,7 +58,7 @@ type ContractDetail = Pick<ContractDeal, 'planLine' | 'cards' | 'timeline'>;
 
 const CONTRACT_DETAILS: Record<string, ContractDetail> = {
   'BOOL-001': {
-    planLine: 'The Emerson · Premium · Modern Farmhouse',
+    planLine: 'The Emerson · Deluxe · Modern Farmhouse',
     cards: [
       {
         id: 'ic-deck',

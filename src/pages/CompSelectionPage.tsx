@@ -1,20 +1,23 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import ProvenanceValue from '../components/ProvenanceValue';
-import { CONTRACT_DEALS } from '../data/contracts';
-import { DFW_PLANS, calcFinancials, defaultSpecIdx } from '../data/plans';
-import { AI, MLS, computed, human } from '../data/provenance';
+import { getAIDraft } from '../data/aiDrafts';
+import type { AIDraft } from '../data/aiDrafts';
+import { ASSETS } from '../data/assets';
+import { CONTRACT_DEALS, DEMO_DEAL_ID, underwriteInfo } from '../data/contracts';
+import { daysSince } from '../data/dates';
+import { calcFinancials, defaultSpecIdx } from '../data/plans';
+import type { Plan, SpecLevelName } from '../data/plans';
+import { compOverridesFor, lotPlans, withOverrides } from '../data/scenarioPricing';
+import { AI, MLS, SFDC, computed, human } from '../data/provenance';
 import { useCanAct } from '../data/role';
 import type { ProvenanceInfo } from '../types';
 import './CompSelectionPage.css';
 
 // ── Constants ──────────────────────────────────────────────────
-const SPEC_LEVELS = ['Entry', 'Deluxe', 'Premium', 'Premium Plus'] as const;
-type SpecLevel = (typeof SPEC_LEVELS)[number];
-
-// Fallback when no ?plan= is passed from the scenario engine. BOOL-001 recommends
-// The Emerson (highest projected margin of the lot-feasible plans).
-const DEFAULT_PLAN_NAME = 'The Emerson';
+const SPEC_LEVELS: SpecLevelName[] = ['Essential', 'Deluxe', 'Premium', 'Premium+'];
+type SpecLevel = SpecLevelName;
 
 // ── Provenance ─────────────────────────────────────────────────
 // Comp facts come from MLS; ML adjustments, adjusted values and starting
@@ -33,8 +36,8 @@ interface CompDef {
   zip: string;
   salePrice: number;
   sqft: number;
-  beds: number;
-  baths: number;
+  beds?: number;            // not on every MLS comp feed
+  baths?: number;
   spec: SpecLevel;
   distance: string;
   daysAgo: number;
@@ -50,7 +53,9 @@ interface CompDef {
 }
 
 // ── Comp data ──────────────────────────────────────────────────
-const COMPS: CompDef[] = [
+// BOOL-001's hand-picked comp set with ML adjustments. Other lots use the
+// MLS comps from their AI draft (compsFromDraft).
+const BOOL_001_COMPS: CompDef[] = [
   {
     rank: 1,
     address: '4903 Maple Creek Dr',
@@ -95,6 +100,34 @@ const COMPS: CompDef[] = [
   },
 ];
 
+/** The draft's three nearest comps, with a small ML size adjustment toward the plan. */
+function compsFromDraft(draft: AIDraft, planSqft: number, spec: SpecLevel): CompDef[] {
+  const asset = draft.asset;
+  const weights = [40, 35, 25];
+  return [...draft.comps]
+    .sort((a, b) => a.distanceMi - b.distanceMi)
+    .slice(0, 3)
+    .map((c, i) => {
+      const ppsf = c.salePrice / c.sqft;
+      const sqftAdjML = Math.round(((planSqft - c.sqft) * ppsf * 0.02) / 100) * 100;
+      const days = daysSince(`${c.soldOn}T00:00:00Z`);
+      return {
+        rank: i + 1,
+        address: c.address,
+        city: asset.city, state: asset.state, zip: asset.zip,
+        salePrice: c.salePrice,
+        sqft: c.sqft, spec,
+        distance: `${c.distanceMi.toFixed(1)} mi`, daysAgo: days,
+        sqftAdjML, sqftAdjMarket: Math.round((sqftAdjML * 0.95) / 100) * 100,
+        lotAdjML: null, lotAdjMarket: null,
+        bathAdjML: null, bathAdjMarket: null,
+        flagLotDiv: false,
+        startingWeight: weights[i],
+        aiReason: `${i === 0 ? 'Nearest' : i === 1 ? 'Second-nearest' : 'Third-nearest'} new-construction sale · $${Math.round(ppsf)}/sqft · sold ${days} days ago`,
+      };
+    });
+}
+
 // ── Helpers ────────────────────────────────────────────────────
 function usd(n: number) {
   return new Intl.NumberFormat('en-US', {
@@ -115,10 +148,20 @@ function computeAdjValue(comp: CompDef): number {
 }
 
 // ── Offer Published Screen ─────────────────────────────────────
+interface PublishedValue { value: number; info: ProvenanceInfo; label: string }
+
 function OfferPublishedScreen(
-  { esp, espInfo, planName, maxLotOffer, onReturn, onViewContract }:
-  { esp: number; espInfo: ProvenanceInfo; planName: string; maxLotOffer: number; onReturn: () => void; onViewContract: () => void },
+  { address, planLine, offer, esp, compCheck, onReturn, onViewContract }: {
+    address: string;
+    planLine: string;
+    offer: PublishedValue;
+    esp: PublishedValue;
+    compCheck: { value: number; info: ProvenanceInfo };
+    onReturn: () => void;
+    onViewContract: () => void;
+  },
 ) {
+  const gapPct = ((compCheck.value - esp.value) / esp.value) * 100;
   return (
     <div className="cs-published-wrapper">
       <div className="cs-published-card">
@@ -127,21 +170,28 @@ function OfferPublishedScreen(
         <div className="cs-published-rows">
           <div className="cs-pub-row">
             <span className="cs-pub-label">Address</span>
-            <span className="cs-pub-value">4821 Maple Creek Dr, Dallas TX 75227</span>
+            <span className="cs-pub-value">{address}</span>
           </div>
           <div className="cs-pub-row">
             <span className="cs-pub-label">Plan</span>
-            <span className="cs-pub-value">{planName} · Premium · Elevation 1</span>
+            <span className="cs-pub-value">{planLine}</span>
           </div>
           <div className="cs-pub-row">
-            <span className="cs-pub-label">Max Lot Offer</span>
+            <span className="cs-pub-label">{offer.label}</span>
             <span className="cs-pub-value cs-pub-value--highlight">
-              <ProvenanceValue info={AI}>{usd(maxLotOffer)}</ProvenanceValue>
+              <ProvenanceValue info={offer.info}>{usd(offer.value)}</ProvenanceValue>
             </span>
           </div>
           <div className="cs-pub-row">
-            <span className="cs-pub-label">Weighted ESP</span>
-            <span className="cs-pub-value"><ProvenanceValue info={espInfo}>{usd(esp)}</ProvenanceValue></span>
+            <span className="cs-pub-label">{esp.label}</span>
+            <span className="cs-pub-value"><ProvenanceValue info={esp.info}>{usd(esp.value)}</ProvenanceValue></span>
+          </div>
+          <div className="cs-pub-row">
+            <span className="cs-pub-label">Comp check</span>
+            <span className="cs-pub-value">
+              Weighted comps <ProvenanceValue info={compCheck.info}>{usd(compCheck.value)}</ProvenanceValue>{' '}
+              (<ProvenanceValue info={compCheck.info}>{gapPct >= 0 ? '+' : '−'}{Math.abs(gapPct).toFixed(1)}%</ProvenanceValue>)
+            </span>
           </div>
         </div>
         <div className="cs-pub-systems">
@@ -203,7 +253,9 @@ function CompCard({
       <div className="cs-comp-prop">
         <span><ProvenanceValue info={MLS}>{comp.sqft.toLocaleString()} sqft</ProvenanceValue></span>
         <span className="cs-sep">·</span>
-        <span><ProvenanceValue info={MLS}>{comp.beds}bd / {comp.baths}ba</ProvenanceValue></span>
+        {comp.beds !== undefined && comp.baths !== undefined && (
+          <span><ProvenanceValue info={MLS}>{comp.beds}bd / {comp.baths}ba</ProvenanceValue></span>
+        )}
         <span className="cs-sep">·</span>
         <span>{comp.spec} spec</span>
         <span className="cs-sep">·</span>
@@ -308,25 +360,33 @@ export default function CompSelectionPage() {
   const canAct = useCanAct();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const confirmedPlan = DFW_PLANS.find((p) => p.id === searchParams.get('plan'));
-  const plan = confirmedPlan ?? DFW_PLANS.find((p) => p.name === DEFAULT_PLAN_NAME)!;
-  const planName = plan.name;
-  // The scenario engine's AI pricing of this plan (first elevation, default
-  // spec): the same ESP and max lot offer it showed, and that the underwrite carries.
-  const model = calcFinancials({ plan, elevationIdx: 0, specLevelIdx: defaultSpecIdx(plan), selectedOptionIds: [] });
-  const mlEsp = model.estSalePrice;
+  const asset = ASSETS.find((a) => a.id === id);
+  const draft = id ? getAIDraft(id) : undefined;
 
-  const [weights, setWeights] = useState<number[]>(COMPS.map(c => c.startingWeight));
-  const [specLevels, setSpecLevels] = useState<string[]>(COMPS.map(c => c.spec));
+  // Plans priced for this lot, exactly as the scenario engine prices them.
+  const plans: Plan[] = asset ? lotPlans(asset.id, asset.market) : [];
+  const anchorName = draft?.recommendation.plan.plan.name ?? asset?.underwrite?.planName;
+  const confirmedPlan = plans.find((p) => p.id === searchParams.get('plan'));
+  const basePlan = confirmedPlan ?? plans.find((p) => p.name === anchorName) ?? plans[0];
+  const plan = basePlan && withOverrides(basePlan, compOverridesFor(id));
+  const specIdx = plan ? defaultSpecIdx(plan) : 0;
+  const specName = plan?.specLevels[specIdx].level ?? 'Deluxe';
+  const model = plan && calcFinancials({ plan, elevationIdx: 0, specLevelIdx: specIdx, selectedOptionIds: [] });
+  const mlEsp = model?.estSalePrice ?? 0;
+
+  const comps: CompDef[] = id === DEMO_DEAL_ID ? BOOL_001_COMPS : draft && model ? compsFromDraft(draft, model.sqft, specName) : [];
+
+  const [weights, setWeights] = useState<number[]>(comps.map(c => c.startingWeight));
+  const [specLevels, setSpecLevels] = useState<string[]>(comps.map(c => c.spec));
   const [published, setPublished] = useState(false);
 
-  const adjustedValues = COMPS.map(computeAdjValue);
-  const pricesPerSqft = COMPS.map((c, i) => adjustedValues[i] / c.sqft);
+  const adjustedValues = comps.map(computeAdjValue);
+  const pricesPerSqft = comps.map((c, i) => adjustedValues[i] / c.sqft);
   const weightTotal = weights.reduce((a, b) => a + b, 0);
 
   // Weighted adjusted $/sqft × the plan's sqft, the same method as the AI draft's ESP.
   const displayESP = weightTotal > 0
-    ? (COMPS.reduce((sum, _, i) => sum + pricesPerSqft[i] * weights[i], 0) / weightTotal) * model.sqft
+    ? (comps.reduce((sum, _, i) => sum + pricesPerSqft[i] * weights[i], 0) / weightTotal) * (model?.sqft ?? 0)
     : 0;
 
   const divergencePct = displayESP > 0
@@ -334,18 +394,48 @@ export default function CompSelectionPage() {
     : 0;
 
   const weightsValid = weightTotal === 100;
-  const weightsAreDefault = COMPS.every((c, i) => weights[i] === c.startingWeight);
+  const weightsAreDefault = comps.every((c, i) => weights[i] === c.startingWeight);
   const espInfo = weightsAreDefault ? AI : SCENARIO_OUTPUT;
 
+  if (!asset || !plan || !model || comps.length === 0) {
+    return (
+      <div className="cs-page">
+        <div className="uc-empty-state">
+          <h2>No comp set for {id}.</h2>
+          <p>Comp selection needs an AI draft or an underwritten deal with comps.</p>
+          <Link to={id ? `/underwrite/${id}/scenario` : '/queue'} className="link-button">← Back to plan selection</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const planName = plan.name;
+  const location = `${asset.address}, ${asset.city} ${asset.state} ${asset.zip}`;
+
   if (published) {
+    // What goes to contract: the reviewed underwrite once there is one, else the
+    // AI draft's ESP and its max land price at target margin.
+    const uw = asset.underwrite;
+    const offer: PublishedValue = uw
+      ? {
+          label: 'Offer',
+          value: uw.landPrice,
+          // Same rule as the contract page: Salesforce unless the analyst overrode land.
+          info: uw.review?.overrides.some((o) => o.field === 'landPrice') ? underwriteInfo(asset.id, 'landPrice') : SFDC,
+        }
+      : { label: 'Offer (max land at target margin)', value: draft!.recommendation.maxLandPrice, info: AI };
+    const esp: PublishedValue = uw
+      ? { label: 'ESP', value: uw.esp, info: underwriteInfo(asset.id, 'esp') }
+      : { label: 'ESP', value: draft!.recommendation.esp, info: AI };
     return (
       <OfferPublishedScreen
-        esp={displayESP}
-        espInfo={espInfo}
-        planName={planName}
-        maxLotOffer={model.maxLotOffer}
+        address={location}
+        planLine={`${uw?.planName ?? planName} · ${specName} · Elevation 1`}
+        offer={offer}
+        esp={esp}
+        compCheck={{ value: displayESP, info: espInfo }}
         onReturn={() => navigate('/queue')}
-        onViewContract={() => navigate(id && CONTRACT_DEALS[id] ? `/contract/${id}` : '/contract')}
+        onViewContract={() => navigate(CONTRACT_DEALS[asset.id] ? `/contract/${asset.id}` : '/contract')}
       />
     );
   }
@@ -361,7 +451,7 @@ export default function CompSelectionPage() {
         </button>
         <span className="sc-breadcrumb-sep">›</span>
         <button className="sc-breadcrumb-link" onClick={() => navigate(`/underwrite/${id}`)}>
-          BOOL-001
+          {asset.id}
         </button>
         <span className="sc-breadcrumb-sep">›</span>
         <button className="sc-breadcrumb-link" onClick={() => navigate(`/underwrite/${id}/scenario`)}>
@@ -376,8 +466,8 @@ export default function CompSelectionPage() {
         <div className="cs-header-left">
           <h1 className="cs-page-title">Comp Selection &amp; Adjustment</h1>
           <p className="cs-page-subtitle">
-            4821 Maple Creek Dr &nbsp;·&nbsp; {planName} &nbsp;·&nbsp;
-            <ProvenanceValue info={AI}>{model.sqft.toLocaleString()} sqft</ProvenanceValue> &nbsp;·&nbsp; Premium &nbsp;·&nbsp; DFW
+            {asset.address} &nbsp;·&nbsp; {planName} &nbsp;·&nbsp;
+            <ProvenanceValue info={AI}>{model.sqft.toLocaleString()} sqft</ProvenanceValue> &nbsp;·&nbsp; {specName} &nbsp;·&nbsp; {asset.market}
           </p>
         </div>
         <div className="cs-esp-panel">
@@ -394,7 +484,7 @@ export default function CompSelectionPage() {
 
       {/* Comp cards */}
       <div className="cs-comp-list">
-        {COMPS.map((comp, i) => (
+        {comps.map((comp, i) => (
           <CompCard
             key={comp.rank}
             comp={comp}
@@ -437,7 +527,7 @@ export default function CompSelectionPage() {
         <div className="cs-sum-divider" />
         <div className="cs-sum-item">
           <span className="cs-sum-label">Comps</span>
-          <span className="cs-sum-value">3 selected</span>
+          <span className="cs-sum-value">{comps.length} selected</span>
         </div>
         <div className="cs-sum-actions">
           {canAct && <button className="cs-add-comp-btn">+ Add Comp</button>}
