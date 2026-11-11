@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
 import { ASSETS } from '../data/assets';
+import { TAPE, computed, human } from '../data/provenance';
 import { underwritingGap } from '../data/selectors';
 import type { GapLineKey } from '../data/selectors';
 import { CLOSING_COST_CORRECTED_ON, CLOSING_COST_PCT, closingCostPctFor } from '../data/underwriting';
 import type { ProvenanceInfo } from '../types';
 
-const TAPE: ProvenanceInfo = { provenance: 'system', source: 'BOOL data tape' };
+const ASSUMPTION = human('Underwriting assumption');
 const UW: ProvenanceInfo = { provenance: 'human', note: 'Reviewed underwrite' };
 
 function usd(n: number) {
@@ -68,11 +69,11 @@ export default function UnderwritingAccuracyTab() {
       <div className="pf-callout">
         <h3 className="pf-callout-title">Closing costs were underwritten too low</h3>
         <p className="pf-callout-text">
-          The {oldest.length} oldest sold deals assumed {assumed}% of land for closing costs and realized{' '}
+          The {oldest.length} oldest sold deals assumed <ProvenanceValue info={ASSUMPTION}>{assumed}%</ProvenanceValue> of land for closing costs and realized{' '}
           <ProvenanceValue info={TAPE}>{average(oldest.map(realizedPct)).toFixed(2)}%</ProvenanceValue> on average
           ({oldest.map((a) => a.id).join(', ')}). Across all {legacy.length} deals underwritten before {correctedMonth},
           realized closing averaged <ProvenanceValue info={TAPE}>{average(legacy.map(realizedPct)).toFixed(2)}%</ProvenanceValue>.
-          The assumption was corrected to {CLOSING_COST_PCT}% in {correctedMonth}; underwrites since then use it.
+          The assumption was corrected to <ProvenanceValue info={ASSUMPTION}>{CLOSING_COST_PCT}%</ProvenanceValue> in {correctedMonth}; underwrites since then use it.
         </p>
       </div>
 
@@ -82,7 +83,8 @@ export default function UnderwritingAccuracyTab() {
         <div className="pf-card-header">
           <h3 className="pf-card-title">Margin by sold asset</h3>
           <span className="pf-card-caption">
-            Average {avgUwMargin.toFixed(1)}% underwritten → {avgRealizedMargin.toFixed(1)}% realized
+            Average <ProvenanceValue info={computed('Average of reviewed underwrite margins')}>{avgUwMargin.toFixed(1)}%</ProvenanceValue> underwritten →{' '}
+            <ProvenanceValue info={computed('Average realized margin from the BOOL data tape')}>{avgRealizedMargin.toFixed(1)}%</ProvenanceValue> realized
           </span>
         </div>
         <div className="pf-table-wrap">

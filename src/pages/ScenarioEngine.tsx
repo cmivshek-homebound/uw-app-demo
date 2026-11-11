@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mockOpportunities } from '../data/opportunities';
 import { ASSETS } from '../data/assets';
@@ -7,6 +8,7 @@ import { evaluateAdus, aduRuleText } from '../data/adu';
 import type { AduEconomics, LotForFit } from '../data/adu';
 import { getAIDraft } from '../data/aiDrafts';
 import type { AIDraft } from '../data/aiDrafts';
+import { AI, SFDC, computed, human } from '../data/provenance';
 import { marketPlanNames } from '../data/selectors';
 import { CARRY_COST_PCT, SELLING_COST_PCT } from '../data/underwriting';
 import type { Market, ProvenanceInfo } from '../types';
@@ -48,8 +50,7 @@ const FALLBACK_LOT: Omit<LotForFit, 'lotSqFt' | 'floodZone'> = {
   maxCoveragePct: 50,
 };
 
-const AI: ProvenanceInfo = { provenance: 'ai' };
-const SFDC: ProvenanceInfo = { provenance: 'system', source: 'Salesforce' };
+const ASSUMPTION = human('Underwriting assumption');
 
 // ── Market calibration ─────────────────────────────────────────
 // The plan library is priced for DFW. Outside DFW, scale each plan's ESP and
@@ -132,6 +133,33 @@ function initialCardState(plan: Plan): PlanCardState {
   };
 }
 
+// ── Scenario provenance ────────────────────────────────────────
+// A card on its starting elevation, spec level and no options is the AI's
+// draft scenario, so its numbers keep their base provenance. Once the analyst
+// changes any of those, readouts of the choice are scenario inputs and the
+// numbers computed from it are scenario outputs.
+const SCENARIO_INPUT = human('Scenario input');
+const SCENARIO_OUTPUT = computed('Scenario output');
+
+function isDefaultScenario(plan: Plan, state: PlanCardState): boolean {
+  const initial = initialCardState(plan);
+  return (
+    state.elevationIdx === initial.elevationIdx &&
+    state.specSelectedIdx === initial.specSelectedIdx &&
+    state.selectedOptionIds.length === 0
+  );
+}
+
+/** Provenance for a financial output of a plan card's scenario. */
+function outputProvenance(plan: Plan, state: PlanCardState, base: ProvenanceInfo): ProvenanceInfo {
+  return isDefaultScenario(plan, state) ? base : SCENARIO_OUTPUT;
+}
+
+/** Provenance for the selected elevation's footprint. */
+function elevationProvenance(plan: Plan, state: PlanCardState): ProvenanceInfo {
+  return state.elevationIdx === initialCardState(plan).elevationIdx ? AI : SCENARIO_INPUT;
+}
+
 // ── Rendering placeholder ──────────────────────────────────────
 function RenderingPlaceholder({ planName, elevationName }: { planName: string; elevationName: string }) {
   return (
@@ -163,11 +191,14 @@ interface PlanCardProps {
   fin: PlanFinancials;
   isRecommended: boolean;
   isSelected: boolean;
+  compOverrides: CompOverrides;
   onToggleSelect: () => void;
   onChange: (patch: Partial<PlanCardState>) => void;
 }
 
-function PlanCard({ plan, state, fin, isRecommended, isSelected, onToggleSelect, onChange }: PlanCardProps) {
+function PlanCard({
+  plan, state, fin, isRecommended, isSelected, compOverrides, onToggleSelect, onChange,
+}: PlanCardProps) {
   const elevation = plan.elevations[state.elevationIdx];
   const specVisible = plan.specLevels.slice(state.specWindowStart, state.specWindowStart + 2);
   const canShiftLeft = state.specWindowStart > 0;
@@ -195,6 +226,8 @@ function PlanCard({ plan, state, fin, isRecommended, isSelected, onToggleSelect,
   };
 
   const selectedOptionsCount = state.selectedOptionIds.length;
+  const buildInfo = outputProvenance(plan, state, AI);
+  const espInfo = outputProvenance(plan, state, espProvenance(plan, compOverrides));
 
   return (
     <div className={`sc-plan-card ${isSelected ? 'sc-plan-card--selected' : ''}`}>
@@ -239,7 +272,9 @@ function PlanCard({ plan, state, fin, isRecommended, isSelected, onToggleSelect,
             ))}
           </select>
           <div className="sc-selector-hint">
-            {elevation.widthFt.toFixed(2)}ft W × {elevation.depthFt.toFixed(2)}ft D
+            <ProvenanceValue info={elevationProvenance(plan, state)}>
+              {elevation.widthFt.toFixed(2)}ft W × {elevation.depthFt.toFixed(2)}ft D
+            </ProvenanceValue>
           </div>
         </div>
 
@@ -303,41 +338,41 @@ function PlanCard({ plan, state, fin, isRecommended, isSelected, onToggleSelect,
       <div className="sc-plan-financials">
         <div className="sc-fin-row sc-fin-row--primary">
           <span>Sellable Sqft</span>
-          <span>{fin.sqft.toLocaleString()} sqft</span>
+          <span><ProvenanceValue info={buildInfo}>{fin.sqft.toLocaleString()} sqft</ProvenanceValue></span>
         </div>
         <div className="sc-fin-row sc-fin-row--primary">
           <span>Est. Sale Price</span>
-          <span>{usd(fin.estSalePrice)}</span>
+          <span><ProvenanceValue info={espInfo}>{usd(fin.estSalePrice)}</ProvenanceValue></span>
         </div>
         <div className="sc-fin-divider" />
         <div className="sc-fin-row">
           <span>Build Cost</span>
-          <span>{usd(fin.buildCost)}</span>
+          <span><ProvenanceValue info={buildInfo}>{usd(fin.buildCost)}</ProvenanceValue></span>
         </div>
         <div className="sc-fin-row sc-fin-row--sub">
           <span>Financing (6%)</span>
-          <span>{usd(fin.financingCost)}</span>
+          <span><ProvenanceValue info={buildInfo}>{usd(fin.financingCost)}</ProvenanceValue></span>
         </div>
         <div className="sc-fin-row sc-fin-row--sub">
           <span>Transaction (3%)</span>
-          <span>{usd(fin.transactionCosts)}</span>
+          <span><ProvenanceValue info={espInfo}>{usd(fin.transactionCosts)}</ProvenanceValue></span>
         </div>
         <div className="sc-fin-row sc-fin-row--sub">
           <span>Homebound Fee (5%)</span>
-          <span>{usd(fin.homeboundFee)}</span>
+          <span><ProvenanceValue info={espInfo}>{usd(fin.homeboundFee)}</ProvenanceValue></span>
         </div>
         <div className="sc-fin-row sc-fin-row--total">
           <span>Total Cost Ex-Land</span>
-          <span>{usd(fin.totalCostExLand)}</span>
+          <span><ProvenanceValue info={espInfo}>{usd(fin.totalCostExLand)}</ProvenanceValue></span>
         </div>
         <div className="sc-fin-divider" />
         <div className="sc-fin-row sc-fin-row--highlight">
           <span>Max Lot Offer</span>
-          <span>{usd(fin.maxLotOffer)}</span>
+          <span><ProvenanceValue info={espInfo}>{usd(fin.maxLotOffer)}</ProvenanceValue></span>
         </div>
         <div className={`sc-fin-row sc-fin-row--margin ${fin.projectedMargin < 0 ? 'sc-fin-row--margin-neg' : ''}`}>
           <span>Projected Margin</span>
-          <span>{pct(fin.projectedMargin)}</span>
+          <span><ProvenanceValue info={espInfo}>{pct(fin.projectedMargin)}</ProvenanceValue></span>
         </div>
       </div>
 
@@ -361,7 +396,8 @@ function PlanCard({ plan, state, fin, isRecommended, isSelected, onToggleSelect,
           <div className="sc-addons-body">
             {selectedOptionsCount > 0 && (
               <div className="sc-addons-summary">
-                Selected options: <strong>+{usd(fin.optionsCost)}</strong>
+                Selected options:{' '}
+                <strong><ProvenanceValue info={SCENARIO_INPUT}>+{usd(fin.optionsCost)}</ProvenanceValue></strong>
               </div>
             )}
             <ul className="sc-addons-list">
@@ -404,26 +440,32 @@ interface ProFormaRow {
   key: keyof PlanFinancials | 'compPerSqft' | 'landPrice';
   format: (n: number) => string;
   style?: string;
-  provenance?: (plan: Plan, overrides: CompOverrides) => ProvenanceInfo;
+  /** Provenance while the plan card is on the AI's draft scenario. */
+  provenance: (plan: Plan, overrides: CompOverrides) => ProvenanceInfo;
+  /** Not changed by the card's scenario inputs, so always the base provenance. */
+  fixed?: boolean;
 }
 
+const aiRow = () => AI;
+
 const PROFORMA_ROWS: ProFormaRow[] = [
-  { label: 'Sellable Sqft',        key: 'sqft',             format: (n) => n.toLocaleString() + ' sqft', style: 'primary' },
-  { label: 'Comp ESP / Sqft',      key: 'compPerSqft',      format: (n) => usd(n) + '/sqft',              style: 'sub', provenance: compProvenance },
+  { label: 'Sellable Sqft',        key: 'sqft',             format: (n) => n.toLocaleString() + ' sqft', style: 'primary', provenance: aiRow },
+  { label: 'Comp ESP / Sqft',      key: 'compPerSqft',      format: (n) => usd(n) + '/sqft',              style: 'sub', provenance: compProvenance, fixed: true },
   { label: 'Est. Sale Price',      key: 'estSalePrice',     format: usd,                                  style: 'primary', provenance: espProvenance },
-  { label: 'Build Cost',           key: 'buildCost',        format: usd },
-  { label: 'Options',              key: 'optionsCost',      format: (n) => (n > 0 ? '+' + usd(n) : '—'), style: 'sub' },
-  { label: 'Financing (6%)',       key: 'financingCost',    format: usd,                                  style: 'sub' },
-  { label: 'Transaction (3%)',     key: 'transactionCosts', format: usd,                                  style: 'sub' },
-  { label: 'Homebound Fee (5%)',   key: 'homeboundFee',     format: usd,                                  style: 'sub' },
-  { label: 'Total Cost Ex-Land',   key: 'totalCostExLand',  format: usd,                                  style: 'total' },
-  { label: 'Max Lot Offer',        key: 'maxLotOffer',      format: usd,                                  style: 'highlight' },
-  { label: 'Land Price',           key: 'landPrice',        format: usd,                                  provenance: () => SFDC },
-  { label: 'Projected Margin',     key: 'projectedMargin',  format: pct,                                  style: 'margin' },
+  { label: 'Build Cost',           key: 'buildCost',        format: usd,                                  provenance: aiRow },
+  { label: 'Options',              key: 'optionsCost',      format: (n) => (n > 0 ? '+' + usd(n) : '—'), style: 'sub', provenance: () => SCENARIO_INPUT, fixed: true },
+  { label: 'Financing (6%)',       key: 'financingCost',    format: usd,                                  style: 'sub', provenance: aiRow },
+  { label: 'Transaction (3%)',     key: 'transactionCosts', format: usd,                                  style: 'sub', provenance: espProvenance },
+  { label: 'Homebound Fee (5%)',   key: 'homeboundFee',     format: usd,                                  style: 'sub', provenance: espProvenance },
+  { label: 'Total Cost Ex-Land',   key: 'totalCostExLand',  format: usd,                                  style: 'total', provenance: espProvenance },
+  { label: 'Max Lot Offer',        key: 'maxLotOffer',      format: usd,                                  style: 'highlight', provenance: espProvenance },
+  { label: 'Land Price',           key: 'landPrice',        format: usd,                                  provenance: () => SFDC, fixed: true },
+  { label: 'Projected Margin',     key: 'projectedMargin',  format: pct,                                  style: 'margin', provenance: espProvenance },
 ];
 
 interface ExtraRow {
-  label: string;
+  key: string;
+  label: ReactNode;
   value: string;          // selected plan only
   provenance: ProvenanceInfo;
   style?: string;
@@ -431,6 +473,7 @@ interface ExtraRow {
 
 function ProFormaTable({
   plans,
+  states,
   financials,
   recommendedId,
   selectedId,
@@ -439,6 +482,7 @@ function ProFormaTable({
   extraRows = [],
 }: {
   plans: Plan[];
+  states: PlanCardState[];
   financials: PlanFinancials[];
   recommendedId: string;
   selectedId: string;
@@ -451,6 +495,10 @@ function ProFormaTable({
     if (row.key === 'compPerSqft') return fin.estSalePrice / fin.sqft;
     if (row.key === 'landPrice') return landPrice!;
     return fin[row.key];
+  };
+  const cellInfo = (row: ProFormaRow, i: number): ProvenanceInfo => {
+    const base = row.provenance(plans[i], compOverrides);
+    return row.fixed ? base : outputProvenance(plans[i], states[i], base);
   };
 
   return (
@@ -471,24 +519,25 @@ function ProFormaTable({
           {rows.map((row) => (
             <tr key={row.key} className={row.style ? `sc-table-row--${row.style}` : ''}>
               <td className="sc-table-label">{row.label}</td>
-              {financials.map((fin, i) => (
-                <td
-                  key={plans[i].id}
-                  className={plans[i].id === selectedId ? 'sc-table-col--selected' : ''}
-                >
-                  {row.provenance ? (
-                    <ProvenanceValue info={row.provenance(plans[i], compOverrides)}>
-                      {row.format(cellValue(row, fin))}
-                    </ProvenanceValue>
-                  ) : (
-                    row.format(cellValue(row, fin))
-                  )}
-                </td>
-              ))}
+              {financials.map((fin, i) => {
+                const value = cellValue(row, fin);
+                return (
+                  <td
+                    key={plans[i].id}
+                    className={plans[i].id === selectedId ? 'sc-table-col--selected' : ''}
+                  >
+                    {row.key === 'optionsCost' && value === 0 ? (
+                      row.format(value)
+                    ) : (
+                      <ProvenanceValue info={cellInfo(row, i)}>{row.format(value)}</ProvenanceValue>
+                    )}
+                  </td>
+                );
+              })}
             </tr>
           ))}
           {extraRows.map((row) => (
-            <tr key={row.label} className={`sc-table-row--adu ${row.style ? `sc-table-row--${row.style}` : ''}`}>
+            <tr key={row.key} className={`sc-table-row--adu ${row.style ? `sc-table-row--${row.style}` : ''}`}>
               <td className="sc-table-label">{row.label}</td>
               {plans.map((p) => (
                 <td key={p.id} className={p.id === selectedId ? 'sc-table-col--selected' : ''}>
@@ -504,7 +553,14 @@ function ProFormaTable({
 }
 
 // ── Sensitivity Panel ──────────────────────────────────────────
-function SensitivityPanel({ plan, fin }: { plan: Plan; fin: PlanFinancials }) {
+function SensitivityPanel({
+  plan, fin, buildInfo, espInfo,
+}: {
+  plan: Plan;
+  fin: PlanFinancials;
+  buildInfo: ProvenanceInfo;
+  espInfo: ProvenanceInfo;
+}) {
   const scenarios = [
     {
       label: 'ESP −5%',
@@ -541,8 +597,9 @@ function SensitivityPanel({ plan, fin }: { plan: Plan; fin: PlanFinancials }) {
       <div className="sc-sensitivity-header">
         <h3 className="sc-sens-panel-title">Sensitivity Analysis — {plan.name}</h3>
         <p className="sc-sens-panel-sub">
-          Based on live selection: {fin.sqft.toLocaleString()} sqft ·
-          ESP {usd(fin.estSalePrice)} · Build {usd(fin.buildCost)}
+          Based on live selection: <ProvenanceValue info={buildInfo}>{fin.sqft.toLocaleString()} sqft</ProvenanceValue> ·
+          ESP <ProvenanceValue info={espInfo}>{usd(fin.estSalePrice)}</ProvenanceValue> ·
+          Build <ProvenanceValue info={buildInfo}>{usd(fin.buildCost)}</ProvenanceValue>
         </p>
       </div>
       <div className="sc-sensitivity-grid">
@@ -561,11 +618,13 @@ function SensitivityPanel({ plan, fin }: { plan: Plan; fin: PlanFinancials }) {
               <div className="sc-sens-label">{s.label}</div>
               <div className="sc-sens-param">
                 <span className="sc-sens-param-key">{s.paramLabel}</span>
-                <span className="sc-sens-param-val">{usd(s.paramValue)}</span>
+                <span className="sc-sens-param-val">
+                  <ProvenanceValue info={SCENARIO_OUTPUT}>{usd(s.paramValue)}</ProvenanceValue>
+                </span>
               </div>
               <div className="sc-sens-offer-label">Max Lot Offer</div>
               <div className={`sc-sens-offer ${negative ? 'sc-sens-offer--negative' : ''}`}>
-                {usd(maxOffer)}
+                <ProvenanceValue info={SCENARIO_OUTPUT}>{usd(maxOffer)}</ProvenanceValue>
               </div>
               {negative && <div className="sc-sens-breach">Margin floor breached</div>}
             </div>
@@ -621,7 +680,7 @@ function ExcludedPlansSection({
 const signedUsd = (n: number) => (n < 0 ? '−' : '+') + usd(Math.abs(n));
 
 interface AduImpact {
-  name: string;
+  name: string;           // ADU type name
   economics: AduEconomics;
   maxLotOffer: number;
   estSalePrice: number;
@@ -653,6 +712,8 @@ function AduSection({
   plan,
   elevationIdx,
   fin,
+  finInfo,
+  elevationInfo,
   addedTypeId,
   onAdd,
   onRemove,
@@ -662,6 +723,8 @@ function AduSection({
   plan: Plan;
   elevationIdx: number;
   fin: PlanFinancials;
+  finInfo: ProvenanceInfo;          // the plan's own max lot offer and margin
+  elevationInfo: ProvenanceInfo;
   addedTypeId: string | null;
   onAdd: (typeId: string) => void;
   onRemove: () => void;
@@ -670,7 +733,7 @@ function AduSection({
   const evaluation = evaluateAdus(market, lot, elevation);
   const { geometry } = evaluation;
   const added = evaluation.offered ? evaluation.options.find((o) => o.type.id === addedTypeId && o.fits) : undefined;
-  const impact = added && aduImpact(fin, `${added.type.name} ${added.type.sqft.toLocaleString()} sqft`, added.economics);
+  const impact = added && aduImpact(fin, added.type.name, added.economics);
   const e = added?.economics;
 
   return (
@@ -688,7 +751,10 @@ function AduSection({
 
       <div className="sc-adu-card">
         <p className="sc-adu-context">
-          For <strong>{plan.name}</strong> ({elevation.name}, {elevation.widthFt.toFixed(1)} × {elevation.depthFt.toFixed(1)} ft):
+          For <strong>{plan.name}</strong> ({elevation.name},{' '}
+          <ProvenanceValue info={elevationInfo}>
+            {elevation.widthFt.toFixed(1)} × {elevation.depthFt.toFixed(1)} ft
+          </ProvenanceValue>):
           remaining buildable area <ProvenanceValue info={AI}>{geometry.remainingSqFt.toLocaleString()} sqft</ProvenanceValue>
           <span className="sc-adu-sep">·</span>
           rear yard <ProvenanceValue info={AI}>{geometry.rearYardFt} ft</ProvenanceValue>
@@ -709,7 +775,8 @@ function AduSection({
                     <div className="sc-adu-type">
                       <span className="sc-adu-name">{o.type.name}</span>
                       <span className="sc-adu-size">
-                        {o.type.sqft.toLocaleString()} sqft · {o.type.footprint.widthFt} × {o.type.footprint.depthFt} ft footprint
+                        <ProvenanceValue info={AI}>{o.type.sqft.toLocaleString()} sqft</ProvenanceValue> ·{' '}
+                        <ProvenanceValue info={AI}>{o.type.footprint.widthFt} × {o.type.footprint.depthFt} ft</ProvenanceValue> footprint
                       </span>
                     </div>
                     {o.fits ? (
@@ -742,7 +809,7 @@ function AduSection({
         {impact && e && (
           <div className="sc-adu-impact">
             <dl className="sc-adu-lines">
-              <dt>ADU build ({e.sqft.toLocaleString()} sqft)</dt>
+              <dt>ADU build (<ProvenanceValue info={AI}>{e.sqft.toLocaleString()} sqft</ProvenanceValue>)</dt>
               <dd><ProvenanceValue info={AI}>{usd(e.build)}</ProvenanceValue></dd>
               <dt>Permits &amp; fees</dt>
               <dd><ProvenanceValue info={AI}>{usd(e.fees)}</ProvenanceValue></dd>
@@ -752,11 +819,11 @@ function AduSection({
                   <dd><ProvenanceValue info={AI}>{usd(e.flood)}</ProvenanceValue></dd>
                 </>
               )}
-              <dt>Carry ({CARRY_COST_PCT}% of build)</dt>
+              <dt>Carry (<ProvenanceValue info={ASSUMPTION}>{CARRY_COST_PCT}%</ProvenanceValue> of build)</dt>
               <dd><ProvenanceValue info={AI}>{usd(e.carry)}</ProvenanceValue></dd>
               <dt>ESP uplift</dt>
               <dd><ProvenanceValue info={AI}>+{usd(e.uplift)}</ProvenanceValue></dd>
-              <dt>Selling costs ({SELLING_COST_PCT}% of uplift)</dt>
+              <dt>Selling costs (<ProvenanceValue info={ASSUMPTION}>{SELLING_COST_PCT}%</ProvenanceValue> of uplift)</dt>
               <dd><ProvenanceValue info={AI}>{usd(e.selling)}</ProvenanceValue></dd>
               <dt className="sc-adu-total">Change in margin</dt>
               <dd className="sc-adu-total"><ProvenanceValue info={AI}>{signedUsd(e.marginDelta)}</ProvenanceValue></dd>
@@ -765,13 +832,15 @@ function AduSection({
               <div>
                 <span className="sc-adu-stat-label">Max lot offer</span>
                 <span className="sc-adu-stat-value">
-                  {usd(fin.maxLotOffer)} → <ProvenanceValue info={AI}>{usd(impact.maxLotOffer)}</ProvenanceValue>
+                  <ProvenanceValue info={finInfo}>{usd(fin.maxLotOffer)}</ProvenanceValue> →{' '}
+                  <ProvenanceValue info={SCENARIO_OUTPUT}>{usd(impact.maxLotOffer)}</ProvenanceValue>
                 </span>
               </div>
               <div>
                 <span className="sc-adu-stat-label">Projected margin</span>
                 <span className="sc-adu-stat-value">
-                  {pct(fin.projectedMargin)} → <ProvenanceValue info={AI}>{pct(impact.projectedMargin)}</ProvenanceValue>
+                  <ProvenanceValue info={finInfo}>{pct(fin.projectedMargin)}</ProvenanceValue> →{' '}
+                  <ProvenanceValue info={SCENARIO_OUTPUT}>{pct(impact.projectedMargin)}</ProvenanceValue>
                 </span>
               </div>
               <div>
@@ -869,17 +938,39 @@ export default function ScenarioEngine() {
     ? aduEvaluation.options.find((o) => o.type.id === aduTypeId && o.fits)
     : undefined;
   const addedImpact = addedAdu && selectedFin
-    ? aduImpact(selectedFin, `${addedAdu.type.name} ${addedAdu.type.sqft.toLocaleString()} sqft`, addedAdu.economics)
+    ? aduImpact(selectedFin, addedAdu.type.name, addedAdu.economics)
     : undefined;
+  // The ADU's own economics are AI modeling; totals with the analyst's added
+  // ADU are scenario outputs.
   const aduRows: ExtraRow[] = addedImpact
     ? [
-        { label: `ADU: ${addedImpact.name}`, value: `${usd(addedImpact.economics.hardCost)} cost`, provenance: AI, style: 'sub' },
-        { label: 'ADU ESP uplift', value: '+' + usd(addedImpact.economics.uplift), provenance: AI, style: 'sub' },
-        { label: 'ADU change in margin', value: signedUsd(addedImpact.economics.marginDelta), provenance: AI },
-        { label: 'Max Lot Offer with ADU', value: usd(addedImpact.maxLotOffer), provenance: AI, style: 'highlight' },
-        { label: 'Projected Margin with ADU', value: pct(addedImpact.projectedMargin), provenance: AI, style: 'margin' },
+        {
+          key: 'adu-cost',
+          label: (
+            <>
+              ADU: {addedImpact.name}{' '}
+              <ProvenanceValue info={AI}>{addedImpact.economics.sqft.toLocaleString()} sqft</ProvenanceValue>
+            </>
+          ),
+          value: `${usd(addedImpact.economics.hardCost)} cost`,
+          provenance: AI,
+          style: 'sub',
+        },
+        { key: 'adu-uplift', label: 'ADU ESP uplift', value: '+' + usd(addedImpact.economics.uplift), provenance: AI, style: 'sub' },
+        { key: 'adu-margin-delta', label: 'ADU change in margin', value: signedUsd(addedImpact.economics.marginDelta), provenance: AI },
+        { key: 'adu-max-lot', label: 'Max Lot Offer with ADU', value: usd(addedImpact.maxLotOffer), provenance: SCENARIO_OUTPUT, style: 'highlight' },
+        { key: 'adu-margin', label: 'Projected Margin with ADU', value: pct(addedImpact.projectedMargin), provenance: SCENARIO_OUTPUT, style: 'margin' },
       ]
     : [];
+  const cardStateList = feasiblePlans.map((plan) => cardStates[plan.id] ?? initialCardState(plan));
+  const scenarioInfo = (plan: Plan, state: PlanCardState) => ({
+    build: outputProvenance(plan, state, AI),
+    esp: outputProvenance(plan, state, espProvenance(plan, compOverrides)),
+  });
+  const recommendedInfo = recommendedPlan
+    ? scenarioInfo(recommendedPlan, cardStateList[recommendedIdx])
+    : undefined;
+  const selectedInfo = selectedPlan && selectedState ? scenarioInfo(selectedPlan, selectedState) : undefined;
 
   const patchCard = (planId: string, patch: Partial<PlanCardState>) => {
     setCardStates((prev) => ({
@@ -920,7 +1011,8 @@ export default function ScenarioEngine() {
           <h1 className="sc-page-title">Plan Selection &amp; Scenario Engine</h1>
           <p className="sc-page-subtitle">
             {opp.address}, {opp.city} {opp.state} &nbsp;·&nbsp; {opp.market} &nbsp;·&nbsp;{' '}
-            {opp.lotSqFt.toLocaleString()} sqft lot ({lot.widthFt}ft × {lot.depthFt}ft)
+            <ProvenanceValue info={SFDC}>{opp.lotSqFt.toLocaleString()} sqft</ProvenanceValue> lot (
+            <ProvenanceValue info={SFDC}>{lot.widthFt}ft × {lot.depthFt}ft</ProvenanceValue>)
           </p>
         </div>
         <div className="sc-header-summary">
@@ -930,11 +1022,12 @@ export default function ScenarioEngine() {
               {feasiblePlans.length} of {marketPlans.length}
             </span>
           </div>
-          {recommendedPlan && (
+          {recommendedPlan && recommendedInfo && (
             <div className="sc-header-summary-item">
               <span className="sc-header-summary-label">Top Margin</span>
               <span className="sc-header-summary-value sc-header-summary-value--margin">
-                {recommendedPlan.name} · {pct(recommendedFin.projectedMargin)}
+                {recommendedPlan.name} ·{' '}
+                <ProvenanceValue info={recommendedInfo.esp}>{pct(recommendedFin.projectedMargin)}</ProvenanceValue>
               </span>
             </div>
           )}
@@ -946,7 +1039,7 @@ export default function ScenarioEngine() {
         <div className="sc-section-header">
           <h2 className="sc-section-title">Feasible Plans — {market} Market</h2>
           <span className="sc-section-caption">
-            Filtered by lot: {lot.widthFt}ft W × {lot.depthFt}ft D
+            Filtered by lot: <ProvenanceValue info={SFDC}>{lot.widthFt}ft W × {lot.depthFt}ft D</ProvenanceValue>
             {calibration && ' · priced to this lot’s AI draft'}
           </span>
         </div>
@@ -959,6 +1052,7 @@ export default function ScenarioEngine() {
               fin={financials[i]}
               isRecommended={plan.id === recommendedPlan?.id}
               isSelected={plan.id === selectedPlan?.id}
+              compOverrides={compOverrides}
               onToggleSelect={() => setSelectedId(plan.id === selectedId ? null : plan.id)}
               onChange={(patch) => patchCard(plan.id, patch)}
             />
@@ -977,13 +1071,15 @@ export default function ScenarioEngine() {
       </section>
 
       {/* ADU */}
-      {selectedPlan && selectedState && selectedFin && (
+      {selectedPlan && selectedState && selectedFin && selectedInfo && (
         <AduSection
           market={market}
           lot={lot}
           plan={selectedPlan}
           elevationIdx={selectedState.elevationIdx}
           fin={selectedFin}
+          finInfo={selectedInfo.esp}
+          elevationInfo={elevationProvenance(selectedPlan, selectedState)}
           addedTypeId={aduTypeId}
           onAdd={setAduTypeId}
           onRemove={() => setAduTypeId(null)}
@@ -997,6 +1093,7 @@ export default function ScenarioEngine() {
           <ProvenanceLegend />
           <ProFormaTable
             plans={feasiblePlans}
+            states={cardStateList}
             financials={financials}
             recommendedId={recommendedPlan.id}
             selectedId={selectedPlan.id}
@@ -1008,9 +1105,14 @@ export default function ScenarioEngine() {
       )}
 
       {/* Sensitivity */}
-      {selectedPlan && (
+      {selectedPlan && selectedInfo && (
         <section className="sc-section">
-          <SensitivityPanel plan={selectedPlan} fin={selectedFin} />
+          <SensitivityPanel
+            plan={selectedPlan}
+            fin={selectedFin}
+            buildInfo={selectedInfo.build}
+            espInfo={selectedInfo.esp}
+          />
         </section>
       )}
 

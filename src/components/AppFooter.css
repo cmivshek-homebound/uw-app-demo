@@ -1,0 +1,20 @@
+/* ── App footer ── */
+.app-footer {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 16px 32px;
+  border-top: 1px solid #e5e5e5;
+  font-size: 12px;
+  color: #a3a3a3;
+}
+
+.app-footer a {
+  color: #737373;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.app-footer a:hover { color: #1A6B4A; text-decoration: underline; }

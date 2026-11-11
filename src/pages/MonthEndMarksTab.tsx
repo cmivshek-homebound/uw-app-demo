@@ -2,6 +2,7 @@ import { Fragment, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
 import { ASSETS } from '../data/assets';
+import { AI, MLS, markProvenance } from '../data/provenance';
 import { APPROVAL_THRESHOLD } from '../data/markProposals';
 import {
   MARKS_MANAGER,
@@ -12,7 +13,7 @@ import {
   withMarkReviews,
 } from '../data/markReview';
 import type { ReviewedMarkProposal } from '../data/markReview';
-import type { Asset, AssetStage, MarkDriverKind, MarkProposalStatus, MonthlyMark, ProvenanceInfo } from '../types';
+import type { Asset, AssetStage, MarkDriverKind, MarkProposalStatus, ProvenanceInfo } from '../types';
 
 const STAGE_LABELS: Partial<Record<AssetStage, string>> = {
   precon: 'Pre-Con',
@@ -43,9 +44,6 @@ const DRIVER_TITLES: Record<MarkDriverKind, string> = {
 
 const DRIVER_ORDER: MarkDriverKind[] = ['newComps', 'homeboundSales', 'seasonality', 'listingDemand'];
 
-const AI: ProvenanceInfo = { provenance: 'ai' };
-const MLS: ProvenanceInfo = { provenance: 'system', source: 'MLS' };
-
 function usd(n: number) {
   return `${n < 0 ? '−' : ''}$${Math.abs(Math.round(n)).toLocaleString()}`;
 }
@@ -67,12 +65,6 @@ function shortDate(iso: string) {
 
 function monthName(month: string) {
   return new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-}
-
-function markProvenance(m: MonthlyMark | undefined): ProvenanceInfo {
-  if (!m?.approvedBy) return AI;
-  if (m.approvedBy === 'Auto-approved') return { provenance: 'system', note: 'Auto-approved' };
-  return { provenance: 'human', note: `Approved by ${m.approvedBy}` };
 }
 
 function proposalProvenance(p: ReviewedMarkProposal): ProvenanceInfo {
@@ -138,7 +130,7 @@ function OverrideForm({
         <span className="pf-hint">
           {valid
             ? `${signedUsd(change)} vs. March${nextStatus === 'needs_approval' ? ', over $10K, so it goes to approval' : ''}`
-            : `AI proposed ${usd(p.aiValue)}`}
+            : <>AI proposed <ProvenanceValue info={AI}>{usd(p.aiValue)}</ProvenanceValue></>}
         </span>
         <button type="button" className="pf-btn" onClick={onCancel}>Cancel</button>
         <button type="submit" className="pf-btn pf-btn--primary" disabled={!valid}>Save override</button>
@@ -183,7 +175,7 @@ function DriverDetail({ asset, p }: { asset: Asset; p: ReviewedMarkProposal }) {
       </ul>
       {p.override && (
         <p className="pf-detail-note">
-          {p.override.by} overrode the AI’s {usd(p.override.aiValue)}: {p.override.reason}
+          {p.override.by} overrode the AI’s <ProvenanceValue info={AI}>{usd(p.override.aiValue)}</ProvenanceValue>: {p.override.reason}
         </p>
       )}
       {p.status === 'approved' && (p.approvalNote || p.approvedBy) && (

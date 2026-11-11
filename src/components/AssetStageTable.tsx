@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { latestMark } from '../data/selectors';
 import type { Asset, AssetStage } from '../types';
+import { markProvenance } from '../data/provenance';
+import ProvenanceValue from './ProvenanceValue';
 // Reuse the queue's page and table classes (oq-*).
 import '../pages/OpportunityQueue.css';
 
@@ -50,7 +52,7 @@ export default function AssetStageTable({ assets }: { assets: Asset[] }) {
                 <td>
                   {mark ? (
                     <>
-                      {usd(mark.value)} <span className="per-year">{formatMonth(mark.month)}</span>
+                      <ProvenanceValue info={markProvenance(mark)}>{usd(mark.value)}</ProvenanceValue> <span className="per-year">{formatMonth(mark.month)}</span>
                     </>
                   ) : '—'}
                 </td>

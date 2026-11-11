@@ -1,3 +1,4 @@
+import type { AssetUnderwrite, UnderwriteOverrideField } from '../types';
 import { ASSETS } from './assets';
 
 // ── Under-contract deals ───────────────────────────────────────
@@ -13,6 +14,9 @@ export interface WorkflowItem {
   state: ItemState;
   label: string;
   note: string;
+  /** An underwrite figure shown after the label; `value` is filled from the underwrite. */
+  field?: Extract<UnderwriteOverrideField, 'buildCost' | 'esp' | 'landPrice'>;
+  value?: number;
 }
 
 export type CardTone = 'review' | 'progress' | 'waiting' | 'locked';
@@ -84,7 +88,7 @@ const CONTRACT_DETAILS: Record<string, ContractDetail> = {
         status: 'Awaiting procurement',
         tone: 'waiting',
         items: [
-          { state: 'done',    label: 'UW cost basis locked — $589,812',            note: 'Snapshot BP-2026-04-1122' },
+          { state: 'done',    label: 'UW build budget locked', field: 'buildCost', note: 'Snapshot BP-2026-04-1122' },
           { state: 'waiting', label: 'Final procurement budget',                   note: 'pending' },
           { state: 'waiting', label: 'Variance check — auto-flags if >3% deviation', note: 'armed' },
           { state: 'waiting', label: 'IC deck budget update',                      note: 'auto-updates on confirmation' },
@@ -114,6 +118,10 @@ const CONTRACT_DETAILS: Record<string, ContractDetail> = {
   },
 };
 
+function underwriteValue(uw: AssetUnderwrite, field: NonNullable<WorkflowItem['field']>): number {
+  return { buildCost: uw.buildCost, esp: uw.esp, landPrice: uw.landPrice }[field];
+}
+
 export const CONTRACT_DEALS: Record<string, ContractDeal> = Object.fromEntries(
   ASSETS.filter((a) => a.stage === 'under_contract' && a.underwrite && a.contract).map((a) => {
     const uw = a.underwrite!;
@@ -128,7 +136,10 @@ export const CONTRACT_DEALS: Record<string, ContractDeal> = Object.fromEntries(
       marginPct: uw.marginPct,
       contractDate: a.contract!.contractDate,
       inspectionExpires: a.contract!.inspectionExpires,
-      cards: detail?.cards ?? [],
+      cards: (detail?.cards ?? []).map((card) => ({
+        ...card,
+        items: card.items.map((item) => (item.field ? { ...item, value: underwriteValue(uw, item.field) } : item)),
+      })),
       timeline: detail?.timeline ?? [],
     };
     return [a.id, deal];

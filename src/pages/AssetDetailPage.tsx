@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import type { PointerEvent, ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import ConstructionDetail, { MarginImpactLine, StatusChip } from '../components/ConstructionDetail';
+import { eacInfo, weeksLate } from '../components/constructionFormat';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
 import { getAIDraft } from '../data/aiDrafts';
+import { AI, BLUEPRINT, MLS, SFDC, TAPE, computed, human, markProvenance } from '../data/provenance';
 import { ASSETS } from '../data/assets';
 import { DEMO_TODAY } from '../data/dates';
 import { useListingActions, withListingActions } from '../data/listingActions';
 import { useMarkReviews, withMarkReviews } from '../data/markReview';
-import { APPROVAL_THRESHOLD, PIPELINE_STAGES, stageHistory, underwritingGap } from '../data/selectors';
+import { APPROVAL_THRESHOLD, PIPELINE_STAGES, constructionStatus, constructionSummary, stageHistory, underwritingGap } from '../data/selectors';
 import type { GapLine } from '../data/selectors';
 import { CARRY_COST_PCT, SELLING_COST_PCT, closingCostPctFor } from '../data/underwriting';
 import type {
@@ -50,11 +53,8 @@ const OVERRIDE_LABELS: Record<UnderwriteOverrideField, string> = {
   maxCoveragePct: 'Max lot coverage',
 };
 
-const AI: ProvenanceInfo = { provenance: 'ai' };
-const SFDC: ProvenanceInfo = { provenance: 'system', source: 'Salesforce' };
-const MLS: ProvenanceInfo = { provenance: 'system', source: 'MLS' };
-const BLUEPRINT: ProvenanceInfo = { provenance: 'system', source: 'Blueprint' };
-const TAPE: ProvenanceInfo = { provenance: 'system', source: 'BOOL data tape' };
+const GAP = computed('Realized minus underwritten');
+const ASSUMPTION = human('Underwriting assumption');
 
 function usd(n: number) {
   return `${n < 0 ? '−' : ''}$${Math.abs(Math.round(n)).toLocaleString()}`;
@@ -155,13 +155,13 @@ function UnderwriteSection({ asset }: { asset: Asset }) {
         <dl className="as-lines">
           <dt>Land</dt>
           <dd><ProvenanceValue info={overrides.has('landPrice') ? pv('landPrice') : SFDC}>{usd(uw.landPrice)}</ProvenanceValue></dd>
-          <dt>Closing costs ({closingPct}% of land)</dt>
+          <dt>Closing costs (<ProvenanceValue info={ASSUMPTION}>{closingPct}%</ProvenanceValue> of land)</dt>
           <dd><ProvenanceValue info={pv()}>{usd(uw.closingCosts)}</ProvenanceValue></dd>
           <dt>Build</dt>
           <dd><ProvenanceValue info={pv('buildCost')}>{usd(uw.buildCost)}</ProvenanceValue></dd>
-          <dt>Carry / financing ({CARRY_COST_PCT}% of build)</dt>
+          <dt>Carry / financing (<ProvenanceValue info={ASSUMPTION}>{CARRY_COST_PCT}%</ProvenanceValue> of build)</dt>
           <dd><ProvenanceValue info={pv()}>{usd(uw.carryCosts)}</ProvenanceValue></dd>
-          <dt>Selling costs ({SELLING_COST_PCT}% of ESP)</dt>
+          <dt>Selling costs (<ProvenanceValue info={ASSUMPTION}>{SELLING_COST_PCT}%</ProvenanceValue> of ESP)</dt>
           <dd><ProvenanceValue info={pv()}>{usd(uw.sellingCosts)}</ProvenanceValue></dd>
           <dt className="as-lines-total">Total cost</dt>
           <dd className="as-lines-total"><ProvenanceValue info={pv()}>{usd(uw.totalCost)}</ProvenanceValue></dd>
@@ -198,7 +198,7 @@ function UnderwriteSection({ asset }: { asset: Asset }) {
                   <span className="as-override-values">
                     <ProvenanceValue info={AI}>{overrideValue(o.field, o.aiValue)}</ProvenanceValue>
                     <span className="as-arrow" aria-hidden="true">→</span>
-                    <ProvenanceValue info={{ provenance: 'human', note: o.reason }}>{overrideValue(o.field, o.finalValue)}</ProvenanceValue>
+                    <ProvenanceValue info={human(o.reason)}>{overrideValue(o.field, o.finalValue)}</ProvenanceValue>
                   </span>
                   <span className="as-override-reason">{o.reason}</span>
                 </li>
@@ -282,37 +282,56 @@ function DiligenceSection({ asset }: { asset: Asset }) {
 // ── 3. Construction ────────────────────────────────────────────
 function ConstructionSection({ asset }: { asset: Asset }) {
   const owned = asset.owned!;
-  const variance = owned.costToDate - owned.budget;
+  const s = constructionSummary(asset)!;
+  const status = constructionStatus(asset)!;
   const done = owned.pctComplete >= 1;
+  const eac = eacInfo(asset);
   return (
     <Card
       title="Construction"
-      aside={owned.startedOn && <span className="as-card-caption">Started {shortDate(owned.startedOn)}</span>}
+      aside={
+        <span className="as-card-caption">
+          {owned.startedOn && <>Started {shortDate(owned.startedOn)} · </>}
+          {done ? <>CO {shortDate(owned.schedule.forecastCompletion)}</> : <StatusChip status={status} />}
+        </span>
+      }
     >
       <div className="as-stats as-stats--row">
         <Stat label="Budget"><ProvenanceValue info={BLUEPRINT}>{usd(owned.budget)}</ProvenanceValue></Stat>
         <Stat
-          label={done ? 'Final cost' : 'Cost to date'}
-          sub={done && variance !== 0 ? `${signedUsd(variance)} vs. budget` : undefined}
+          label={done ? 'Final cost' : 'Est. at completion'}
+          sub={s.variance !== 0 ? (
+            <><ProvenanceValue info={eac}>{signedUsd(s.variance)} ({s.variancePct > 0 ? '+' : ''}{s.variancePct.toFixed(1)}%)</ProvenanceValue> vs. budget</>
+          ) : 'On budget'}
         >
-          <ProvenanceValue info={BLUEPRINT}>{usd(owned.costToDate)}</ProvenanceValue>
+          <ProvenanceValue info={eac}>{usd(s.estimateAtCompletion)}</ProvenanceValue>
         </Stat>
+        {!done && (
+          <>
+            <Stat label="Cost to date"><ProvenanceValue info={BLUEPRINT}>{usd(owned.costToDate)}</ProvenanceValue></Stat>
+            <Stat label="Cost to complete"><ProvenanceValue info={AI}>{usd(s.costToComplete)}</ProvenanceValue></Stat>
+          </>
+        )}
         <Stat label="Complete"><ProvenanceValue info={BLUEPRINT}>{Math.round(owned.pctComplete * 100)}%</ProvenanceValue></Stat>
+        <Stat
+          label={done ? 'Completed' : 'Forecast CO'}
+          sub={s.scheduleSlipDays > 0 ? (
+            <>Plan {shortDate(owned.schedule.plannedCompletion)} · <ProvenanceValue info={BLUEPRINT}>{weeksLate(s.scheduleSlipDays)}</ProvenanceValue></>
+          ) : 'On plan'}
+        >
+          <ProvenanceValue info={BLUEPRINT}>{shortDate(owned.schedule.forecastCompletion)}</ProvenanceValue>
+        </Stat>
       </div>
       <div className="as-progress" aria-hidden="true">
         <span style={{ width: `${Math.min(100, Math.round(owned.pctComplete * 100))}%` }} />
       </div>
+      <div className="as-construction-impact"><MarginImpactLine asset={asset} /></div>
+      <ConstructionDetail asset={asset} />
     </Card>
   );
 }
 
 // ── 4. Monthly marks ───────────────────────────────────────────
-function markProvenance(m: MonthlyMark): ProvenanceInfo {
-  if (!m.approvedBy) return { provenance: 'ai', note: 'Awaiting approval' };
-  if (m.approvedBy === 'Auto-approved') return { provenance: 'system', note: 'Auto-approved' };
-  return { provenance: 'human', note: `Approved by ${m.approvedBy}` };
-}
-
 function niceStep(range: number) {
   const raw = range / 3;
   const pow = 10 ** Math.floor(Math.log10(raw));
@@ -394,8 +413,10 @@ function MarkChart({ marks }: { marks: MonthlyMark[] }) {
           style={{ left: `${(x(hover) / CHART.w) * 100}%`, top: `${(y(h.value) / CHART.h) * 100}%` }}
         >
           <span className="as-chart-tooltip-month">{monthLabel(h.month)}</span>
-          <span className="as-chart-tooltip-value">{usd(h.value)}</span>
-          <span className="as-chart-tooltip-change">{h.changeFromPrior === 0 ? 'No change' : signedUsd(h.changeFromPrior)}</span>
+          <span className="as-chart-tooltip-value"><ProvenanceValue info={markProvenance(h)}>{usd(h.value)}</ProvenanceValue></span>
+          <span className="as-chart-tooltip-change">
+            {h.changeFromPrior === 0 ? 'No change' : <ProvenanceValue info={markProvenance(h)}>{signedUsd(h.changeFromPrior)}</ProvenanceValue>}
+          </span>
         </div>
       )}
     </div>
@@ -476,7 +497,7 @@ function ListingSection({ asset }: { asset: Asset }) {
             </thead>
             <tbody>
               {l.priceDropHistory.map((d) => {
-                const info: ProvenanceInfo = d.loggedBy ? { provenance: 'human', note: `Accepted from the listing board by ${d.loggedBy}` } : MLS;
+                const info = d.loggedBy ? human(`Accepted from the listing board by ${d.loggedBy}`) : MLS;
                 return (
                   <tr key={d.date}>
                     <td>{shortDate(d.date)}</td>
@@ -528,26 +549,42 @@ function ListingSection({ asset }: { asset: Asset }) {
 }
 
 // ── 6. Underwritten vs realized ────────────────────────────────
-function driverSentence(asset: Asset, driver: GapLine, marginPts: number): string {
-  const gap = Math.abs(driver.realized - driver.uw);
-  const move = `${Math.abs(marginPts).toFixed(1)}-point margin ${marginPts < 0 ? 'drop' : 'gain'}`;
+function driverSentence(asset: Asset, driver: GapLine, marginPts: number): ReactNode {
+  const gap = <ProvenanceValue info={GAP}>{usd(Math.abs(driver.realized - driver.uw))}</ProvenanceValue>;
+  const move = (
+    <>
+      <ProvenanceValue info={GAP}>{Math.abs(marginPts).toFixed(1)}-point</ProvenanceValue> margin {marginPts < 0 ? 'drop' : 'gain'}
+    </>
+  );
   const sale = asset.sale!;
   const uw = asset.underwrite!;
   switch (driver.key) {
-    case 'salePrice':
+    case 'salePrice': {
+      const drops = asset.listing!.priceDrops;
       return driver.marginImpact < 0
-        ? `Selling ${usd(gap)} below ESP after ${asset.listing!.priceDrops} price ${asset.listing!.priceDrops === 1 ? 'drop' : 'drops'} was the biggest driver of the ${move}.`
-        : `Selling ${usd(gap)} above ESP was the biggest driver of the ${move}.`;
+        ? <>Selling {gap} below ESP after <ProvenanceValue info={MLS}>{drops}</ProvenanceValue> price {drops === 1 ? 'drop' : 'drops'} was the biggest driver of the {move}.</>
+        : <>Selling {gap} above ESP was the biggest driver of the {move}.</>;
+    }
     case 'build':
       return driver.marginImpact < 0
-        ? `Build ran ${usd(gap)} (${((gap / uw.buildCost) * 100).toFixed(1)}%) over budget, the biggest driver of the ${move}.`
-        : `Build came in ${usd(gap)} under budget, the biggest driver of the ${move}.`;
+        ? (
+          <>
+            Build ran {gap} (<ProvenanceValue info={GAP}>{((Math.abs(driver.realized - driver.uw) / uw.buildCost) * 100).toFixed(1)}%</ProvenanceValue>) over
+            budget, the biggest driver of the {move}.
+          </>
+        )
+        : <>Build came in {gap} under budget, the biggest driver of the {move}.</>;
     case 'carry':
-      return `Carry ran ${usd(gap)} over plan on a ${asset.listing!.daysOnMarket}-day sale, the biggest driver of the ${move}.`;
+      return <>Carry ran {gap} over plan on a <ProvenanceValue info={MLS}>{asset.listing!.daysOnMarket}-day</ProvenanceValue> sale, the biggest driver of the {move}.</>;
     case 'closing':
-      return `Closing costs ran ${((sale.closingCosts / sale.landPrice) * 100).toFixed(2)}% of land against ${closingCostPctFor(uw.underwrittenOn)}% underwritten, the biggest driver of the ${move}.`;
+      return (
+        <>
+          Closing costs ran <ProvenanceValue info={TAPE}>{((sale.closingCosts / sale.landPrice) * 100).toFixed(2)}%</ProvenanceValue> of land against{' '}
+          <ProvenanceValue info={ASSUMPTION}>{closingCostPctFor(uw.underwrittenOn)}%</ProvenanceValue> underwritten, the biggest driver of the {move}.
+        </>
+      );
     default:
-      return `${driver.label} moved ${usd(gap)}, the biggest driver of the ${move}.`;
+      return <>{driver.label} moved {gap}, the biggest driver of the {move}.</>;
   }
 }
 
@@ -555,11 +592,12 @@ function RealizedSection({ asset }: { asset: Asset }) {
   const uw = asset.underwrite!;
   const sale = asset.sale!;
   const { lines, uwMargin, realizedMargin, marginPts, driver } = underwritingGap(asset)!;
+  const reviewed = human(`Reviewed by ${uw.review?.analyst ?? 'analyst'}`);
 
   const diffCell = (l: GapLine) => {
     const diff = l.realized - l.uw;
     if (diff === 0) return <td className="as-num as-muted">—</td>;
-    return <td className={`as-num ${l.marginImpact > 0 ? 'as-good' : 'as-bad'}`}>{signedUsd(diff)}</td>;
+    return <td className={`as-num ${l.marginImpact > 0 ? 'as-good' : 'as-bad'}`}><ProvenanceValue info={GAP}>{signedUsd(diff)}</ProvenanceValue></td>;
   };
 
   return (
@@ -579,29 +617,29 @@ function RealizedSection({ asset }: { asset: Asset }) {
             {lines.map((l) => (
               <tr key={l.label} className={l.key === 'salePrice' ? 'as-row--revenue' : ''}>
                 <td>{l.label}</td>
-                <td className="as-num"><ProvenanceValue info={{ provenance: 'human', note: `Reviewed by ${uw.review?.analyst ?? 'analyst'}` }}>{usd(l.uw)}</ProvenanceValue></td>
+                <td className="as-num"><ProvenanceValue info={reviewed}>{usd(l.uw)}</ProvenanceValue></td>
                 <td className="as-num"><ProvenanceValue info={l.key === 'salePrice' ? MLS : TAPE}>{usd(l.realized)}</ProvenanceValue></td>
                 {diffCell(l)}
               </tr>
             ))}
             <tr className="as-row--total">
               <td>Total cost</td>
-              <td className="as-num">{usd(uw.totalCost)}</td>
+              <td className="as-num"><ProvenanceValue info={reviewed}>{usd(uw.totalCost)}</ProvenanceValue></td>
               <td className="as-num"><ProvenanceValue info={TAPE}>{usd(sale.totalCost)}</ProvenanceValue></td>
-              <td className={`as-num ${sale.totalCost > uw.totalCost ? 'as-bad' : 'as-good'}`}>{signedUsd(sale.totalCost - uw.totalCost)}</td>
+              <td className={`as-num ${sale.totalCost > uw.totalCost ? 'as-bad' : 'as-good'}`}><ProvenanceValue info={GAP}>{signedUsd(sale.totalCost - uw.totalCost)}</ProvenanceValue></td>
             </tr>
             <tr className="as-row--total">
               <td>Margin ($)</td>
-              <td className="as-num">{usd(uwMargin)}</td>
+              <td className="as-num"><ProvenanceValue info={reviewed}>{usd(uwMargin)}</ProvenanceValue></td>
               <td className="as-num"><ProvenanceValue info={TAPE}>{usd(realizedMargin)}</ProvenanceValue></td>
-              <td className={`as-num ${realizedMargin < uwMargin ? 'as-bad' : 'as-good'}`}>{signedUsd(realizedMargin - uwMargin)}</td>
+              <td className={`as-num ${realizedMargin < uwMargin ? 'as-bad' : 'as-good'}`}><ProvenanceValue info={GAP}>{signedUsd(realizedMargin - uwMargin)}</ProvenanceValue></td>
             </tr>
             <tr className="as-row--total">
               <td>Margin (%)</td>
-              <td className="as-num">{uw.marginPct.toFixed(1)}%</td>
+              <td className="as-num"><ProvenanceValue info={reviewed}>{uw.marginPct.toFixed(1)}%</ProvenanceValue></td>
               <td className="as-num"><ProvenanceValue info={TAPE}>{sale.marginPct.toFixed(1)}%</ProvenanceValue></td>
               <td className={`as-num ${marginPts < 0 ? 'as-bad' : 'as-good'}`}>
-                {marginPts > 0 ? '+' : marginPts < 0 ? '−' : ''}{Math.abs(marginPts).toFixed(1)} pts
+                <ProvenanceValue info={GAP}>{marginPts > 0 ? '+' : marginPts < 0 ? '−' : ''}{Math.abs(marginPts).toFixed(1)} pts</ProvenanceValue>
               </td>
             </tr>
           </tbody>

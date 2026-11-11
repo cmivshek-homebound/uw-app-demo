@@ -3,6 +3,7 @@ import AssetStageTable from '../components/AssetStageTable';
 import { ASSETS } from '../data/assets';
 import { useMarkReviews, withMarkReviews } from '../data/markReview';
 import { assetsByStage } from '../data/selectors';
+import ConstructionTab from './ConstructionTab';
 import MonthEndMarksTab from './MonthEndMarksTab';
 import UnderwritingAccuracyTab from './UnderwritingAccuracyTab';
 import './PortfolioPage.css';
@@ -11,6 +12,7 @@ const TABS = [
   { id: 'assets', label: 'Assets' },
   { id: 'marks', label: 'Month-end marks' },
   { id: 'accuracy', label: 'Underwriting accuracy' },
+  { id: 'construction', label: 'Construction' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -37,7 +39,7 @@ export default function PortfolioPage() {
         <div>
           <h1 className="oq-title">Portfolio</h1>
           <p className="oq-subtitle">
-            Owned lots, month-end marks, and how underwriting held up on sold homes.
+            Owned lots, month-end marks, how underwriting held up on sold homes, and builds in progress.
           </p>
         </div>
       </div>
@@ -59,6 +61,7 @@ export default function PortfolioPage() {
       {tab === 'assets' && <AssetStageTable assets={assets} />}
       {tab === 'marks' && <MonthEndMarksTab />}
       {tab === 'accuracy' && <UnderwritingAccuracyTab />}
+      {tab === 'construction' && <ConstructionTab />}
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import ProvenanceValue from '../components/ProvenanceValue';
 import { mockOpportunities } from '../data/opportunities';
+import { SFDC } from '../data/provenance';
 import type { Opportunity } from '../types';
 import './OpportunityQueue.css';
 
@@ -90,7 +92,7 @@ export default function OpportunityQueue() {
                 </td>
                 <td className="oq-address">{opp.address}, {opp.city}, {opp.state} {opp.zip}</td>
                 <td>{opp.market}</td>
-                <td>{formatSqFt(opp.lotSqFt)}</td>
+                <td><ProvenanceValue info={SFDC}>{formatSqFt(opp.lotSqFt)}</ProvenanceValue></td>
                 <td>
                   <span className={`source-tag source-${opp.source === 'MLS' ? 'mls' : 'off-market'}`}>
                     {opp.source}

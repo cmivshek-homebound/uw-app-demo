@@ -1,5 +1,8 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { getAIDraft } from '../data/aiDrafts';
+import { AI, SFDC } from '../data/provenance';
+import ProvenanceValue from './ProvenanceValue';
 import type { Opportunity } from '../types';
 import './TriageCard.css';
 
@@ -8,12 +11,22 @@ type CheckResult = 'pass' | 'fail' | 'flag';
 interface PreScreenCheck {
   name: string;
   result: CheckResult;
-  label: string;
+  label: ReactNode;
 }
 
 interface TriageData {
   checks: PreScreenCheck[];
   overallResult: 'pass' | 'review_required' | 'fail';
+}
+
+/** Lot dimensions from the Salesforce lot record. */
+function lot(width: number, depth: number) {
+  return <ProvenanceValue info={SFDC}>{width}ft × {depth}ft</ProvenanceValue>;
+}
+
+/** AI detection confidence. */
+function confidence(pct: number) {
+  return <ProvenanceValue info={AI}>{pct}%</ProvenanceValue>;
 }
 
 const TRIAGE_DATA: Record<string, TriageData> = {
@@ -22,9 +35,9 @@ const TRIAGE_DATA: Record<string, TriageData> = {
     checks: [
       { name: 'Dev Area',             result: 'pass', label: 'Pass' },
       { name: 'Zoning',               result: 'pass', label: 'Pass — SF-3 Residential' },
-      { name: 'Lot Dimensions',       result: 'pass', label: 'Pass — 52ft × 120ft, fits 3 plans' },
+      { name: 'Lot Dimensions',       result: 'pass', label: <>Pass — {lot(52, 120)}, fits 3 plans</> },
       { name: 'Road Classification',  result: 'pass', label: 'Pass — Residential, 2 lanes' },
-      { name: 'Commercial Proximity', result: 'flag', label: 'Flag — Gas station 190ft NE (58% confidence)' },
+      { name: 'Commercial Proximity', result: 'flag', label: <>Flag — Gas station <ProvenanceValue info={AI}>190ft</ProvenanceValue> NE ({confidence(58)} confidence)</> },
       { name: 'Flood Zone',           result: 'pass', label: 'Pass — Zone X' },
     ],
   },
@@ -33,7 +46,7 @@ const TRIAGE_DATA: Record<string, TriageData> = {
     checks: [
       { name: 'Dev Area',             result: 'pass', label: 'Pass' },
       { name: 'Zoning',               result: 'pass', label: 'Pass — SF-3 Residential' },
-      { name: 'Lot Dimensions',       result: 'pass', label: 'Pass — 58ft × 122ft, fits 4 plans' },
+      { name: 'Lot Dimensions',       result: 'pass', label: <>Pass — {lot(58, 122)}, fits 4 plans</> },
       { name: 'Road Classification',  result: 'pass', label: 'Pass — Residential, 2 lanes' },
       { name: 'Commercial Proximity', result: 'pass', label: 'Pass — No disqualifying POI within 400ft' },
       { name: 'Flood Zone',           result: 'pass', label: 'Pass — Zone X' },
@@ -44,8 +57,8 @@ const TRIAGE_DATA: Record<string, TriageData> = {
     checks: [
       { name: 'Dev Area',             result: 'pass', label: 'Pass' },
       { name: 'Zoning',               result: 'flag', label: 'Flag — Verify, mixed use boundary' },
-      { name: 'Lot Dimensions',       result: 'pass', label: 'Pass — 48ft × 121ft, fits 2 plans' },
-      { name: 'Road Classification',  result: 'flag', label: 'Flag — 4-lane arterial detected (82% confidence)' },
+      { name: 'Lot Dimensions',       result: 'pass', label: <>Pass — {lot(48, 121)}, fits 2 plans</> },
+      { name: 'Road Classification',  result: 'flag', label: <>Flag — 4-lane arterial detected ({confidence(82)} confidence)</> },
       { name: 'Commercial Proximity', result: 'pass', label: 'Pass' },
       { name: 'Flood Zone',           result: 'fail', label: 'Fail — Zone AE, high risk' },
     ],
@@ -55,7 +68,7 @@ const TRIAGE_DATA: Record<string, TriageData> = {
     checks: [
       { name: 'Dev Area',             result: 'pass', label: 'Pass' },
       { name: 'Zoning',               result: 'pass', label: 'Pass — RS-60 Residential' },
-      { name: 'Lot Dimensions',       result: 'pass', label: 'Pass — 55ft × 118ft, fits 3 plans' },
+      { name: 'Lot Dimensions',       result: 'pass', label: <>Pass — {lot(55, 118)}, fits 3 plans</> },
       { name: 'Road Classification',  result: 'pass', label: 'Pass — Residential, 2 lanes' },
       { name: 'Commercial Proximity', result: 'pass', label: 'Pass' },
       { name: 'Flood Zone',           result: 'pass', label: 'Pass — Zone X' },
@@ -98,7 +111,7 @@ export default function TriageCard({ opp, onDQ, onProceed, onOverride }: Props) 
             <span className="triage-meta-sep">·</span>
             {opp.market}
             <span className="triage-meta-sep">·</span>
-            {opp.lotSqFt.toLocaleString()} sqft
+            <ProvenanceValue info={SFDC}>{opp.lotSqFt.toLocaleString()} sqft</ProvenanceValue>
           </p>
         </div>
         {triage && (

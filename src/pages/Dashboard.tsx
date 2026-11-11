@@ -1,7 +1,10 @@
+import type { ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import ProvenanceValue from '../components/ProvenanceValue';
 import { ASSETS } from '../data/assets';
 import { DEMO_TODAY, daysRemaining, daysSince } from '../data/dates';
 import { useMarkReviews, withMarkReviews } from '../data/markReview';
+import { MLS, computed } from '../data/provenance';
 import {
   ASSET_STAGES,
   BALANCE_SHEET_STAGES,
@@ -16,7 +19,7 @@ import {
   staleListings,
 } from '../data/selectors';
 import type { BalanceSheetRow } from '../data/selectors';
-import type { Asset, AssetStage, Market, PipelineStatus } from '../types';
+import type { Asset, AssetStage, Market, PipelineStatus, ProvenanceInfo } from '../types';
 // Reuse the queue's pill filter buttons (.filter-btn).
 import './OpportunityQueue.css';
 import './Dashboard.css';
@@ -42,6 +45,14 @@ const STAGE_META: Record<AssetStage, { label: string; phase: Phase; to: string |
   sold:           { label: 'Sold',           phase: 'sold',     to: null,          valueNote: `sales · last ${SOLD_WINDOW_MONTHS} mo` },
 };
 
+// What each lifecycle stage's dollar value sums.
+const PHASE_VALUE_PROVENANCE: Record<Phase, ProvenanceInfo> = {
+  pipeline: computed('Sum of underwrite ESPs'),
+  contract: computed('Sum of underwrite ESPs'),
+  owned: computed('Sum of latest month-end marks'),
+  sold: computed('Sum of sale prices'),
+};
+
 const INSPECTION_WARN_DAYS = 7;
 const LONGEST_PENDING_LIMIT = 3;
 
@@ -61,7 +72,7 @@ const REASON_META: Record<AttentionReason, { rank: number; tag: string; tone: st
 interface AttentionItem {
   asset: Asset;
   reason: AttentionReason;
-  detail: string;
+  detail: ReactNode;
   severity: number; // higher = more urgent within its reason
   to: string;
 }
@@ -94,10 +105,18 @@ function BalanceCells({ row }: { row: BalanceSheetRow }) {
   return (
     <>
       <td className="db-num">{row.count}</td>
-      <td className="db-num">{row.count ? usdCompact(row.costBasis) : '—'}</td>
-      <td className="db-num">{row.count ? usdCompact(row.projectedTotalCost) : '—'}</td>
-      <td className="db-num">{row.count ? usdCompact(row.currentMark) : '—'}</td>
-      <td className="db-num db-margin">{pct(row.impliedMarginPct)}</td>
+      <td className="db-num">
+        {row.count ? <ProvenanceValue info={computed('Sum of land + vertical spend to date')}>{usdCompact(row.costBasis)}</ProvenanceValue> : '—'}
+      </td>
+      <td className="db-num">
+        {row.count ? <ProvenanceValue info={computed('Sum of land + full vertical budget')}>{usdCompact(row.projectedTotalCost)}</ProvenanceValue> : '—'}
+      </td>
+      <td className="db-num">
+        {row.count ? <ProvenanceValue info={computed('Sum of latest month-end marks')}>{usdCompact(row.currentMark)}</ProvenanceValue> : '—'}
+      </td>
+      <td className="db-num db-margin">
+        {row.impliedMarginPct === null ? '—' : <ProvenanceValue info={computed('Implied margin on current marks')}>{pct(row.impliedMarginPct)}</ProvenanceValue>}
+      </td>
     </>
   );
 }
@@ -149,17 +168,20 @@ export default function Dashboard() {
       .map((a) => ({ asset: a, days: daysRemaining(a.contract!.inspectionExpires) }))
       .filter(({ days }) => days < INSPECTION_WARN_DAYS)
       .map(({ asset, days }) => ({
-        asset, reason: 'inspection' as const, detail: `${plural(days, 'day')} left`, severity: -days, to: assetPath(asset),
+        asset, reason: 'inspection' as const,
+        detail: <><ProvenanceValue info={computed('Days until inspection expiry')}>{plural(days, 'day')}</ProvenanceValue> left</>, severity: -days, to: assetPath(asset),
       })),
     ...assetsNeedingApproval(assets).map((asset) => {
       const change = asset.markProposal!.change;
       return {
-        asset, reason: 'mark_approval' as const, detail: `${signedUsd(change)} April proposal`,
+        asset, reason: 'mark_approval' as const,
+        detail: <><ProvenanceValue info={{ provenance: 'ai', note: 'Awaiting approval' }}>{signedUsd(change)}</ProvenanceValue> April proposal</>,
         severity: Math.abs(change), to: assetPath(asset),
       };
     }),
     ...staleListings(assets).map((asset) => ({
-      asset, reason: 'stale_listing' as const, detail: `${asset.listing!.daysOnMarket} days on market`,
+      asset, reason: 'stale_listing' as const,
+      detail: <><ProvenanceValue info={MLS}>{asset.listing!.daysOnMarket} days</ProvenanceValue> on market</>,
       severity: asset.listing!.daysOnMarket, to: assetPath(asset),
     })),
     ...pipeline
@@ -168,7 +190,8 @@ export default function Dashboard() {
       .sort((a, b) => b.days - a.days)
       .slice(0, LONGEST_PENDING_LIMIT)
       .map(({ asset, days }) => ({
-        asset, reason: 'pending_review' as const, detail: `${plural(days, 'day')} waiting`, severity: days, to: assetPath(asset),
+        asset, reason: 'pending_review' as const,
+        detail: <><ProvenanceValue info={computed('Days since intake')}>{plural(days, 'day')}</ProvenanceValue> waiting</>, severity: days, to: assetPath(asset),
       })),
   ].sort((a, b) => REASON_META[a.reason].rank - REASON_META[b.reason].rank || b.severity - a.severity);
 
@@ -211,7 +234,9 @@ export default function Dashboard() {
         {ASSET_STAGES.map((stage, i) => {
           const meta = STAGE_META[stage];
           const { count, value, valuedCount } = lifecycle[stage];
-          const valueText = valuedCount > 0 ? usdCompact(value) : '—';
+          const valueText = valuedCount > 0
+            ? <ProvenanceValue info={PHASE_VALUE_PROVENANCE[meta.phase]}>{usdCompact(value)}</ProvenanceValue>
+            : '—';
           const note = valuedCount > 0 && valuedCount < count
             ? `${meta.valueNote} · ${valuedCount} of ${count}`
             : count > 0 && valuedCount === 0 ? 'not yet underwritten' : meta.valueNote;

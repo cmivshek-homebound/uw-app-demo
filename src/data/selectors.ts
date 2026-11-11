@@ -1,7 +1,8 @@
-import type { Asset, AssetStage, Market, MonthlyMark, UnderwritingStatus } from '../types';
+import type { Asset, AssetStage, BudgetLine, Market, MilestoneKind, MonthlyMark, UnderwritingStatus } from '../types';
 import { ASSETS } from './assets';
 import { DEMO_TODAY, daysSince } from './dates';
 import { isStale } from './listingHealth';
+import { CARRY_COST_PCT, closingCostPctFor, costStack, marginPct } from './underwriting';
 
 // ── Portfolio selectors ────────────────────────────────────────
 // Pure functions over the asset list. Every selector defaults to the full
@@ -165,6 +166,132 @@ export function latestMark(asset: Asset): MonthlyMark | undefined {
 export function costBasis(asset: Asset): number {
   if (!asset.owned || !asset.underwrite) return 0;
   return asset.underwrite.landPrice + asset.owned.costToDate;
+}
+
+export interface ConstructionSummary {
+  budget: number;
+  committed: number;
+  spent: number;
+  estimateAtCompletion: number;
+  costToComplete: number;    // estimateAtCompletion − spent
+  variance: number;          // estimateAtCompletion − budget; + is over budget
+  variancePct: number;       // one decimal
+  changeOrderTotal: number;
+  scheduleSlipDays: number;  // forecast − planned completion; + is late
+  drawn: { funded: number; pending: number };
+}
+
+/** Budget, cost and schedule rollup across an owned asset's budget lines. */
+export function constructionSummary(asset: Asset): ConstructionSummary | undefined {
+  const owned = asset.owned;
+  if (!owned) return undefined;
+  const total = (pick: (l: BudgetLine) => number) => owned.budgetLines.reduce((s, l) => s + pick(l), 0);
+  const estimateAtCompletion = total((l) => l.estimateAtCompletion);
+  const variance = estimateAtCompletion - owned.budget;
+  const drawn = (status: 'funded' | 'pending') =>
+    owned.draws.filter((d) => d.status === status).reduce((s, d) => s + d.amount, 0);
+  return {
+    budget: owned.budget,
+    committed: total((l) => l.committed),
+    spent: total((l) => l.spent),
+    estimateAtCompletion,
+    costToComplete: total((l) => l.costToComplete),
+    variance,
+    variancePct: Math.round((variance / owned.budget) * 1000) / 10,
+    changeOrderTotal: owned.changeOrders.reduce((s, c) => s + c.amount, 0),
+    scheduleSlipDays: Math.round(
+      (new Date(owned.schedule.forecastCompletion).getTime() - new Date(owned.schedule.plannedCompletion).getTime()) / 86_400_000,
+    ),
+    drawn: { funded: drawn('funded'), pending: drawn('pending') },
+  };
+}
+
+// ── Construction risk ──────────────────────────────────────────
+/** Estimate at completion more than this % over budget reads as over budget. */
+export const OVER_BUDGET_PCT = 2;
+/** Forecast completion more than this many days past plan reads as behind schedule. */
+export const BEHIND_SCHEDULE_DAYS = 7;
+
+export type ConstructionStatus = 'on_track' | 'over_budget' | 'behind_schedule' | 'both';
+
+export function constructionStatus(asset: Asset): ConstructionStatus | undefined {
+  const s = constructionSummary(asset);
+  if (!s) return undefined;
+  const over = s.variancePct > OVER_BUDGET_PCT;
+  const late = s.scheduleSlipDays > BEHIND_SCHEDULE_DAYS;
+  return over && late ? 'both' : over ? 'over_budget' : late ? 'behind_schedule' : 'on_track';
+}
+
+/** First milestone not yet reached; pending milestones carry the build's slip. */
+export function nextMilestone(asset: Asset): { kind: MilestoneKind; planned: string; forecast: string } | undefined {
+  const owned = asset.owned;
+  const next = owned?.schedule.milestones.find((m) => !m.actual);
+  if (!owned || !next) return undefined;
+  const slip = constructionSummary(asset)!.scheduleSlipDays;
+  const forecast = new Date(new Date(next.planned).getTime() + slip * 86_400_000).toISOString().replace('.000Z', 'Z');
+  return { kind: next.kind, planned: next.planned, forecast };
+}
+
+export interface ConstructionMarginImpact {
+  mark: number;               // latest month-end mark, the price the margin is measured against
+  budgetCost: number;         // full cost stack with the build at budget
+  projectedCost: number;      // with the build at estimate at completion, plus slip carry
+  overrun: number;            // estimate at completion − budget
+  overrunCarry: number;       // carry on the overrun
+  slipCarry: number;          // extra carry for the weeks the build runs late
+  budgetMarginPct: number;
+  projectedMarginPct: number;
+  marginPts: number;          // projected − budget margin %
+}
+
+/**
+ * How an in-progress build's overrun and slip move projected total cost and the
+ * margin implied by the current mark. Carry is the underwriting carry rate on
+ * build, prorated over the planned build duration for each day of slip.
+ */
+export function constructionMarginImpact(asset: Asset): ConstructionMarginImpact | undefined {
+  const s = constructionSummary(asset);
+  const uw = asset.underwrite;
+  const mark = latestMark(asset)?.value;
+  if (!s || !uw || !mark || !asset.owned) return undefined;
+  const closingPct = closingCostPctFor(uw.underwrittenOn);
+  const atBudget = costStack({ land: uw.landPrice, build: s.budget, esp: mark, closingPct });
+  const atEac = costStack({ land: uw.landPrice, build: s.estimateAtCompletion, esp: mark, closingPct });
+  const { plannedStart, plannedCompletion } = asset.owned.schedule;
+  const plannedDays = (new Date(plannedCompletion).getTime() - new Date(plannedStart).getTime()) / 86_400_000;
+  const slipCarry = s.scheduleSlipDays > 0
+    ? Math.round(((s.estimateAtCompletion * CARRY_COST_PCT) / 100) * (s.scheduleSlipDays / plannedDays))
+    : 0;
+  const projectedCost = atEac.total + slipCarry;
+  const budgetMarginPct = marginPct(mark, atBudget.total);
+  const projectedMarginPct = marginPct(mark, projectedCost);
+  return {
+    mark,
+    budgetCost: atBudget.total,
+    projectedCost,
+    overrun: s.variance,
+    overrunCarry: atEac.carry - atBudget.carry,
+    slipCarry,
+    budgetMarginPct,
+    projectedMarginPct,
+    marginPts: Math.round((projectedMarginPct - budgetMarginPct) * 10) / 10,
+  };
+}
+
+const STATUS_RANK: Record<ConstructionStatus, number> = { both: 0, over_budget: 1, behind_schedule: 2, on_track: 3 };
+
+/** Construction-stage assets, riskiest first: by status, then by margin hit, then by budget variance. */
+export function constructionByRisk(assets: Asset[] = ASSETS): Asset[] {
+  const key = (a: Asset) => ({
+    rank: STATUS_RANK[constructionStatus(a)!],
+    pts: constructionMarginImpact(a)?.marginPts ?? 0,
+    variance: constructionSummary(a)!.variancePct,
+  });
+  return assets
+    .filter((a) => a.stage === 'construction' && a.owned)
+    .map((a) => ({ a, k: key(a) }))
+    .sort((x, y) => x.k.rank - y.k.rank || x.k.pts - y.k.pts || y.k.variance - x.k.variance)
+    .map(({ a }) => a);
 }
 
 export function costBasisByStage(assets: Asset[] = ASSETS): Record<AssetStage, number> {

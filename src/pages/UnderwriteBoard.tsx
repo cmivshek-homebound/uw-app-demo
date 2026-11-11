@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import ProvenanceValue from '../components/ProvenanceValue';
 import { getAIDraft } from '../data/aiDrafts';
+import { AI, SFDC, computed } from '../data/provenance';
 import { useDraftReviews, withReviewStatus } from '../data/review';
 import {
   BOARD_LATE_DAYS,
@@ -13,14 +14,12 @@ import {
   filterAssets,
   underwritingBoard,
 } from '../data/selectors';
-import type { Asset, Market, ProvenanceInfo, UnderwritingStatus } from '../types';
+import type { Asset, Market, UnderwritingStatus } from '../types';
 // Reuse the queue's pill filter buttons (.filter-btn) and page shell (.oq-page).
 import './OpportunityQueue.css';
 import './UnderwriteBoard.css';
 
-const AI: ProvenanceInfo = { provenance: 'ai' };
-const SFDC: ProvenanceInfo = { provenance: 'system', source: 'Salesforce' };
-const SYSTEM: ProvenanceInfo = { provenance: 'system' };
+const DAYS_IN_COLUMN = computed('Days in current board column');
 
 const COLUMN_LABELS: Record<UnderwritingStatus, string> = {
   ai_drafting: 'AI drafting',
@@ -88,7 +87,7 @@ function BoardCard({ asset }: { asset: Asset }) {
 
       <div className="ub-card-footer">
         <span className={`ub-age ub-age--${ageTone(days)}`}>
-          <ProvenanceValue info={SYSTEM}>{days}</ProvenanceValue> {days === 1 ? 'day' : 'days'} in column
+          <ProvenanceValue info={DAYS_IN_COLUMN}>{days} {days === 1 ? 'day' : 'days'}</ProvenanceValue> in column
         </span>
       </div>
     </Link>

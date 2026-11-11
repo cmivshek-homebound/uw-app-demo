@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import ProvenanceValue from '../components/ProvenanceValue';
 import { DFW_PLANS } from '../data/plans';
+import { AI, MLS, computed, human } from '../data/provenance';
+import type { ProvenanceInfo } from '../types';
 import './CompSelectionPage.css';
 
 // ── Constants ──────────────────────────────────────────────────
@@ -13,6 +16,14 @@ const MAX_LOT_OFFER = 152_760;
 // Fallback when no ?plan= is passed from the scenario engine. BOOL-001 recommends
 // The Emerson (highest projected margin of the lot-feasible plans).
 const DEFAULT_PLAN_NAME = 'The Emerson';
+
+// ── Provenance ─────────────────────────────────────────────────
+// Comp facts come from MLS; ML adjustments, adjusted values and starting
+// weights are AI drafts. Once the analyst moves a weight, the weight reads as
+// a scenario input and anything weighted by it as a scenario output.
+const MARKET_ADJ = computed('Market-implied adjustment');
+const SCENARIO_INPUT = human('Scenario input');
+const SCENARIO_OUTPUT = computed('Scenario output');
 
 // ── Types ──────────────────────────────────────────────────────
 interface CompDef {
@@ -106,8 +117,8 @@ function computeAdjValue(comp: CompDef): number {
 
 // ── Offer Published Screen ─────────────────────────────────────
 function OfferPublishedScreen(
-  { esp, planName, onReturn, onViewContract }:
-  { esp: number; planName: string; onReturn: () => void; onViewContract: () => void },
+  { esp, espInfo, planName, onReturn, onViewContract }:
+  { esp: number; espInfo: ProvenanceInfo; planName: string; onReturn: () => void; onViewContract: () => void },
 ) {
   return (
     <div className="cs-published-wrapper">
@@ -125,11 +136,13 @@ function OfferPublishedScreen(
           </div>
           <div className="cs-pub-row">
             <span className="cs-pub-label">Max Lot Offer</span>
-            <span className="cs-pub-value cs-pub-value--highlight">{usd(MAX_LOT_OFFER)}</span>
+            <span className="cs-pub-value cs-pub-value--highlight">
+              <ProvenanceValue info={AI}>{usd(MAX_LOT_OFFER)}</ProvenanceValue>
+            </span>
           </div>
           <div className="cs-pub-row">
             <span className="cs-pub-label">Weighted ESP</span>
-            <span className="cs-pub-value">{usd(esp)}</span>
+            <span className="cs-pub-value"><ProvenanceValue info={espInfo}>{usd(esp)}</ProvenanceValue></span>
           </div>
         </div>
         <div className="cs-pub-systems">
@@ -162,6 +175,7 @@ interface CompCardProps {
 function CompCard({
   comp, adjustedValue, weight, specLevel, onWeightChange, onSpecChange,
 }: CompCardProps) {
+  const weightIsDefault = weight === comp.startingWeight;
   return (
     <div className="cs-comp-card">
       {/* ── Top row ── */}
@@ -173,21 +187,23 @@ function CompCard({
           </div>
           <div className="cs-comp-tags">
             <span className="cs-tag cs-tag--new">New Construction</span>
-            <span className="cs-tag cs-tag--dist">{comp.distance}</span>
+            <span className="cs-tag cs-tag--dist"><ProvenanceValue info={MLS}>{comp.distance}</ProvenanceValue></span>
           </div>
         </div>
-        <div className="cs-comp-sold">Sold {comp.daysAgo} days ago</div>
+        <div className="cs-comp-sold">
+          Sold <ProvenanceValue info={MLS}>{comp.daysAgo} days</ProvenanceValue> ago
+        </div>
         <div className="cs-comp-adjval">
           <div className="cs-comp-adjval-label">Adjusted Value</div>
-          <div className="cs-comp-adjval-num">{usd(adjustedValue)}</div>
+          <div className="cs-comp-adjval-num"><ProvenanceValue info={AI}>{usd(adjustedValue)}</ProvenanceValue></div>
         </div>
       </div>
 
       {/* ── Property row ── */}
       <div className="cs-comp-prop">
-        <span>{comp.sqft.toLocaleString()} sqft</span>
+        <span><ProvenanceValue info={MLS}>{comp.sqft.toLocaleString()} sqft</ProvenanceValue></span>
         <span className="cs-sep">·</span>
-        <span>{comp.beds}bd / {comp.baths}ba</span>
+        <span><ProvenanceValue info={MLS}>{comp.beds}bd / {comp.baths}ba</ProvenanceValue></span>
         <span className="cs-sep">·</span>
         <span>{comp.spec} spec</span>
         <span className="cs-sep">·</span>
@@ -199,30 +215,31 @@ function CompCard({
         {/* Sale Price */}
         <div className="cs-adj-cell">
           <div className="cs-adj-cell-label">Sale Price</div>
-          <div className="cs-adj-cell-main cs-adj-sale">{usd(comp.salePrice)}</div>
+          <div className="cs-adj-cell-main cs-adj-sale"><ProvenanceValue info={MLS}>{usd(comp.salePrice)}</ProvenanceValue></div>
           <div className="cs-adj-cell-sub">&nbsp;</div>
         </div>
 
         {/* Sqft Adjustment */}
         <div className="cs-adj-cell">
           <div className="cs-adj-cell-label">Sqft Adjustment</div>
-          <div className="cs-adj-cell-main">{fmtAdj(comp.sqftAdjML)}</div>
+          <div className="cs-adj-cell-main"><ProvenanceValue info={AI}>{fmtAdj(comp.sqftAdjML)}</ProvenanceValue></div>
           <div className="cs-adj-cell-sub">ML suggested</div>
-          <div className="cs-adj-cell-mkt">{fmtAdj(comp.sqftAdjMarket)} market</div>
+          <div className="cs-adj-cell-mkt"><ProvenanceValue info={MARKET_ADJ}>{fmtAdj(comp.sqftAdjMarket)}</ProvenanceValue> market</div>
         </div>
 
         {/* Lot Size Adjustment (Comps 1 & 2) */}
         {comp.lotAdjML !== null && (
           <div className={`cs-adj-cell${comp.flagLotDiv ? ' cs-adj-cell--amber' : ''}`}>
             <div className="cs-adj-cell-label">Lot Size Adjustment</div>
-            <div className="cs-adj-cell-main">{fmtAdj(comp.lotAdjML)}</div>
+            <div className="cs-adj-cell-main"><ProvenanceValue info={AI}>{fmtAdj(comp.lotAdjML)}</ProvenanceValue></div>
             <div className="cs-adj-cell-sub">ML suggested</div>
             {comp.lotAdjMarket !== null && (
-              <div className="cs-adj-cell-mkt">{fmtAdj(comp.lotAdjMarket)} market</div>
+              <div className="cs-adj-cell-mkt"><ProvenanceValue info={MARKET_ADJ}>{fmtAdj(comp.lotAdjMarket)}</ProvenanceValue> market</div>
             )}
             {comp.flagLotDiv && (
               <div className="cs-lot-flag">
-                ⚠ ML 90% above market-implied — verify lot premium
+                ⚠ ML <ProvenanceValue info={computed('ML vs market-implied lot adjustment')}>90%</ProvenanceValue> above
+                market-implied — verify lot premium
               </div>
             )}
           </div>
@@ -232,10 +249,10 @@ function CompCard({
         {comp.bathAdjML !== null && (
           <div className="cs-adj-cell">
             <div className="cs-adj-cell-label">Bath Adjustment</div>
-            <div className="cs-adj-cell-main">{fmtAdj(comp.bathAdjML)}</div>
+            <div className="cs-adj-cell-main"><ProvenanceValue info={AI}>{fmtAdj(comp.bathAdjML)}</ProvenanceValue></div>
             <div className="cs-adj-cell-sub">ML suggested</div>
             {comp.bathAdjMarket !== null && (
-              <div className="cs-adj-cell-mkt">{fmtAdj(comp.bathAdjMarket)} market</div>
+              <div className="cs-adj-cell-mkt"><ProvenanceValue info={MARKET_ADJ}>{fmtAdj(comp.bathAdjMarket)}</ProvenanceValue> market</div>
             )}
           </div>
         )}
@@ -267,9 +284,13 @@ function CompCard({
           onChange={e => onWeightChange(Number(e.target.value))}
           className="cs-slider"
         />
-        <span className="cs-weight-pct">{weight}%</span>
+        <span className="cs-weight-pct">
+          <ProvenanceValue info={weightIsDefault ? AI : SCENARIO_INPUT}>{weight}%</ProvenanceValue>
+        </span>
         <span className="cs-weight-contrib">
-          = {usd(adjustedValue * weight / 100)} contribution
+          ={' '}
+          <ProvenanceValue info={weightIsDefault ? AI : SCENARIO_OUTPUT}>{usd(adjustedValue * weight / 100)}</ProvenanceValue>
+          {' '}contribution
         </span>
       </div>
 
@@ -305,11 +326,14 @@ export default function CompSelectionPage() {
     : 0;
 
   const weightsValid = weightTotal === 100;
+  const weightsAreDefault = COMPS.every((c, i) => weights[i] === c.startingWeight);
+  const espInfo = weightsAreDefault ? AI : SCENARIO_OUTPUT;
 
   if (published) {
     return (
       <OfferPublishedScreen
         esp={displayESP}
+        espInfo={espInfo}
         planName={planName}
         onReturn={() => navigate('/queue')}
         onViewContract={() => navigate(`/contract/${id ?? 'BOOL-001'}`)}
@@ -344,13 +368,13 @@ export default function CompSelectionPage() {
           <h1 className="cs-page-title">Comp Selection &amp; Adjustment</h1>
           <p className="cs-page-subtitle">
             4821 Maple Creek Dr &nbsp;·&nbsp; {planName} &nbsp;·&nbsp;
-            2,100 sqft &nbsp;·&nbsp; Premium &nbsp;·&nbsp; DFW
+            <ProvenanceValue info={AI}>2,100 sqft</ProvenanceValue> &nbsp;·&nbsp; Premium &nbsp;·&nbsp; DFW
           </p>
         </div>
         <div className="cs-esp-panel">
           <div className="cs-esp-panel-label">Weighted ESP</div>
-          <div className="cs-esp-panel-value">{usd(displayESP)}</div>
-          <div className="cs-esp-ml-ref">ML ESP v2: {usd(ML_ESP)}</div>
+          <div className="cs-esp-panel-value"><ProvenanceValue info={espInfo}>{usd(displayESP)}</ProvenanceValue></div>
+          <div className="cs-esp-ml-ref">ML ESP v2: <ProvenanceValue info={AI}>{usd(ML_ESP)}</ProvenanceValue></div>
           {divergencePct > 5 && (
             <div className="cs-diverge-warn">
               ⚠ Review — &gt;5% divergence from ML estimate
@@ -386,13 +410,13 @@ export default function CompSelectionPage() {
       <div className="cs-summary-bar">
         <div className="cs-sum-item">
           <span className="cs-sum-label">Weighted ESP</span>
-          <span className="cs-sum-value">{usd(displayESP)}</span>
+          <span className="cs-sum-value"><ProvenanceValue info={espInfo}>{usd(displayESP)}</ProvenanceValue></span>
         </div>
         <div className="cs-sum-divider" />
         <div className="cs-sum-item">
           <span className="cs-sum-label">Weight Total</span>
           <span className={`cs-sum-value ${weightsValid ? 'cs-sum-value--ok' : 'cs-sum-value--err'}`}>
-            {weightTotal}%
+            <ProvenanceValue info={weightsAreDefault ? AI : SCENARIO_INPUT}>{weightTotal}%</ProvenanceValue>
             {!weightsValid && (
               <span className="cs-sum-delta">
                 &nbsp;({weightDelta > 0 ? `+${weightDelta}%` : `${weightDelta}%`} needed)

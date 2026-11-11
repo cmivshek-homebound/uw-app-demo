@@ -162,12 +162,79 @@ export interface AssetContract {
   diligence?: AssetDiligence; // under_contract and later
 }
 
+// ── Construction (Blueprint) ───────────────────────────────────
+export type BudgetCategory =
+  | 'site_work'
+  | 'foundation'
+  | 'framing'
+  | 'roofing'
+  | 'mep'
+  | 'exterior'
+  | 'interior_finishes'
+  | 'contingency';
+
+/** One cost category of the vertical budget. Contingency is never spent directly; it funds overruns elsewhere. */
+export interface BudgetLine {
+  category: BudgetCategory;
+  budget: number;
+  committed: number;            // contracts and POs issued, including change orders; spent ≤ committed ≤ EAC
+  spent: number;
+  estimateAtCompletion: number;
+  costToComplete: number;       // estimateAtCompletion − spent
+  note?: string;                // why the line is off budget
+}
+
+export type MilestoneKind =
+  | 'permit_issued'
+  | 'foundation'
+  | 'framing'
+  | 'dry_in'
+  | 'mep_rough'
+  | 'drywall'
+  | 'finishes'
+  | 'co';
+
+export interface ScheduleMilestone {
+  kind: MilestoneKind;
+  planned: string;      // ISO
+  actual?: string;      // ISO, once reached
+  note?: string;        // where a slip started
+}
+
+export interface ConstructionSchedule {
+  plannedStart: string;        // ISO
+  plannedCompletion: string;   // ISO, CO
+  forecastCompletion: string;  // ISO; the actual CO date once complete
+  milestones: ScheduleMilestone[];
+}
+
+export type ChangeOrderReason = 'Design change' | 'Unforeseen condition' | 'Code requirement';
+
+export interface ChangeOrder {
+  date: string;         // ISO
+  category: BudgetCategory;
+  description: string;
+  amount: number;
+  reason: ChangeOrderReason;
+  approvedBy: string;
+}
+
+export interface ConstructionDraw {
+  date: string;         // ISO
+  amount: number;
+  status: 'funded' | 'pending';
+}
+
 export interface AssetOwned {
   closedOn: string;     // ISO
-  startedOn?: string;   // ISO, construction start; construction and later
-  budget: number;       // vertical budget (underwrite.buildCost)
-  costToDate: number;   // vertical spend to date
-  pctComplete: number;  // 0–1
+  startedOn?: string;   // ISO, actual construction start; construction and later
+  budget: number;       // vertical budget (underwrite.buildCost); equals the sum of budgetLines budgets
+  costToDate: number;   // vertical spend to date; equals the sum of budgetLines spent
+  pctComplete: number;  // 0–1, costToDate over estimate at completion (excluding unused contingency)
+  budgetLines: BudgetLine[];
+  schedule: ConstructionSchedule;
+  changeOrders: ChangeOrder[];
+  draws: ConstructionDraw[]; // construction loan draws; funded + pending never exceeds costToDate
 }
 
 export interface ListingWeek {

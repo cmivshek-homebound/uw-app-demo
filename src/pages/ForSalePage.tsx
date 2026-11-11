@@ -2,19 +2,18 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
 import { ASSETS } from '../data/assets';
+import { AI, MLS, computed, human, markProvenance } from '../data/provenance';
 import { useListingActions, withListingActions } from '../data/listingActions';
 import { DIAGNOSIS_LABELS, DIAGNOSIS_URGENCY, evaluateOffer, listingHealth } from '../data/listingHealth';
 import type { ListingHealth } from '../data/listingHealth';
 import { useMarkReviews, withMarkReviews } from '../data/markReview';
 import { SELLING_COST_PCT } from '../data/underwriting';
-import type { Asset, ListingOffer, ListingWeek, MonthlyMark, ProvenanceInfo } from '../types';
+import type { Asset, ListingOffer, ListingWeek, ProvenanceInfo } from '../types';
 // Reuses the queue page shell and the Portfolio buttons/inputs (pf-btn, pf-approval-input).
 import './OpportunityQueue.css';
 import './PortfolioPage.css';
 import './ForSalePage.css';
 
-const AI: ProvenanceInfo = { provenance: 'ai' };
-const MLS: ProvenanceInfo = { provenance: 'system', source: 'MLS' };
 const NORM: ProvenanceInfo = { provenance: 'system', note: 'Market norm' };
 
 function usd(n: number) {
@@ -33,12 +32,6 @@ function usdCompact(n: number) {
 
 function shortDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-}
-
-function markProvenance(m: MonthlyMark | undefined): ProvenanceInfo {
-  if (!m?.approvedBy) return AI;
-  if (m.approvedBy === 'Auto-approved') return { provenance: 'system', note: 'Auto-approved' };
-  return { provenance: 'human', note: `Approved by ${m.approvedBy}` };
 }
 
 // ── Small charts ───────────────────────────────────────────────
@@ -88,6 +81,9 @@ function Sparkline({ weeks, norm }: { weeks: ListingWeek[]; norm: number }) {
 function OfferEvaluation({ asset, offer }: { asset: Asset; offer: ListingOffer }) {
   const e = evaluateOffer(asset, offer);
   const tone = (n: number) => (n < 0 ? 'fs-bad' : 'fs-good');
+  const VS = computed('Offer amount minus the benchmark');
+  const STACK = computed('Offer run through the underwriting cost stack');
+  const reviewed = human(`Reviewed underwrite${asset.underwrite?.review ? ` · ${asset.underwrite.review.analyst}` : ''}`);
   return (
     <div className="fs-eval">
       <div className="fs-eval-col">
@@ -96,27 +92,27 @@ function OfferEvaluation({ asset, offer }: { asset: Asset; offer: ListingOffer }
           <dt>Offer ({offer.financing}, {shortDate(offer.date)})</dt>
           <dd><ProvenanceValue info={MLS}>{usd(offer.amount)}</ProvenanceValue></dd>
           <dt>vs. list price</dt>
-          <dd className={tone(e.vsList)}><ProvenanceValue info={AI}>{signedUsd(e.vsList)}</ProvenanceValue></dd>
+          <dd className={tone(e.vsList)}><ProvenanceValue info={VS}>{signedUsd(e.vsList)}</ProvenanceValue></dd>
           <dt>vs. current mark</dt>
-          <dd className={tone(e.vsMark)}><ProvenanceValue info={AI}>{signedUsd(e.vsMark)}</ProvenanceValue></dd>
+          <dd className={tone(e.vsMark)}><ProvenanceValue info={VS}>{signedUsd(e.vsMark)}</ProvenanceValue></dd>
           <dt>vs. underwritten ESP</dt>
-          <dd className={tone(e.vsEsp)}><ProvenanceValue info={AI}>{signedUsd(e.vsEsp)}</ProvenanceValue></dd>
+          <dd className={tone(e.vsEsp)}><ProvenanceValue info={VS}>{signedUsd(e.vsEsp)}</ProvenanceValue></dd>
         </dl>
       </div>
       <div className="fs-eval-col">
         <h4 className="fs-eval-title">If accepted</h4>
         <dl className="fs-lines">
           <dt>Selling costs ({SELLING_COST_PCT}%)</dt>
-          <dd><ProvenanceValue info={AI}>−{usd(e.sellingCosts)}</ProvenanceValue></dd>
+          <dd><ProvenanceValue info={STACK}>−{usd(e.sellingCosts)}</ProvenanceValue></dd>
           <dt>Concessions{offer.concessionNote ? ` (${offer.concessionNote.toLowerCase()})` : ''}</dt>
           <dd><ProvenanceValue info={MLS}>{offer.concessions ? `−${usd(offer.concessions)}` : '$0'}</ProvenanceValue></dd>
           <dt className="fs-lines-total">Net proceeds</dt>
-          <dd className="fs-lines-total"><ProvenanceValue info={AI}>{usd(e.netProceeds)}</ProvenanceValue></dd>
+          <dd className="fs-lines-total"><ProvenanceValue info={STACK}>{usd(e.netProceeds)}</ProvenanceValue></dd>
           <dt>Margin</dt>
-          <dd><ProvenanceValue info={AI}>{usd(e.margin)} · {e.marginPct.toFixed(1)}%</ProvenanceValue></dd>
-          <dt>vs. underwritten {e.uwMarginPct.toFixed(1)}%</dt>
+          <dd><ProvenanceValue info={STACK}>{usd(e.margin)} · {e.marginPct.toFixed(1)}%</ProvenanceValue></dd>
+          <dt>vs. underwritten <ProvenanceValue info={reviewed}>{e.uwMarginPct.toFixed(1)}%</ProvenanceValue></dt>
           <dd className={tone(e.marginPts)}>
-            <ProvenanceValue info={AI}>{e.marginPts > 0 ? '+' : e.marginPts < 0 ? '−' : ''}{Math.abs(e.marginPts).toFixed(1)} pts</ProvenanceValue>
+            <ProvenanceValue info={STACK}>{e.marginPts > 0 ? '+' : e.marginPts < 0 ? '−' : ''}{Math.abs(e.marginPts).toFixed(1)} pts</ProvenanceValue>
           </dd>
         </dl>
       </div>
@@ -147,7 +143,7 @@ function ListingRow({ asset, health }: { asset: Asset; health: ListingHealth }) 
         </div>
         <div className="fs-cell">
           <span className="fs-label">List price</span>
-          <ProvenanceValue info={sessionDrop ? { provenance: 'human', note: `Dropped by ${sessionDrop.loggedBy}` } : MLS}>
+          <ProvenanceValue info={sessionDrop ? human(`Dropped by ${sessionDrop.loggedBy}`) : MLS}>
             {usd(l.listPrice)}
           </ProvenanceValue>
         </div>
@@ -186,7 +182,7 @@ function ListingRow({ asset, health }: { asset: Asset; health: ListingHealth }) 
             drops.map((d) => (
               <span key={d.date} className="fs-drop">
                 {shortDate(d.date)}{' '}
-                <ProvenanceValue info={d.loggedBy ? { provenance: 'human', note: `Logged by ${d.loggedBy}` } : MLS}>
+                <ProvenanceValue info={d.loggedBy ? human(`Logged by ${d.loggedBy}`) : MLS}>
                   −{usdCompact(d.from - d.to)}
                 </ProvenanceValue>
               </span>
@@ -204,7 +200,8 @@ function ListingRow({ asset, health }: { asset: Asset; health: ListingHealth }) 
         <div className="fs-action">
           {sessionDrop ? (
             <span className="fs-done">
-              Dropped {usdCompact(sessionDrop.from - sessionDrop.to)} to {usd(sessionDrop.to)} · logged by {sessionDrop.loggedBy}
+              Dropped <ProvenanceValue info={human(`Accepted by ${sessionDrop.loggedBy}`)}>{usdCompact(sessionDrop.from - sessionDrop.to)}</ProvenanceValue> to{' '}
+              <ProvenanceValue info={human(`Accepted by ${sessionDrop.loggedBy}`)}>{usd(sessionDrop.to)}</ProvenanceValue> · logged by {sessionDrop.loggedBy}
             </span>
           ) : action?.dismissal ? (
             <span className="fs-done fs-done--dismissed">Dismissed: {action.dismissal.reason}</span>
@@ -312,7 +309,7 @@ export default function ForSalePage() {
         <div className="fs-stat">
           <span className="fs-stat-label">Need action</span>
           <span className={`fs-stat-value ${needAction > 0 ? 'fs-stat-value--attention' : ''}`}>
-            <ProvenanceValue info={AI}>{needAction}</ProvenanceValue>
+            {needAction}
           </span>
         </div>
       </div>

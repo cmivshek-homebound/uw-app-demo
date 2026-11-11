@@ -460,3 +460,13 @@
   line-height: 1.5;
   color: #262626;
 }
+
+.as-construction-impact:not(:empty) {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-left: 3px solid #d97706;
+  border-radius: 0 8px 8px 0;
+  background: #fffbeb;
+}
+
+.as-card .cx-detail { margin-top: 18px; padding-top: 16px; border-top: 1px solid #f0f0f0; }

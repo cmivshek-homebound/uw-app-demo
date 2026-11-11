@@ -1,4 +1,6 @@
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import ProvenanceValue from '../components/ProvenanceValue';
+import { ASSETS } from '../data/assets';
 import {
   CONTRACT_DEALS,
   daysRemaining,
@@ -7,6 +9,8 @@ import {
   type TimelineStep,
   type WorkflowCard,
 } from '../data/contracts';
+import { AI, SFDC, computed } from '../data/provenance';
+import type { ProvenanceInfo, UnderwriteOverrideField } from '../types';
 import './UnderContractPage.css';
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -35,8 +39,21 @@ function countdownTone(days: number): 'ok' | 'warn' | 'urgent' {
   return 'ok';
 }
 
+// Underwrite values read as analyst-confirmed once reviewed, or as overrides with their reason.
+function reviewOf(deal: ContractDeal) {
+  return ASSETS.find((a) => a.id === deal.oppId)?.underwrite?.review;
+}
+
+function underwriteInfo(deal: ContractDeal, field: UnderwriteOverrideField): ProvenanceInfo {
+  const review = reviewOf(deal);
+  const o = review?.overrides.find((x) => x.field === field);
+  if (o) return { provenance: 'human', note: `${review!.analyst} overrode AI ${usd(o.aiValue)}: ${o.reason}` };
+  if (review) return { provenance: 'human', note: `Reviewed by ${review.analyst}` };
+  return AI;
+}
+
 // ── Workflow card ──────────────────────────────────────────────
-function WorkflowCardView({ card }: { card: WorkflowCard }) {
+function WorkflowCardView({ card, deal }: { card: WorkflowCard; deal: ContractDeal }) {
   return (
     <div className={`uc-card uc-card--${card.tone}`}>
       <div className="uc-card-head">
@@ -49,7 +66,15 @@ function WorkflowCardView({ card }: { card: WorkflowCard }) {
             <span className={`uc-item-glyph uc-item-glyph--${item.state}`} aria-hidden="true">
               {ITEM_GLYPH[item.state]}
             </span>
-            <span className="uc-item-label">{item.label}</span>
+            <span className="uc-item-label">
+              {item.label}
+              {item.field && item.value !== undefined && (
+                <>
+                  {' — '}
+                  <ProvenanceValue info={underwriteInfo(deal, item.field)}>{usd(item.value)}</ProvenanceValue>
+                </>
+              )}
+            </span>
             <span className="uc-item-note">{item.note}</span>
           </li>
         ))}
@@ -89,6 +114,11 @@ function DealHeader({ deal }: { deal: ContractDeal }) {
   const days = daysRemaining(deal.inspectionExpires);
   const tone = countdownTone(days);
 
+  const review = reviewOf(deal);
+  const pv = (field: UnderwriteOverrideField) => underwriteInfo(deal, field);
+  const offerInfo = review?.overrides.some((o) => o.field === 'landPrice') ? pv('landPrice') : SFDC;
+  const marginInfo: ProvenanceInfo = review ? { provenance: 'human', note: `Reviewed by ${review.analyst}` } : AI;
+
   return (
     <div className="uc-deal-header">
       <div className="uc-deal-head-top">
@@ -101,22 +131,22 @@ function DealHeader({ deal }: { deal: ContractDeal }) {
           </p>
         </div>
         <span className={`uc-countdown uc-countdown--${tone}`}>
-          {days} {days === 1 ? 'day' : 'days'} remaining
+          <ProvenanceValue info={computed('Days until inspection expiry')}>{days} {days === 1 ? 'day' : 'days'}</ProvenanceValue> remaining
         </span>
       </div>
 
       <div className="uc-metrics">
         <div className="uc-metric">
           <span className="uc-metric-label">Offer</span>
-          <span className="uc-metric-value uc-metric-value--accent">{usd(deal.offer)}</span>
+          <span className="uc-metric-value uc-metric-value--accent"><ProvenanceValue info={offerInfo}>{usd(deal.offer)}</ProvenanceValue></span>
         </div>
         <div className="uc-metric">
           <span className="uc-metric-label">ESP</span>
-          <span className="uc-metric-value">{usd(deal.esp)}</span>
+          <span className="uc-metric-value"><ProvenanceValue info={pv('esp')}>{usd(deal.esp)}</ProvenanceValue></span>
         </div>
         <div className="uc-metric">
           <span className="uc-metric-label">Margin</span>
-          <span className="uc-metric-value">{deal.marginPct.toFixed(1)}%</span>
+          <span className="uc-metric-value"><ProvenanceValue info={marginInfo}>{deal.marginPct.toFixed(1)}%</ProvenanceValue></span>
         </div>
         <div className="uc-metric">
           <span className="uc-metric-label">Contract Date</span>
@@ -170,7 +200,7 @@ export default function UnderContractPage() {
 
       <div className="uc-cards-grid">
         {deal.cards.map((card) => (
-          <WorkflowCardView key={card.id} card={card} />
+          <WorkflowCardView key={card.id} card={card} deal={deal} />
         ))}
       </div>
 

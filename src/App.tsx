@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
+import AppFooter from './components/AppFooter';
 import NavBar from './components/NavBar';
 import DraftReviewProvider from './components/DraftReviewProvider';
 import MarkReviewProvider from './components/MarkReviewProvider';
@@ -14,6 +15,7 @@ import CompSelectionPage from './pages/CompSelectionPage';
 import UnderContractPage from './pages/UnderContractPage';
 import PortfolioPage from './pages/PortfolioPage';
 import ForSalePage from './pages/ForSalePage';
+import IntegrationsPage from './pages/IntegrationsPage';
 import { DEMO_DEAL_ID } from './data/contracts';
 
 export default function App() {
@@ -36,7 +38,9 @@ export default function App() {
               <Route path="/asset/:id" element={<AssetDetailPage />} />
               <Route path="/portfolio" element={<PortfolioPage />} />
               <Route path="/for-sale" element={<ForSalePage />} />
+              <Route path="/integrations" element={<IntegrationsPage />} />
             </Routes>
+            <AppFooter />
           </ListingActionProvider>
         </MarkReviewProvider>
       </DraftReviewProvider>

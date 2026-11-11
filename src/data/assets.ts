@@ -14,8 +14,10 @@ import type {
   UnderwriteOverrideField,
   UnderwritingStatus,
 } from '../types';
+import { buildConstruction } from './construction';
 import { DEMO_TODAY, daysRemaining } from './dates';
 import { buildMarkProposal } from './markProposals';
+import { seededRandom } from './random';
 import { buildForMargin, closingCostPctFor, costStack, marginPct } from './underwriting';
 
 // ── Unified asset portfolio ────────────────────────────────────
@@ -44,7 +46,7 @@ interface Seed {
   contractDate?: string;      // defaults to 30 days before closedOn
   inspectionExpires?: string; // defaults to 10 days after contractDate
   closedOn?: string;
-  pct?: number;               // construction progress, 0–1; for_sale/sold default to 1
+  pct?: number;               // construction progress, 0–1; for_sale/sold default to 1. Budget lines, schedule, change orders and draws: construction.ts
   listing?: {
     listedOn: string;
     listPrice: number;   // current list price
@@ -73,8 +75,6 @@ interface Seed {
 
 const AUTO_APPROVER = 'Auto-approved';
 
-/** Pre-con runs this long before construction starts. */
-const PRECON_DAYS = 45;
 /** Intake for owned assets, which predate the queue: received this long before underwriting. */
 const INTAKE_LEAD_DAYS = 6;
 const SDR_BY_MARKET: Record<Market, string> = {
@@ -84,7 +84,6 @@ const SDR_BY_MARKET: Record<Market, string> = {
   'St. Pete': 'Karsten Thompson',
   LA: 'Danny Gaule',
 };
-const STARTED_STAGES: AssetStage[] = ['construction', 'for_sale', 'sold'];
 const MAX_DRIFT = 9_500; // keeps routine monthly drift under the $10K approval threshold (markProposals.ts)
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -112,18 +111,6 @@ function monthsBetween(start: string, end: string): string[] {
     if (m > 12) { m = 1; y += 1; }
   }
   return months;
-}
-
-/** Deterministic PRNG so marks are stable between builds. */
-function seededRandom(key: string): () => number {
-  let h = 2166136261;
-  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
-  return () => {
-    h = (h + 0x6d2b79f5) | 0;
-    let t = Math.imul(h ^ (h >>> 15), 1 | h);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
 
 /** Last finished month-end. April 2026 is still open, so its mark is a proposal. */
@@ -286,12 +273,29 @@ function buildAsset(s: Seed): Asset {
 
   if (s.closedOn && s.uw) {
     const pct = s.pct ?? 1;
+    const build = buildConstruction({
+      id: s.id,
+      market: s.market,
+      stage: s.stage,
+      closedOn: iso(s.closedOn),
+      budget: s.uw.build,
+      pct,
+      finalCost: realizedBuild,
+      listedOn: s.listing && iso(s.listing.listedOn),
+    });
+    if (realizedBuild !== undefined && build.costToDate !== realizedBuild) {
+      throw new Error(`Construction for ${s.id}: final cost doesn’t match the realized build`);
+    }
     asset.owned = {
       closedOn: iso(s.closedOn),
-      ...(STARTED_STAGES.includes(s.stage) && { startedOn: addDays(s.closedOn, PRECON_DAYS) }),
+      ...(build.startedOn && { startedOn: build.startedOn }),
       budget: s.uw.build,
-      costToDate: realizedBuild ?? Math.round(s.uw.build * pct),
+      costToDate: build.costToDate,
       pctComplete: pct,
+      budgetLines: build.budgetLines,
+      schedule: build.schedule,
+      changeOrders: build.changeOrders,
+      draws: build.draws,
     };
     asset.marks = buildMarks(s, s.uw.esp);
   }

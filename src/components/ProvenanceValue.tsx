@@ -36,7 +36,8 @@ function describe({ provenance, source, note }: ProvenanceInfo): string {
     case 'human':
       return note ?? 'Confirmed by analyst';
     case 'system':
-      return source ? `From ${source}` : 'From system of record';
+      if (source) return note ? `From ${source} · ${note}` : `From ${source}`;
+      return note ?? 'From system of record';
   }
 }
 

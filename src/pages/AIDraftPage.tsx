@@ -22,15 +22,14 @@ import {
   useDraftReviews,
 } from '../data/review';
 import type { DraftReview, SectionStatus } from '../data/review';
+import { AI, MLS, SFDC, human } from '../data/provenance';
 import { PIPELINE_STAGES } from '../data/selectors';
 import { CARRY_COST_PCT, CLOSING_COST_PCT, SELLING_COST_PCT } from '../data/underwriting';
 import type { ProvenanceInfo } from '../types';
 import './UnderwritePage.css';
 import './AIDraftPage.css';
 
-const AI: ProvenanceInfo = { provenance: 'ai' };
-const SFDC: ProvenanceInfo = { provenance: 'system', source: 'Salesforce' };
-const MLS: ProvenanceInfo = { provenance: 'system', source: 'MLS' };
+const ASSUMPTION = human('Underwriting assumption');
 
 const CONFIDENCE_LABELS: Record<Confidence, string> = {
   high: 'High',
@@ -172,7 +171,10 @@ function OverrideForm({
           />
         </label>
       </div>
-      <p className="ad-override-hint">AI drafted {formatUnit(meta.value(aiDraft), meta.unit)}. Downstream values recompute.</p>
+      <p className="ad-override-hint">
+        AI drafted <ProvenanceValue info={AI}>{formatUnit(meta.value(aiDraft), meta.unit)}</ProvenanceValue>.
+        Downstream values recompute.
+      </p>
       <div className="ad-override-actions">
         <button type="button" className="ad-btn" onClick={onCancel}>Cancel</button>
         <button type="submit" className="ad-btn ad-btn--primary" disabled={!valid}>Save override</button>
@@ -647,7 +649,15 @@ export default function AIDraftPage() {
                   <dt>
                     {review.overrides.esp
                       ? 'Adjustment (analyst override)'
-                      : `Adjustment (${derivation.adjustmentPct > 0 ? '+' : ''}${derivation.adjustmentPct}%, rounded to $5K)`}
+                      : (
+                        <>
+                          Adjustment (
+                          <ProvenanceValue info={pv('recommendation', AI)}>
+                            {derivation.adjustmentPct > 0 ? '+' : ''}{derivation.adjustmentPct}%
+                          </ProvenanceValue>
+                          , rounded to $5K)
+                        </>
+                      )}
                     <span className="ad-calc-sub">{review.overrides.esp?.reason ?? derivation.reason}</span>
                   </dt>
                   <dd><ProvenanceValue info={pv('recommendation', AI, 'esp')}>{signedUsd(derivation.adjustment)}</ProvenanceValue></dd>
@@ -660,13 +670,13 @@ export default function AIDraftPage() {
                 <dl className="ad-calc">
                   <dt>Land</dt>
                   <dd><ProvenanceValue info={SFDC}>{usd(rec.costs.land)}</ProvenanceValue></dd>
-                  <dt>Closing costs ({CLOSING_COST_PCT}% of land)</dt>
+                  <dt>Closing costs (<ProvenanceValue info={ASSUMPTION}>{CLOSING_COST_PCT}%</ProvenanceValue> of land)</dt>
                   <dd><ProvenanceValue info={pv('recommendation', AI)}>{usd(rec.costs.closing)}</ProvenanceValue></dd>
                   <dt>Build</dt>
                   <dd><ProvenanceValue info={pv('plans', AI, 'recBuild')}>{usd(rec.costs.build)}</ProvenanceValue></dd>
-                  <dt>Carry / financing ({CARRY_COST_PCT}% of build)</dt>
+                  <dt>Carry / financing (<ProvenanceValue info={ASSUMPTION}>{CARRY_COST_PCT}%</ProvenanceValue> of build)</dt>
                   <dd><ProvenanceValue info={pv('recommendation', AI)}>{usd(rec.costs.carry)}</ProvenanceValue></dd>
-                  <dt>Selling costs ({SELLING_COST_PCT}% of ESP)</dt>
+                  <dt>Selling costs (<ProvenanceValue info={ASSUMPTION}>{SELLING_COST_PCT}%</ProvenanceValue> of ESP)</dt>
                   <dd><ProvenanceValue info={pv('recommendation', AI)}>{usd(rec.costs.selling)}</ProvenanceValue></dd>
                   <dt className="ad-calc-total">Total cost</dt>
                   <dd className="ad-calc-total"><ProvenanceValue info={pv('recommendation', AI)}>{usd(rec.costs.total)}</ProvenanceValue></dd>
