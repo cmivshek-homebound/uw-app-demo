@@ -290,6 +290,7 @@ export interface ListingOffer {
   concessions: number;  // $ requested from the seller; 0 for none
   concessionNote?: string;
   status: 'active' | 'countered' | 'rejected' | 'accepted';
+  agentNote?: string;   // buyer's agent's read, from the listing agent
 }
 
 export interface AssetListing {
@@ -298,6 +299,7 @@ export interface AssetListing {
   daysOnMarket: number;
   showings: number;     // total; equals the sum of weeklyHistory showings
   priceDrops: number;   // equals priceDropHistory.length where history exists
+  leads?: number;       // agent and buyer inquiries since listing (for-sale listings)
   // For-sale listings carry full history; sold listings only the totals above.
   weeklyHistory?: ListingWeek[];
   priceDropHistory?: PriceDrop[];

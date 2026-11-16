@@ -3,6 +3,7 @@ import type { Asset, PreScreenResult } from '../types';
 import { getAIDraft } from './aiDrafts';
 import { ASSETS } from './assets';
 import { daysRemaining, diligenceProgress } from './contracts';
+import { listingHealth } from './listingHealth';
 import { constructionSummary, untriagedLeads } from './selectors';
 
 // ── Guided demo: LA Westside ───────────────────────────────────
@@ -108,6 +109,15 @@ export const DEMO_STEPS: DemoStep[] = [
     talkingPoint: () => {
       const l = asset('BOOL-034').listing!;
       return `${asset('BOOL-034').address} in Santa Monica: ${l.showings} showings in ${l.daysOnMarket} days and no offers. The board diagnoses it and recommends the next move.`;
+    },
+  },
+  {
+    title: 'Weekly pricing review',
+    path: '/for-sale?view=review',
+    talkingPoint: () => {
+      const listings = ASSETS.filter((a) => a.stage === 'for_sale' && a.listing);
+      const urgent = listings.filter((a) => listingHealth(a).diagnosis !== 'healthy').length;
+      return `Weekly pricing review: one decision per listing, logged. ${listings.length} listings, ${urgent} flagged, worked top to bottom with the arrow keys. Each decision records who made it and lands on the asset record.`;
     },
   },
   {

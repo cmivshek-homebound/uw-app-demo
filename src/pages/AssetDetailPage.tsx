@@ -10,6 +10,8 @@ import { AI, BLUEPRINT, MLS, SFDC, TAPE, computed, human, markProvenance } from 
 import { DEMO_TODAY } from '../data/dates';
 import { useFromPage } from '../data/navHistory';
 import { useSessionAssets } from '../data/useSessionAssets';
+import { DECISION_LABELS, useListingActions } from '../data/listingActions';
+import { ROLE_LABELS } from '../data/role';
 import { APPROVAL_THRESHOLD, PIPELINE_STAGES, constructionStatus, constructionSummary, stageHistory, underwritingGap } from '../data/selectors';
 import type { GapLine } from '../data/selectors';
 import { CARRY_COST_PCT, SELLING_COST_PCT, closingCostPctFor } from '../data/underwriting';
@@ -521,6 +523,8 @@ function MarksSection({ asset }: { asset: Asset }) {
 // ── 5. Listing ─────────────────────────────────────────────────
 function ListingSection({ asset }: { asset: Asset }) {
   const l = asset.listing!;
+  // Decisions logged in the For Sale weekly review this session.
+  const decisions = useListingActions().actions[asset.id]?.decisions ?? [];
   return (
     <Card title="Listing" aside={<span className="as-card-caption">Listed {shortDate(l.listedOn)}</span>}>
       <div className="as-stats as-stats--row">
@@ -586,6 +590,36 @@ function ListingSection({ asset }: { asset: Asset }) {
                       {o.status[0].toUpperCase() + o.status.slice(1)}
                     </span>
                   </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {decisions.length > 0 && (
+        <>
+          <h3 className="as-subhead">Weekly review decisions</h3>
+          <table className="as-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Decision</th>
+                <th className="as-num">Price</th>
+                <th>Note</th>
+                <th>Logged by</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...decisions].reverse().map((d, i) => (
+                <tr key={`${d.at}-${i}`}>
+                  <td>{shortDate(d.at)}</td>
+                  <td>{DECISION_LABELS[d.kind]}</td>
+                  <td className="as-num">
+                    {d.price !== undefined ? <ProvenanceValue info={human(`Logged by ${d.by}`)}>{usd(d.price)}</ProvenanceValue> : '—'}
+                  </td>
+                  <td>{d.note || <span className="as-muted">—</span>}</td>
+                  <td>{d.by} · {ROLE_LABELS[d.role]} view</td>
                 </tr>
               ))}
             </tbody>

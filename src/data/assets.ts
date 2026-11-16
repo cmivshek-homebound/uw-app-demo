@@ -53,6 +53,8 @@ interface Seed {
     listPrice: number;   // current list price
     showings: number;
     priceDrops: number;
+    /** Agent and buyer inquiries since listing. */
+    leads?: number;
     /** Weekly [showings, online views, saves] since listing; the last week may be partial. */
     weeks?: [number, number, number][];
     drops?: { date: string; from: number; to: number }[];
@@ -63,6 +65,7 @@ interface Seed {
       concessions: number;
       concessionNote?: string;
       status: ListingOffer['status'];
+      agentNote?: string;
     }[];
   };
   /**
@@ -160,6 +163,7 @@ function buildListing(s: Seed): AssetListing {
     daysOnMarket,
     showings: l.showings,
     priceDrops: l.priceDrops,
+    ...(l.leads !== undefined && { leads: l.leads }),
   };
   const fail = (msg: string) => {
     throw new Error(`Listing for ${s.id}: ${msg}`);
@@ -663,7 +667,7 @@ const forSaleSeeds: Seed[] = [
     closedOn: '2024-11-14',
     listing: {
       // Steady showings, no offers.
-      listedOn: '2026-02-06', listPrice: 1_075_000, showings: 18, priceDrops: 0,
+      listedOn: '2026-02-06', listPrice: 1_075_000, showings: 18, priceDrops: 0, leads: 11,
       weeks: [[3, 520, 24], [3, 410, 15], [2, 330, 11], [2, 290, 9], [2, 260, 8], [1, 220, 6], [2, 240, 7], [1, 190, 5], [1, 170, 4], [1, 150, 4], [0, 20, 0]],
       drops: [],
       offers: [],
@@ -678,12 +682,14 @@ const forSaleSeeds: Seed[] = [
     closedOn: '2024-12-09',
     listing: {
       // Active offer below the current mark.
-      listedOn: '2026-03-13', listPrice: 1_025_000, showings: 11, priceDrops: 0,
+      listedOn: '2026-03-13', listPrice: 1_025_000, showings: 11, priceDrops: 0, leads: 9,
       weeks: [[2, 380, 14], [2, 300, 10], [2, 270, 9], [2, 260, 8], [2, 240, 8], [1, 40, 1]],
       drops: [],
       offers: [
-        { date: '2026-03-28', amount: 960_000, financing: 'Conventional', concessions: 15_000, concessionNote: 'Closing-cost credit', status: 'rejected' },
-        { date: '2026-04-14', amount: 995_000, financing: 'Conventional', concessions: 10_000, concessionNote: 'Closing-cost credit', status: 'active' },
+        { date: '2026-03-28', amount: 960_000, financing: 'Conventional', concessions: 15_000, concessionNote: 'Closing-cost credit', status: 'rejected',
+          agentNote: 'Buyer’s agent called it a first look; they were testing the floor after two weeks on market.' },
+        { date: '2026-04-14', amount: 995_000, financing: 'Conventional', concessions: 10_000, concessionNote: 'Closing-cost credit', status: 'active',
+          agentNote: 'Same buyer, now pre-approved and flexible on close. Agent hears there’s room to meet in the middle without the credit.' },
       ],
     },
   },
@@ -694,7 +700,7 @@ const forSaleSeeds: Seed[] = [
     closedOn: '2024-09-20',
     listing: {
       // Steady showings, no offers, even after two cuts.
-      listedOn: '2026-01-16', listPrice: 1_075_000, showings: 24, priceDrops: 2,
+      listedOn: '2026-01-16', listPrice: 1_075_000, showings: 24, priceDrops: 2, leads: 14,
       weeks: [[2, 480, 18], [2, 390, 12], [1, 300, 8], [1, 260, 6], [2, 280, 7], [3, 520, 19], [2, 360, 10], [1, 250, 6], [3, 470, 16], [2, 330, 9], [2, 280, 7], [1, 220, 5], [1, 190, 4], [1, 30, 0]],
       drops: [
         { date: '2026-02-20', from: 1_195_000, to: 1_135_000 },
@@ -712,7 +718,7 @@ const forSaleSeeds: Seed[] = [
     closedOn: '2025-01-17',
     listing: {
       // Healthy: ahead of the St. Pete pace.
-      listedOn: '2026-04-01', listPrice: 899_000, showings: 7, priceDrops: 0,
+      listedOn: '2026-04-01', listPrice: 899_000, showings: 7, priceDrops: 0, leads: 6,
       weeks: [[3, 520, 31], [3, 430, 24], [1, 160, 9]],
       drops: [],
       offers: [],
@@ -725,7 +731,7 @@ const forSaleSeeds: Seed[] = [
     closedOn: '2024-10-04',
     listing: {
       // Low traffic, even after the March cut.
-      listedOn: '2026-02-20', listPrice: 3_199_000, showings: 7, priceDrops: 1,
+      listedOn: '2026-02-20', listPrice: 3_199_000, showings: 7, priceDrops: 1, leads: 5,
       weeks: [[2, 310, 9], [1, 220, 5], [1, 240, 6], [1, 180, 4], [1, 150, 3], [0, 120, 2], [0, 110, 2], [1, 100, 2], [0, 10, 0]],
       drops: [{ date: '2026-03-10', from: 3_349_000, to: 3_199_000 }],
       offers: [],
@@ -740,7 +746,7 @@ const forSaleSeeds: Seed[] = [
     closedOn: '2024-08-22',
     listing: {
       // Stale: well past the LA norm, traffic fading after the March cut.
-      listedOn: '2026-01-09', listPrice: 3_950_000, showings: 21, priceDrops: 1,
+      listedOn: '2026-01-09', listPrice: 3_950_000, showings: 21, priceDrops: 1, leads: 12,
       weeks: [[3, 640, 31], [2, 480, 20], [2, 390, 15], [1, 300, 10], [1, 260, 8], [1, 220, 6], [1, 200, 5], [1, 180, 5], [2, 330, 14], [2, 280, 11], [1, 190, 6], [1, 160, 4], [1, 140, 3], [1, 120, 3], [1, 15, 0]],
       drops: [{ date: '2026-03-12', from: 4_295_000, to: 3_950_000 }],
       offers: [],
@@ -755,11 +761,12 @@ const forSaleSeeds: Seed[] = [
     closedOn: '2025-02-11',
     listing: {
       // Active offer above the current mark, two weeks in.
-      listedOn: '2026-04-03', listPrice: 849_000, showings: 4, priceDrops: 0,
+      listedOn: '2026-04-03', listPrice: 849_000, showings: 4, priceDrops: 0, leads: 5,
       weeks: [[2, 410, 22], [1, 330, 15], [1, 50, 3]],
       drops: [],
       offers: [
-        { date: '2026-04-13', amount: 840_000, financing: 'Cash', concessions: 0, status: 'active' },
+        { date: '2026-04-13', amount: 840_000, financing: 'Cash', concessions: 0, status: 'active',
+          agentNote: 'Cash, 14-day close, no inspection contingency. Relocating buyer who values certainty over price.' },
       ],
     },
   },
@@ -770,7 +777,7 @@ const forSaleSeeds: Seed[] = [
     closedOn: '2025-03-06',
     listing: {
       // Healthy: ahead of the LA pace with strong saves.
-      listedOn: '2026-03-30', listPrice: 2_025_000, showings: 9, priceDrops: 0,
+      listedOn: '2026-03-30', listPrice: 2_025_000, showings: 9, priceDrops: 0, leads: 7,
       weeks: [[4, 780, 44], [3, 640, 35], [2, 420, 21]],
       drops: [],
       offers: [],

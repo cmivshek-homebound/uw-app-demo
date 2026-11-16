@@ -1,11 +1,14 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import AssetLink from '../components/AssetLink';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
 import { ASSETS } from '../data/assets';
 import { AI, MLS, computed, human, markProvenance } from '../data/provenance';
 import { useCanAct } from '../data/role';
-import { listingActed, listingsNeedingAction, useListingActions, withListingActions } from '../data/listingActions';
+import { DECISION_LABELS, listingActed, listingsNeedingAction, useListingActions, withListingActions } from '../data/listingActions';
+import type { ForSaleView } from '../data/listingActions';
+import { ROLE_LABELS } from '../data/role';
+import ForSaleWeeklyReview from './ForSaleWeeklyReview';
 import { DIAGNOSIS_LABELS, DIAGNOSIS_URGENCY, evaluateOffer, listingHealth } from '../data/listingHealth';
 import type { ListingHealth } from '../data/listingHealth';
 import { useMarkReviews, withMarkReviews } from '../data/markReview';
@@ -132,6 +135,7 @@ function ListingRow({ asset, health }: { asset: Asset; health: ListingHealth }) 
   const l = asset.listing!;
   const action = actions[asset.id];
   const sessionDrop = action?.drops.at(-1);
+  const decision = action?.decisions?.at(-1);
   const rec = health.recommendation;
   const mark = asset.marks?.at(-1);
   const offers = l.offers ?? [];
@@ -208,6 +212,11 @@ function ListingRow({ asset, health }: { asset: Asset; health: ListingHealth }) 
             </span>
           ) : action?.dismissal ? (
             <span className="fs-done fs-done--dismissed">Dismissed: {action.dismissal.reason}</span>
+          ) : decision ? (
+            <span className="fs-done">
+              Weekly review: {DECISION_LABELS[decision.kind]}
+              {decision.price !== undefined && ` at ${usd(decision.price)}`} · {decision.by} ({ROLE_LABELS[decision.role]})
+            </span>
           ) : (
             <>
               <span className="fs-rec">
@@ -266,7 +275,21 @@ function ListingRow({ asset, health }: { asset: Asset; health: ListingHealth }) 
 // ── Page ───────────────────────────────────────────────────────
 export default function ForSalePage() {
   const { reviews, published } = useMarkReviews();
-  const { actions } = useListingActions();
+  const { actions, view, setView } = useListingActions();
+  const [params, setParams] = useSearchParams();
+
+  // ?view=review opens the weekly review (e.g. from the demo); the choice then lives in session state.
+  const viewParam = params.get('view');
+  useEffect(() => {
+    if (viewParam === 'review' || viewParam === 'board') setView(viewParam);
+  }, [viewParam, setView]);
+  const chooseView = (v: ForSaleView) => {
+    setView(v);
+    const next = new URLSearchParams(params);
+    if (v === 'review') next.set('view', 'review');
+    else next.delete('view');
+    setParams(next, { replace: true });
+  };
   const listings = withListingActions(withMarkReviews(ASSETS, reviews, published), actions)
     .filter((a) => a.stage === 'for_sale' && a.listing)
     .map((asset) => ({ asset, health: listingHealth(asset) }));
@@ -289,9 +312,28 @@ export default function ForSalePage() {
       <div className="oq-header">
         <div>
           <h1 className="oq-title">For Sale</h1>
-          <p className="oq-subtitle">Listing health against each market’s norms, most urgent first.</p>
+          <p className="oq-subtitle">
+            {view === 'review'
+              ? 'Weekly pricing review: one decision per listing, logged.'
+              : 'Listing health against each market’s norms, most urgent first.'}
+          </p>
+        </div>
+        <div className="fs-view-toggle" role="tablist" aria-label="For Sale view">
+          {(['board', 'review'] as ForSaleView[]).map((v) => (
+            <button
+              key={v}
+              role="tab"
+              aria-selected={view === v}
+              className={`fs-view-btn ${view === v ? 'fs-view-btn--on' : ''}`}
+              onClick={() => chooseView(v)}
+            >
+              {v === 'board' ? 'Board' : 'Weekly review'}
+            </button>
+          ))}
         </div>
       </div>
+
+      {view === 'review' ? <><ProvenanceLegend /><ForSaleWeeklyReview /></> : <>
 
       <div className="fs-summary">
         <div className="fs-stat">
@@ -324,6 +366,7 @@ export default function ForSalePage() {
           <ListingRow key={asset.id} asset={asset} health={health} />
         ))}
       </ul>
+      </>}
     </div>
   );
 }
