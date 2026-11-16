@@ -35,7 +35,7 @@ export function roleLanding(role: Role, analyst: string): string {
 
 /** The analyst's own month-end marks: proposals assigned to them. */
 export function analystMarksPath(analyst: string): string {
-  return `/portfolio?tab=marks&analyst=${encodeURIComponent(analyst)}`;
+  return `/marks?analyst=${encodeURIComponent(analyst)}`;
 }
 
 export interface RoleState {

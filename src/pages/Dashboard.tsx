@@ -29,6 +29,7 @@ import '../components/AssetLink.css';
 import RoleBanner from '../components/RoleBanner';
 import { useRole } from '../data/role';
 import UnderwritingAccuracyTab from './UnderwritingAccuracyTab';
+import AssetStageTable from '../components/AssetStageTable';
 import './PortfolioPage.css';
 import './Dashboard.css';
 
@@ -58,11 +59,17 @@ const STAGE_META: Record<AssetStage, { label: string; phase: Phase; to: string |
   opportunity:    { label: 'Intake',         phase: 'pipeline', to: '/intake',     valueNote: 'UW ESP' },
   underwriting:   { label: 'Underwriting',   phase: 'pipeline', to: '/underwrite', valueNote: 'UW ESP' },
   under_contract: { label: 'Under Contract', phase: 'contract', to: '/contract',   valueNote: 'UW ESP' },
-  precon:         { label: 'Pre-Con',        phase: 'owned',    to: '/portfolio',  valueNote: 'current mark' },
-  construction:   { label: 'Construction',   phase: 'owned',    to: '/portfolio',  valueNote: 'current mark' },
+  precon:         { label: 'Pre-Con',        phase: 'owned',    to: '/construction', valueNote: 'current mark' },
+  construction:   { label: 'Construction',   phase: 'owned',    to: '/construction', valueNote: 'current mark' },
   for_sale:       { label: 'For Sale',       phase: 'owned',    to: '/for-sale',   valueNote: 'current mark' },
   sold:           { label: 'Sold',           phase: 'sold',     to: null,          valueNote: `sales · last ${SOLD_WINDOW_MONTHS} mo` },
 };
+
+// Lifecycle brackets, matching the nav's groups: divided at closing.
+const LIFECYCLE_GROUPS: { label: string; stages: AssetStage[] }[] = [
+  { label: 'Acquisitions', stages: ['opportunity', 'underwriting', 'under_contract'] },
+  { label: 'Portfolio', stages: ['precon', 'construction', 'for_sale', 'sold'] },
+];
 
 // What each lifecycle stage's dollar value sums.
 const PHASE_VALUE_PROVENANCE: Record<Phase, ProvenanceInfo> = {
@@ -264,34 +271,48 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Lifecycle strip */}
+      {/* Lifecycle strip, bracketed into Acquisitions and Portfolio */}
       <div className="db-lifecycle" role="list">
-        {ASSET_STAGES.map((stage, i) => {
-          const meta = STAGE_META[stage];
-          const { count, value, valuedCount } = lifecycle[stage];
-          const valueText = valuedCount > 0
-            ? <ProvenanceValue info={PHASE_VALUE_PROVENANCE[meta.phase]}>{usdCompact(value)}</ProvenanceValue>
-            : '—';
-          const note = valuedCount > 0 && valuedCount < count
-            ? `${meta.valueNote} · ${valuedCount} of ${count}`
-            : count > 0 && valuedCount === 0 ? 'not yet underwritten' : meta.valueNote;
-          return (
-            <div key={stage} className={`db-stage-wrap db-stage-wrap--${meta.phase}`} role="listitem">
-              {i > 0 && <span className="db-stage-arrow" aria-hidden="true">›</span>}
-              <button
-                className="db-stage"
-                disabled={!meta.to}
-                onClick={() => meta.to && navigate(meta.to)}
-                title={meta.to ? `Open ${meta.label}` : undefined}
-              >
-                <span className="db-stage-label">{meta.label}</span>
-                <span className="db-stage-count">{count}</span>
-                <span className="db-stage-value">{valueText}</span>
-                <span className="db-stage-note">{note}</span>
-              </button>
+        {LIFECYCLE_GROUPS.map((group) => (
+          <div
+            key={group.label}
+            className="db-lifecycle-group"
+            style={{ flexGrow: group.stages.length }}
+            role="group"
+            aria-label={group.label}
+          >
+            <span className="db-lifecycle-bracket">{group.label}</span>
+            <div className="db-lifecycle-stages">
+              {group.stages.map((stage) => {
+                const i = ASSET_STAGES.indexOf(stage);
+                const meta = STAGE_META[stage];
+                const { count, value, valuedCount } = lifecycle[stage];
+                const valueText = valuedCount > 0
+                  ? <ProvenanceValue info={PHASE_VALUE_PROVENANCE[meta.phase]}>{usdCompact(value)}</ProvenanceValue>
+                  : '—';
+                const note = valuedCount > 0 && valuedCount < count
+                  ? `${meta.valueNote} · ${valuedCount} of ${count}`
+                  : count > 0 && valuedCount === 0 ? 'not yet underwritten' : meta.valueNote;
+                return (
+                  <div key={stage} className={`db-stage-wrap db-stage-wrap--${meta.phase}`} role="listitem">
+                    {i > 0 && <span className="db-stage-arrow" aria-hidden="true">›</span>}
+                    <button
+                      className="db-stage"
+                      disabled={!meta.to}
+                      onClick={() => meta.to && navigate(meta.to)}
+                      title={meta.to ? `Open ${meta.label}` : undefined}
+                    >
+                      <span className="db-stage-label">{meta.label}</span>
+                      <span className="db-stage-count">{count}</span>
+                      <span className="db-stage-value">{valueText}</span>
+                      <span className="db-stage-note">{note}</span>
+                    </button>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
 
       {/* Balance sheet */}
@@ -436,6 +457,16 @@ export default function Dashboard() {
           <UnderwritingAccuracyTab />
         </section>
       )}
+
+      {/* All assets */}
+      <details className="db-card db-all-assets">
+        <summary className="db-all-summary">
+          <span className="db-card-title">All assets</span>
+          <span className="db-all-count">{assets.length}</span>
+          <span className="db-all-hint">{market ? `${market} · ` : ''}every stage, sortable</span>
+        </summary>
+        <AssetStageTable assets={assets} />
+      </details>
     </div>
   );
 }

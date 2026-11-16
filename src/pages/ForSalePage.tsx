@@ -5,7 +5,7 @@ import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue
 import { ASSETS } from '../data/assets';
 import { AI, MLS, computed, human, markProvenance } from '../data/provenance';
 import { useCanAct } from '../data/role';
-import { useListingActions, withListingActions } from '../data/listingActions';
+import { listingActed, listingsNeedingAction, useListingActions, withListingActions } from '../data/listingActions';
 import { DIAGNOSIS_LABELS, DIAGNOSIS_URGENCY, evaluateOffer, listingHealth } from '../data/listingHealth';
 import type { ListingHealth } from '../data/listingHealth';
 import { useMarkReviews, withMarkReviews } from '../data/markReview';
@@ -271,7 +271,7 @@ export default function ForSalePage() {
     .filter((a) => a.stage === 'for_sale' && a.listing)
     .map((asset) => ({ asset, health: listingHealth(asset) }));
 
-  const acted = (id: string) => (actions[id]?.drops.length ?? 0) > 0 || actions[id]?.dismissal !== undefined;
+  const acted = (id: string) => listingActed(id, actions);
   const sorted = [...listings].sort(
     (a, b) =>
       Number(acted(a.asset.id)) - Number(acted(b.asset.id)) ||
@@ -282,7 +282,7 @@ export default function ForSalePage() {
   const totalList = listings.reduce((s, { asset }) => s + asset.listing!.listPrice, 0);
   const avgDom = listings.reduce((s, { asset }) => s + asset.listing!.daysOnMarket, 0) / listings.length;
   const avgNorm = listings.reduce((s, { health }) => s + health.norm.typicalDaysOnMarket, 0) / listings.length;
-  const needAction = listings.filter(({ asset, health }) => health.diagnosis !== 'healthy' && !acted(asset.id)).length;
+  const needAction = listingsNeedingAction(listings.map(({ asset }) => asset), actions).length;
 
   return (
     <div className="oq-page">

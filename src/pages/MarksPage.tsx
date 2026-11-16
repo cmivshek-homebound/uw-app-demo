@@ -1,34 +1,24 @@
 import { useSearchParams } from 'react-router-dom';
-import AssetStageTable from '../components/AssetStageTable';
-import { ASSETS } from '../data/assets';
-import { useMarkReviews, withMarkReviews } from '../data/markReview';
-import { assetsByStage } from '../data/selectors';
-import ConstructionTab from './ConstructionTab';
 import MonthEndMarksTab from './MonthEndMarksTab';
 import UnderwritingAccuracyTab from './UnderwritingAccuracyTab';
+import './OpportunityQueue.css';
 import './PortfolioPage.css';
 
 const TABS = [
-  { id: 'assets', label: 'Assets' },
   { id: 'marks', label: 'Month-end marks' },
   { id: 'accuracy', label: 'Underwriting accuracy' },
-  { id: 'construction', label: 'Construction' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
 
-export default function PortfolioPage() {
+export default function MarksPage() {
   const [params, setParams] = useSearchParams();
-  const { reviews, published } = useMarkReviews();
-  const tabParam = params.get('tab');
-  const tab: TabId = TABS.some((t) => t.id === tabParam) ? (tabParam as TabId) : 'assets';
+  const tab: TabId = params.get('tab') === 'accuracy' ? 'accuracy' : 'marks';
 
-  const byStage = assetsByStage(withMarkReviews(ASSETS, reviews, published));
-  const assets = [...byStage.precon, ...byStage.construction];
-
+  // Keep other params (e.g. ?analyst=) so switching tabs doesn't drop a scope.
   const setTab = (next: TabId) => {
     const p = new URLSearchParams(params);
-    if (next === 'assets') p.delete('tab');
+    if (next === 'marks') p.delete('tab');
     else p.set('tab', next);
     setParams(p, { replace: true });
   };
@@ -37,10 +27,8 @@ export default function PortfolioPage() {
     <div className="oq-page">
       <div className="oq-header">
         <div>
-          <h1 className="oq-title">Portfolio</h1>
-          <p className="oq-subtitle">
-            Owned lots, month-end marks, how underwriting held up on sold homes, and builds in progress.
-          </p>
+          <h1 className="oq-title">Marks</h1>
+          <p className="oq-subtitle">Month-end marks on owned lots, and how underwriting held up on sold homes.</p>
         </div>
       </div>
 
@@ -58,10 +46,8 @@ export default function PortfolioPage() {
         ))}
       </div>
 
-      {tab === 'assets' && <AssetStageTable assets={assets} />}
       {tab === 'marks' && <MonthEndMarksTab />}
       {tab === 'accuracy' && <UnderwritingAccuracyTab />}
-      {tab === 'construction' && <ConstructionTab />}
     </div>
   );
 }

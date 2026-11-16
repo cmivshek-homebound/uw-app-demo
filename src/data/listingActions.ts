@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { Asset, PriceDrop } from '../types';
+import { listingHealth } from './listingHealth';
 
 // ── Listing actions ────────────────────────────────────────────
 // Session-only decisions from the listing health board: accepted price
@@ -37,6 +38,18 @@ export function withListingActions(assets: Asset[], actions: Record<string, List
       },
     };
   });
+}
+
+/** Whether someone already accepted a drop or dismissed the recommendation this session. */
+export function listingActed(id: string, actions: Record<string, ListingAction>): boolean {
+  return (actions[id]?.drops.length ?? 0) > 0 || actions[id]?.dismissal !== undefined;
+}
+
+/** For-sale listings whose health isn't Healthy and that nobody has acted on yet. */
+export function listingsNeedingAction(assets: Asset[], actions: Record<string, ListingAction>): Asset[] {
+  return assets.filter(
+    (a) => a.stage === 'for_sale' && a.listing && listingHealth(a).diagnosis !== 'healthy' && !listingActed(a.id, actions),
+  );
 }
 
 export interface ListingActionStore {

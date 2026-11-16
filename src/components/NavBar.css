@@ -1,7 +1,6 @@
 .navbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 0 32px;
   height: 60px;
   background-color: #0A0A0A;
@@ -33,14 +32,60 @@
   letter-spacing: 0.02em;
 }
 
-.navbar-links {
+.navbar-brand { flex-shrink: 0; }
+
+/* ── Link groups: Acquisitions | Portfolio ── */
+.nav-groups {
+  display: flex;
+  align-items: center;
+  margin-left: 28px;
+  min-width: 0;
+}
+
+.nav-group-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.nav-group-label {
+  padding-left: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #737373;
+}
+
+.nav-group-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.nav-divider {
+  width: 1px;
+  height: 32px;
+  margin: 0 14px;
+  background: #2e2e2e;
+}
+
+.navbar-controls {
   display: flex;
   align-items: center;
   gap: 4px;
+  margin-left: auto;
+  padding-left: 16px;
 }
 
 .nav-link {
-  padding: 6px 14px;
+  padding: 4px 10px;
   border-radius: 6px;
   font-size: 13.5px;
   font-weight: 500;
@@ -163,3 +208,15 @@
 }
 
 .nav-select:hover, .nav-select:focus { border-color: #737373; outline: none; }
+
+/* Two link groups plus controls get tight on laptop widths: drop the subtitle first. */
+@media (max-width: 1400px) {
+  .navbar-subtitle { display: none; }
+}
+
+@media (max-width: 1180px) {
+  .navbar { padding: 0 16px; }
+  .nav-groups { margin-left: 16px; }
+  .nav-divider { margin: 0 8px; }
+  .nav-link { padding: 4px 7px; }
+}

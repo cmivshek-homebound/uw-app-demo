@@ -5,11 +5,35 @@ import { ASSETS } from '../data/assets';
 import { useDraftReviews, withReviewStatus } from '../data/review';
 import { useIntake, withIntakeDecisions } from '../data/intake';
 import { useMarkReviews, withMarkReviews } from '../data/markReview';
-import { BOARD_LATE_DAYS, assetsByStage, assetsNeedingApproval, countByStage, daysInColumn, underwritingBoard, untriagedLeads } from '../data/selectors';
+import { listingsNeedingAction, useListingActions, withListingActions } from '../data/listingActions';
+import {
+  BOARD_LATE_DAYS,
+  assetsByStage,
+  assetsNeedingApproval,
+  constructionAtRisk,
+  constructionStatus,
+  daysInColumn,
+  underwritingBoard,
+  untriagedLeads,
+} from '../data/selectors';
 import { useDemo } from '../data/demo';
 import { ROLE_LABELS, ROLE_SHORT_LABELS, VIEWABLE_ANALYSTS, roleLanding, useRole } from '../data/role';
 import type { Role } from '../data/role';
 import './NavBar.css';
+
+interface NavLink {
+  to: string;
+  label: string;
+  count: number;
+  tone: 'muted' | 'urgent';
+  title: string;
+}
+
+/** Acquisitions (before closing) and Portfolio (after), divided at closing. */
+interface NavGroup {
+  label: string;
+  links: NavLink[];
+}
 
 export default function NavBar() {
   const { pathname } = useLocation();
@@ -28,76 +52,92 @@ export default function NavBar() {
   };
 
   // Counts shown beside each destination so the bar reports live workload.
-  const stageCounts = countByStage();
+  // Badges stay neutral; amber only when something is overdue or needs approval.
   const { decisions } = useIntake();
   const { reviews } = useDraftReviews();
-  const sessionAssets = withReviewStatus(withIntakeDecisions(ASSETS, decisions), reviews);
+  const { reviews: markReviews, published } = useMarkReviews();
+  const { actions } = useListingActions();
+  const sessionAssets = withListingActions(
+    withReviewStatus(withIntakeDecisions(withMarkReviews(ASSETS, markReviews, published), decisions), reviews),
+    actions,
+  );
+
   const intakeCount = untriagedLeads(sessionAssets).length;
   const draftReady = underwritingBoard(sessionAssets).draft_ready;
-  const draftReadyCount = draftReady.length;
   const draftsOverdue = draftReady.filter((a) => daysInColumn(a) > BOARD_LATE_DAYS).length;
-  const { reviews: markReviews, published } = useMarkReviews();
-  const marksNeedingApproval = assetsNeedingApproval(withMarkReviews(ASSETS, markReviews, published)).length;
-  const contractCount = stageCounts.under_contract;
-  const portfolioCount = stageCounts.precon + stageCounts.construction;
-  const forSaleCount = stageCounts.for_sale;
-
+  const underContract = assetsByStage(sessionAssets).under_contract;
   // Soonest inspection deadline across under-contract assets.
-  const soonestDays = assetsByStage().under_contract
+  const soonestDays = underContract
     .filter((a) => a.contract)
     .map((a) => daysRemaining(a.contract!.inspectionExpires))
     .sort((a, b) => a - b)[0];
-
   const inspectionOverdue = soonestDays !== undefined && soonestDays < 0;
 
-  // Badges stay neutral; amber only when something is overdue or needs approval.
-  const links = [
+  const atRisk = constructionAtRisk(sessionAssets);
+  const late = atRisk.filter((a) => {
+    const st = constructionStatus(a);
+    return st === 'behind_schedule' || st === 'both';
+  }).length;
+  const listingsToAct = listingsNeedingAction(sessionAssets, actions).length;
+  const marksNeedingApproval = assetsNeedingApproval(sessionAssets).length;
+
+  const groups: NavGroup[] = [
     {
-      to: '/intake',
-      label: 'Intake',
-      active: pathname.startsWith('/intake'),
-      count: intakeCount,
-      tone: 'muted',
-      title: `${intakeCount} untriaged ${intakeCount === 1 ? 'lead' : 'leads'}`,
+      label: 'Acquisitions',
+      links: [
+        {
+          to: '/intake',
+          label: 'Intake',
+          count: intakeCount,
+          tone: 'muted',
+          title: `${intakeCount} untriaged ${intakeCount === 1 ? 'lead' : 'leads'}`,
+        },
+        {
+          to: '/underwrite',
+          label: 'Underwrite',
+          count: draftReady.length,
+          tone: draftsOverdue > 0 ? 'urgent' : 'muted',
+          title: `${draftReady.length} AI drafts ready for review`
+            + (draftsOverdue > 0 ? ` · ${draftsOverdue} waiting over ${BOARD_LATE_DAYS} days` : ''),
+        },
+        {
+          to: '/contract',
+          label: 'Under Contract',
+          count: underContract.length,
+          tone: inspectionOverdue ? 'urgent' : 'muted',
+          title: soonestDays === undefined
+            ? `${underContract.length} under contract`
+            : inspectionOverdue
+              ? `${underContract.length} under contract · an inspection period has lapsed`
+              : `${underContract.length} under contract · next inspection ends in ${soonestDays} days`,
+        },
+      ],
     },
     {
-      to: '/underwrite',
-      label: 'Underwrite',
-      active: pathname.startsWith('/underwrite'),
-      count: draftReadyCount,
-      tone: draftsOverdue > 0 ? 'urgent' : 'muted',
-      title: draftsOverdue > 0
-        ? `${draftReadyCount} AI drafts ready for review · ${draftsOverdue} waiting over ${BOARD_LATE_DAYS} days`
-        : `${draftReadyCount} AI drafts ready for review`,
-    },
-    {
-      to: '/contract',
-      label: 'Under Contract',
-      active: pathname.startsWith('/contract'),
-      count: contractCount,
-      tone: inspectionOverdue ? 'urgent' : 'muted',
-      title: soonestDays === undefined
-        ? `${contractCount} under contract`
-        : inspectionOverdue
-          ? `${contractCount} under contract · an inspection period has lapsed`
-          : `${contractCount} under contract · next inspection ends in ${soonestDays} days`,
-    },
-    {
-      to: '/portfolio',
       label: 'Portfolio',
-      active: pathname.startsWith('/portfolio'),
-      count: portfolioCount,
-      tone: marksNeedingApproval > 0 ? 'urgent' : 'muted',
-      title: `${stageCounts.precon} pre-con · ${stageCounts.construction} in construction`
-        + (marksNeedingApproval > 0 ? ` · ${marksNeedingApproval} month-end marks need approval` : ''),
-    },
-    {
-      to: '/for-sale',
-      label: 'For Sale',
-      active: pathname.startsWith('/for-sale'),
-      count: forSaleCount,
-      tone: 'muted',
-      title: `${forSaleCount} listed`,
+      links: [
+        {
+          to: '/construction',
+          label: 'Construction',
+          count: atRisk.length,
+          tone: late > 0 ? 'urgent' : 'muted',
+          title: `${atRisk.length} at risk (over budget or late)${late > 0 ? ` · ${late} behind schedule` : ''}`,
+        },
+        {
+          to: '/for-sale',
+          label: 'For Sale',
+          count: listingsToAct,
+          tone: 'muted',
+          title: `${listingsToAct} ${listingsToAct === 1 ? 'listing needs' : 'listings need'} action`,
+        },
+        {
+          to: '/marks',
+          label: 'Marks',
+          count: marksNeedingApproval,
+          tone: marksNeedingApproval > 0 ? 'urgent' : 'muted',
+          title: `${marksNeedingApproval} month-end ${marksNeedingApproval === 1 ? 'mark needs' : 'marks need'} approval`,
+        },
+      ],
     },
   ];
 
@@ -112,18 +152,35 @@ export default function NavBar() {
         <span className="navbar-subtitle">Underwriting App 2.0</span>
       </Link>
 
-      <div className="navbar-links">
-        {links.map((link) => (
-          <Link
-            key={link.to}
-            to={link.to}
-            title={link.title}
-            className={`nav-link ${link.active ? 'active' : ''}`}
-          >
-            {link.label}
-            <span className={`nav-count nav-count--${link.tone}`}>{link.count}</span>
-          </Link>
+      <div className="nav-groups">
+        {groups.map((group, i) => (
+          <div key={group.label} className="nav-group-wrap">
+            {i > 0 && <span className="nav-divider" aria-hidden="true" />}
+            <div className="nav-group" role="group" aria-label={group.label}>
+              <span className="nav-group-label">{group.label}</span>
+              <div className="nav-group-links">
+                {group.links.map((link) => {
+                  const active = pathname.startsWith(link.to);
+                  return (
+                    <Link
+                      key={link.to}
+                      to={link.to}
+                      title={link.title}
+                      aria-current={active ? 'page' : undefined}
+                      className={`nav-link ${active ? 'active' : ''}`}
+                    >
+                      {link.label}
+                      <span className={`nav-count nav-count--${link.tone}`}>{link.count}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         ))}
+      </div>
+
+      <div className="navbar-controls">
         <div className="nav-roles" role="group" aria-label="View as">
           {(Object.keys(ROLE_LABELS) as Role[]).map((r) => (
             <button

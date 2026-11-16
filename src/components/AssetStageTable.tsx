@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { latestMark } from '../data/selectors';
 import type { Asset, AssetStage } from '../types';
 import { BLUEPRINT, markProvenance } from '../data/provenance';
@@ -154,9 +154,7 @@ export default function AssetStageTable({ assets }: { assets: Asset[] }) {
           })}
         </tbody>
       </table>
-      {assets.length === 0 && <div className="oq-empty">
-          No assets in this stage. <Link to="/" className="link-button">Back to the dashboard</Link>
-        </div>}
+      {assets.length === 0 && <div className="oq-empty">No assets.</div>}
     </div>
   );
 }

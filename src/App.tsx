@@ -21,7 +21,9 @@ import CompSelectionPage from './pages/CompSelectionPage';
 import ApprovalsPage from './pages/ApprovalsPage';
 import ContractListPage from './pages/ContractListPage';
 import UnderContractPage from './pages/UnderContractPage';
-import PortfolioPage from './pages/PortfolioPage';
+import ConstructionPage from './pages/ConstructionPage';
+import MarksPage from './pages/MarksPage';
+import PortfolioRedirect from './pages/PortfolioRedirect';
 import ForSalePage from './pages/ForSalePage';
 import IntegrationsPage from './pages/IntegrationsPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -50,7 +52,9 @@ export default function App() {
               <Route path="/contract" element={<ContractListPage />} />
               <Route path="/contract/:id" element={<UnderContractPage />} />
               <Route path="/asset/:id" element={<AssetDetailPage />} />
-              <Route path="/portfolio" element={<PortfolioPage />} />
+              <Route path="/construction" element={<ConstructionPage />} />
+              <Route path="/marks" element={<MarksPage />} />
+              <Route path="/portfolio" element={<PortfolioRedirect />} />
               <Route path="/for-sale" element={<ForSalePage />} />
               <Route path="/integrations" element={<IntegrationsPage />} />
               <Route path="/approvals" element={<ApprovalsPage />} />

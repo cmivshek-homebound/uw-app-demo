@@ -24,7 +24,7 @@ import './ConstructionDetail.css';
 
 // ── Construction detail ────────────────────────────────────────
 // Budget lines, milestones, change orders and draws for one owned asset.
-// Shared by the Portfolio construction tab and the asset page.
+// Shared by the Construction page and the asset page.
 // Budget, spend and schedule come from Blueprint; estimate at completion
 // (and anything derived from it) is AI-drafted until the build is complete.
 

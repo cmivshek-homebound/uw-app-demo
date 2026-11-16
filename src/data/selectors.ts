@@ -308,6 +308,13 @@ export function constructionByRisk(assets: Asset[] = ASSETS): Asset[] {
     .map(({ a }) => a);
 }
 
+/** Pre-con and construction assets over budget or behind schedule (the Construction nav badge). */
+export function constructionAtRisk(assets: Asset[] = ASSETS): Asset[] {
+  return assets.filter(
+    (a) => (a.stage === 'precon' || a.stage === 'construction') && a.owned && constructionStatus(a) !== 'on_track',
+  );
+}
+
 export function costBasisByStage(assets: Asset[] = ASSETS): Record<AssetStage, number> {
   return byStage(assets, (list) => list.reduce((sum, a) => sum + costBasis(a), 0));
 }

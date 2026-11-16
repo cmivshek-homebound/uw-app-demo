@@ -84,7 +84,7 @@ export const DEMO_STEPS: DemoStep[] = [
   },
   {
     title: 'Construction',
-    path: '/portfolio?tab=construction',
+    path: '/construction',
     talkingPoint: () => {
       const over = asset('BOOL-027');
       const late = asset('BOOL-028');
@@ -95,7 +95,7 @@ export const DEMO_STEPS: DemoStep[] = [
   },
   {
     title: 'Month-end marks',
-    path: '/portfolio?tab=marks',
+    path: '/marks',
     talkingPoint: () => {
       const a = asset('BOOL-017');
       const p = a.markProposal!;

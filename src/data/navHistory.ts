@@ -2,18 +2,13 @@ import { createContext, useContext } from 'react';
 
 // ── Where the user came from ───────────────────────────────────
 // The asset record's breadcrumb points back at the last non-asset page
-// visited, so it reads "For Sale › BOOL-031" or "Portfolio · Marks › BOOL-031".
+// visited, so it reads "For Sale › BOOL-031" or "Marks › BOOL-031".
 
 export interface FromPage {
   path: string;   // pathname + search, exactly as visited
   label: string;
 }
 
-const PORTFOLIO_TABS: Record<string, string> = {
-  marks: 'Month-end marks',
-  accuracy: 'Underwriting accuracy',
-  construction: 'Construction',
-};
 
 /** Breadcrumb label for an app path; undefined for asset records and unknown paths. */
 export function pageLabel(pathname: string, search: string): string | undefined {
@@ -28,9 +23,9 @@ export function pageLabel(pathname: string, search: string): string | undefined 
   }
   if (pathname === '/contract') return 'Under Contract';
   if (pathname.startsWith('/contract/')) return `Under Contract ${pathname.split('/')[2]}`;
-  if (pathname.startsWith('/portfolio')) {
-    const tab = PORTFOLIO_TABS[new URLSearchParams(search).get('tab') ?? ''];
-    return tab ? `Portfolio · ${tab}` : 'Portfolio';
+  if (pathname.startsWith('/construction')) return 'Construction';
+  if (pathname.startsWith('/marks')) {
+    return new URLSearchParams(search).get('tab') === 'accuracy' ? 'Marks · Underwriting accuracy' : 'Marks';
   }
   if (pathname.startsWith('/for-sale')) return 'For Sale';
   if (pathname.startsWith('/approvals')) return 'Approvals';

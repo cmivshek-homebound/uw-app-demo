@@ -60,6 +60,49 @@
   margin-bottom: 20px;
 }
 
+/* Acquisitions | Portfolio brackets over the strip, matching the nav groups */
+.db-lifecycle-group {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 0;
+  min-width: 0;
+}
+
+.db-lifecycle-group + .db-lifecycle-group { border-left: 1px solid #f0f0f0; }
+
+.db-lifecycle-bracket {
+  position: relative;
+  margin: 10px 12px 0;
+  padding-bottom: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8a8a8a;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+/* Bracket ticks at each end */
+.db-lifecycle-bracket::before,
+.db-lifecycle-bracket::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  width: 1px;
+  height: 5px;
+  background: #e5e5e5;
+}
+
+.db-lifecycle-bracket::before { left: 0; }
+.db-lifecycle-bracket::after { right: 0; }
+
+.db-lifecycle-stages {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
 .db-stage-wrap {
   display: flex;
   align-items: stretch;
@@ -393,6 +436,10 @@
     flex: 0 0 auto;
   }
 
+  .db-lifecycle-group {
+    flex: 0 0 auto !important;
+  }
+
   .db-stage {
     min-width: 128px;
   }
@@ -426,3 +473,31 @@
   font-weight: 700;
   color: #171717;
 }
+
+/* ── All assets (collapsible) ── */
+.db-all-assets { margin-top: 20px; padding: 0; }
+
+.db-all-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.db-all-summary::-webkit-details-marker { display: none; }
+.db-all-summary::before { content: '▸'; font-size: 11px; color: #a3a3a3; }
+.db-all-assets[open] .db-all-summary::before { content: '▾'; }
+
+.db-all-count {
+  padding: 1px 7px;
+  border-radius: 9px;
+  background: #f0f0f0;
+  color: #525252;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.db-all-hint { margin-left: auto; font-size: 12px; color: #a3a3a3; }
+.db-all-assets .oq-table-wrapper { border: none; border-top: 1px solid #f0f0f0; border-radius: 0 0 10px 10px; }

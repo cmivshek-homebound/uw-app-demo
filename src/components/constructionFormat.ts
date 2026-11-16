@@ -3,7 +3,7 @@ import type { ConstructionStatus } from '../data/selectors';
 import type { Asset, BudgetCategory, MilestoneKind, ProvenanceInfo } from '../types';
 
 // ── Construction labels, provenance and formatters ─────────────
-// Shared by ConstructionDetail, the Portfolio construction tab and the asset page.
+// Shared by ConstructionDetail, the Construction page and the asset page.
 
 export { AI, BLUEPRINT };
 

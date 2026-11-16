@@ -97,12 +97,12 @@ export default function ApprovalsPage() {
         title="Marks over the approval line"
         count={marks.length}
         caption={`April proposals that move more than ${usd(APPROVAL_THRESHOLD)} and aren't approved yet.`}
-        link={{ to: '/portfolio?tab=marks', label: 'Month-end marks' }}
+        link={{ to: '/marks', label: 'Month-end marks' }}
       >
         {marks.map((a) => {
           const p = a.markProposal!;
           return (
-            <Row key={a.id} asset={a} to="/portfolio?tab=marks" action="Review mark">
+            <Row key={a.id} asset={a} to="/marks" action="Review mark">
               <span className={p.change < 0 ? 'ap-bad' : 'ap-good'}>
                 <ProvenanceValue info={{ provenance: 'ai', note: 'Awaiting approval' }}>{signedUsd(p.change)}</ProvenanceValue>
               </span>{' '}
@@ -144,7 +144,7 @@ export default function ApprovalsPage() {
         title="Construction at risk"
         count={builds.length}
         caption="Builds over budget or behind schedule, by margin impact."
-        link={{ to: '/portfolio?tab=construction', label: 'Construction' }}
+        link={{ to: '/construction', label: 'Construction' }}
       >
         {builds.map((a) => {
           const s = constructionSummary(a)!;
