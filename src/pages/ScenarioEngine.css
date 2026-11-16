@@ -1,6 +1,6 @@
 .sc-page {
   padding: 32px 40px 64px;
-  max-width: 1360px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
 }
 

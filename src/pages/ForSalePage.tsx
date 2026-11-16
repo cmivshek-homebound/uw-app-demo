@@ -142,7 +142,7 @@ function ListingRow({ asset, health }: { asset: Asset; health: ListingHealth }) 
       <div className="fs-row-main">
         <div className="fs-cell fs-cell--asset">
           <Link to={`/asset/${asset.id}`} className="fs-address">{asset.address}</Link>
-          <span className="fs-sub"><AssetLink id={asset.id}>{asset.id}</AssetLink> · {asset.city}, {asset.market}</span>
+          <span className="fs-sub"><AssetLink id={asset.id}>{asset.id}</AssetLink> · {asset.city}{asset.city !== asset.market && ` · ${asset.market}`}</span>
         </div>
         <div className="fs-cell">
           <span className="fs-label">List price</span>

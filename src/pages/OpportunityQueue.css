@@ -1,6 +1,6 @@
 .oq-page {
   padding: 36px 40px;
-  max-width: 1200px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
 }
 
@@ -210,3 +210,39 @@
   color: #1A6B4A;
   border-bottom-color: #1A6B4A;
 }
+
+/* ── Sortable headers (Portfolio assets) ── */
+.oq-table th.oq-num, .oq-table td.oq-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.oq-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.oq-sort:hover, .oq-sort--active { color: #171717; }
+.oq-sort-arrow { font-size: 9px; color: #d4d4d4; }
+.oq-sort:hover .oq-sort-arrow { color: #a3a3a3; }
+.oq-sort--active .oq-sort-arrow { color: #1A6B4A; }
+
+/* % complete with a thin bar */
+.oq-pct { display: inline-flex; align-items: center; gap: 8px; }
+
+.oq-pct-bar {
+  width: 48px;
+  height: 4px;
+  border-radius: 2px;
+  background: #f0f0f0;
+  overflow: hidden;
+}
+
+.oq-pct-bar span { display: block; height: 100%; background: #1A6B4A; }
+
+.oq-change--up { color: #1A6B4A !important; }
+.oq-change--down { color: #dc2626 !important; }

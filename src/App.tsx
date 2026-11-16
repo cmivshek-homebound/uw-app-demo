@@ -3,7 +3,9 @@ import AppFooter from './components/AppFooter';
 import DemoPresenter from './components/DemoPresenter';
 import DemoProvider from './components/DemoProvider';
 import RoleProvider from './components/RoleProvider';
+import ShowSourcesProvider from './components/ShowSourcesProvider';
 import NavBar from './components/NavBar';
+import NavHistoryProvider from './components/NavHistoryProvider';
 import DraftReviewProvider from './components/DraftReviewProvider';
 import MarkReviewProvider from './components/MarkReviewProvider';
 import ListingActionProvider from './components/ListingActionProvider';
@@ -31,6 +33,8 @@ export default function App() {
           <ListingActionProvider>
             <DemoProvider>
             <RoleProvider>
+            <ShowSourcesProvider>
+            <NavHistoryProvider>
             <NavBar />
             <Routes>
               <Route path="/" element={<Dashboard />} />
@@ -51,6 +55,8 @@ export default function App() {
             </Routes>
             <AppFooter />
             <DemoPresenter />
+            </NavHistoryProvider>
+            </ShowSourcesProvider>
             </RoleProvider>
             </DemoProvider>
           </ListingActionProvider>

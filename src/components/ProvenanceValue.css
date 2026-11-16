@@ -27,7 +27,32 @@
 /* Human: reads as normal, small check */
 .pv--human .pv-icon { color: #1A6B4A; opacity: 0.7; }
 
-/* System: small source tag */
+/* System: small source tag. Hidden until the value is hovered (floats beside
+   it, so nothing shifts), or shown inline everywhere with "Show sources". */
+.pv--system { position: relative; }
+
+.pv--system .pv-tag {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  margin-left: 4px;
+  transform: translateY(-50%);
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  z-index: 2;
+}
+
+.pv--system:hover .pv-tag { opacity: 1; }
+
+:root[data-show-sources] .pv--system .pv-tag,
+.pv-legend .pv--system .pv-tag {
+  position: static;
+  transform: none;
+  opacity: 1;
+}
+
 .pv-tag {
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 9px;
@@ -71,4 +96,25 @@
 .pv-legend-hint {
   margin-left: auto;
   color: #a3a3a3;
+}
+
+.pv-legend-toggle {
+  padding: 3px 10px;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  background: #fff;
+  color: #525252;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.pv-legend-toggle:hover { border-color: #1A6B4A; color: #1A6B4A; }
+
+.pv-legend-toggle--on {
+  background: #eef6f1;
+  border-color: #1A6B4A;
+  color: #1A6B4A;
 }

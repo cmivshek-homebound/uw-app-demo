@@ -1,6 +1,6 @@
 .uw-page {
   padding: 32px 40px;
-  max-width: 1000px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
 }
 

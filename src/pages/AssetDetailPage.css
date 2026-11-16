@@ -1,6 +1,6 @@
 /* ── Asset detail ── */
 .as-page {
-  max-width: 1080px;
+  max-width: var(--page-max-width);
 }
 
 .as-meta {

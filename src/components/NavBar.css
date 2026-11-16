@@ -82,11 +82,6 @@
   color: #a3a3a3;
 }
 
-.nav-count--attention {
-  background-color: #1A6B4A;
-  color: #fff;
-}
-
 .nav-count--urgent {
   background-color: #b45309;
   color: #fff;
@@ -123,19 +118,36 @@
 
 .nav-demo--on:hover { color: #fff; border-color: #1A6B4A; opacity: 0.9; }
 
-/* ── View as ── */
-.nav-view {
+/* ── View as: segmented control ── */
+.nav-roles {
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: 8px;
+  margin-left: 12px;
+  padding: 2px;
+  border: 1px solid #3a3a3a;
+  border-radius: 7px;
+  background: #171717;
 }
 
-.nav-view-label {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: #737373;
-  white-space: nowrap;
+.nav-role {
+  padding: 3px 10px;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  color: #a3a3a3;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.nav-role:hover { color: #fafafa; }
+
+.nav-role--on,
+.nav-role--on:hover {
+  background: #3a3a3a;
+  color: #fafafa;
+  cursor: default;
 }
 
 .nav-select {

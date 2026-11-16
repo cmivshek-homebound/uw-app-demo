@@ -13,6 +13,15 @@ export const ROLE_LABELS: Record<Role, string> = {
   executive: 'Executive',
 };
 
+/** Short labels for the nav's segmented control. */
+export const ROLE_SHORT_LABELS: Record<Role, string> = {
+  analyst: 'Analyst',
+  manager: 'Manager',
+  executive: 'Exec',
+};
+
+export const DEFAULT_ROLE: Role = 'manager';
+
 /** Analysts who own cards on the underwrite board, for the Analyst view. */
 export const VIEWABLE_ANALYSTS = boardAnalysts();
 export const DEFAULT_ANALYST = VIEWABLE_ANALYSTS.includes('Maya Chen') ? 'Maya Chen' : VIEWABLE_ANALYSTS[0];
@@ -30,14 +39,14 @@ export function analystMarksPath(analyst: string): string {
 }
 
 export interface RoleState {
-  role: Role | null;        // null until someone picks a view
+  role: Role;
   analyst: string;
   setRole: (role: Role) => void;
   setAnalyst: (analyst: string) => void;
 }
 
 export const RoleContext = createContext<RoleState>({
-  role: null,
+  role: DEFAULT_ROLE,
   analyst: DEFAULT_ANALYST,
   setRole: () => {},
   setAnalyst: () => {},

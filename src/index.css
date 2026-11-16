@@ -1,3 +1,9 @@
+/* One content width for every page, matching the Dashboard. */
+:root { --page-max-width: 1200px; }
+
+/* Page shells sit in #root's flex column; auto margins would otherwise shrink them to content. */
+.db-page, .oq-page, .uc-page, .uw-page, .cs-page, .sc-page { width: 100%; }
+
 *, *::before, *::after {
   box-sizing: border-box;
 }

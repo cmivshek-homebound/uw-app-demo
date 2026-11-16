@@ -350,7 +350,7 @@
 
 /* ── Review layout ── */
 .ad-page {
-  max-width: 1340px;
+  max-width: var(--page-max-width);
 }
 
 .ad-layout {
@@ -508,9 +508,22 @@
 }
 
 .ad-panel-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   margin: 0 0 8px;
   font-size: 13px;
   color: #525252;
+}
+
+.ad-panel-progress strong { color: #171717; font-weight: 600; }
+.ad-progress-aside { color: #8a8a8a; }
+
+.ad-confirm-high {
+  display: block;
+  width: 100%;
+  margin: -6px 0 18px;
+  padding: 7px 12px;
 }
 
 .ad-panel-bar {

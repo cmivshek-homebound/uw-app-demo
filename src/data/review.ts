@@ -62,7 +62,8 @@ export function sectionStatus(review: DraftReview, section: DraftSectionKey): Se
 }
 
 export interface ReviewProgress {
-  aiCompletedPct: number;  // review items the AI finished at High confidence
+  sectionsDrafted: number;   // sections the AI drafted (all of them once drafting finishes)
+  sectionsReviewed: number;  // sections the analyst confirmed or overrode
   sectionsLeft: number;
   questionsLeft: number;
   itemsNeedingYou: number;
@@ -71,13 +72,12 @@ export interface ReviewProgress {
 
 /** Review items are the five sections plus each open question. */
 export function reviewProgress(draft: AIDraft, review: DraftReview): ReviewProgress {
-  const totalItems = DRAFT_SECTIONS.length + draft.openQuestions.length;
-  const aiHigh = DRAFT_SECTIONS.filter((s) => draft.confidence[s] === 'high').length;
   const sectionsLeft = DRAFT_SECTIONS.filter((s) => sectionStatus(review, s) === 'pending').length;
   const questionsLeft = draft.openQuestions.filter((_, i) => !review.answers[i]?.trim()).length;
   const itemsNeedingYou = sectionsLeft + questionsLeft;
   return {
-    aiCompletedPct: Math.round((aiHigh / totalItems) * 100),
+    sectionsDrafted: draft.asset.underwritingStatus === 'ai_drafting' ? 0 : DRAFT_SECTIONS.length,
+    sectionsReviewed: DRAFT_SECTIONS.length - sectionsLeft,
     sectionsLeft,
     questionsLeft,
     itemsNeedingYou,

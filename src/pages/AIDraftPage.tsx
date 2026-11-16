@@ -217,7 +217,7 @@ function Section({
           {!readOnly && (
             <>
               {status === 'pending' && (
-                <button className="ad-btn ad-btn--primary" onClick={onConfirm}>Confirm</button>
+                <button className="ad-btn" onClick={onConfirm}>Confirm</button>
               )}
               <button className="ad-btn" onClick={() => setOverriding(true)} disabled={overriding}>Override</button>
             </>
@@ -256,12 +256,14 @@ function ReviewPanel({
   review,
   drafting,
   onAnswer,
+  onConfirmHigh,
   onSubmit,
 }: {
   draft: AIDraft;
   review: DraftReview;
   drafting: boolean;
   onAnswer: (index: number, answer: string) => void;
+  onConfirmHigh: (sections: DraftSectionKey[]) => void;
   onSubmit: () => void;
 }) {
   const progress = reviewProgress(draft, review);
@@ -270,6 +272,7 @@ function ReviewPanel({
   const readOnly = drafting || review.submitted !== undefined || !canAct;
   const totalItems = DRAFT_SECTIONS.length + draft.openQuestions.length;
   const resolvedPct = Math.round(((totalItems - progress.itemsNeedingYou) / totalItems) * 100);
+  const highPending = DRAFT_SECTIONS.filter((s) => draft.confidence[s] === 'high' && sectionStatus(review, s) === 'pending');
 
   const blockers = [
     progress.sectionsLeft > 0 && `confirm or override ${progress.sectionsLeft} ${progress.sectionsLeft === 1 ? 'section' : 'sections'}`,
@@ -284,15 +287,26 @@ function ReviewPanel({
       ) : (
         <>
           <p className="ad-panel-progress">
-            AI completed {progress.aiCompletedPct}%
-            <span className="ad-meta-sep">·</span>
-            {progress.itemsNeedingYou === 0
-              ? 'Nothing left for you'
-              : `${progress.itemsNeedingYou} ${progress.itemsNeedingYou === 1 ? 'item needs' : 'items need'} you`}
+            <span className="ad-progress-line">
+              AI drafted <strong>{progress.sectionsDrafted} of {DRAFT_SECTIONS.length}</strong> sections
+            </span>
+            <span className="ad-progress-line">
+              Your review: <strong>{progress.sectionsReviewed} of {DRAFT_SECTIONS.length}</strong> confirmed
+              {progress.questionsLeft > 0 && (
+                <span className="ad-progress-aside">
+                  {' '}· {progress.questionsLeft} {progress.questionsLeft === 1 ? 'question' : 'questions'} open
+                </span>
+              )}
+            </span>
           </p>
           <div className="ad-panel-bar" aria-hidden="true">
             <span style={{ width: `${resolvedPct}%` }} />
           </div>
+          {!readOnly && highPending.length > 0 && (
+            <button className="ad-btn ad-btn--primary ad-confirm-high" onClick={() => onConfirmHigh(highPending)}>
+              Confirm all High-confidence sections ({highPending.length})
+            </button>
+          )}
         </>
       )}
 
@@ -719,6 +733,12 @@ export default function AIDraftPage() {
           drafting={drafting}
           onAnswer={(index, answer) =>
             updateReview(aiDraft, (r) => ({ ...r, answers: { ...r.answers, [index]: answer } }))
+          }
+          onConfirmHigh={(sections) =>
+            updateReview(aiDraft, (r) => ({
+              ...r,
+              confirmed: { ...r.confirmed, ...Object.fromEntries(sections.map((s) => [s, true])) },
+            }))
           }
           onSubmit={() =>
             updateReview(aiDraft, (r) => ({ ...r, submitted: { by: analyst, at: demoNow(), timeKnown: true } }))

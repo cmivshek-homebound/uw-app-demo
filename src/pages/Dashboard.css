@@ -1,6 +1,6 @@
 .db-page {
   padding: 36px 40px;
-  max-width: 1200px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
   width: 100%;
 }

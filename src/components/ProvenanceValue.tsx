@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
+import { useShowSources } from '../data/showSources';
 import type { ProvenanceInfo, ProvenanceSource } from '../types';
 import './ProvenanceValue.css';
 
 // ── Provenance markers ─────────────────────────────────────────
 // Wraps a displayed value with a quiet marker for where it came from.
-// AI drafts stay tinted until confirmed; hovering explains the source.
+// AI drafts stay tinted until confirmed and analyst values keep their check;
+// system source tags appear on hover, or everywhere via the legend's "Show sources".
 
 const SOURCE_TAGS: Record<ProvenanceSource, string> = {
   Salesforce: 'SFDC',
@@ -57,6 +59,7 @@ export default function ProvenanceValue({ info, children }: { info: ProvenanceIn
 }
 
 export function ProvenanceLegend() {
+  const { showSources, setShowSources } = useShowSources();
   return (
     <div className="pv-legend">
       <span className="pv-legend-item">
@@ -69,6 +72,14 @@ export function ProvenanceLegend() {
         <span className="pv pv--system"><span className="pv-tag">SFDC</span></span> System of record
       </span>
       <span className="pv-legend-hint">Hover a value for its source</span>
+      <button
+        type="button"
+        className={`pv-legend-toggle ${showSources ? 'pv-legend-toggle--on' : ''}`}
+        aria-pressed={showSources}
+        onClick={() => setShowSources(!showSources)}
+      >
+        {showSources ? 'Hide sources' : 'Show sources'}
+      </button>
     </div>
   );
 }

@@ -3,9 +3,10 @@ import homeboundLogo from '../assets/homebound-logo.png';
 import { daysRemaining } from '../data/dates';
 import { ASSETS } from '../data/assets';
 import { useDraftReviews, withReviewStatus } from '../data/review';
-import { assetsByStage, countByStage, pipelineAssets, underwritingBoard } from '../data/selectors';
+import { useMarkReviews, withMarkReviews } from '../data/markReview';
+import { BOARD_LATE_DAYS, assetsByStage, assetsNeedingApproval, countByStage, daysInColumn, pipelineAssets, underwritingBoard } from '../data/selectors';
 import { useDemo } from '../data/demo';
-import { ROLE_LABELS, VIEWABLE_ANALYSTS, roleLanding, useRole } from '../data/role';
+import { ROLE_LABELS, ROLE_SHORT_LABELS, VIEWABLE_ANALYSTS, roleLanding, useRole } from '../data/role';
 import type { Role } from '../data/role';
 import './NavBar.css';
 
@@ -31,7 +32,11 @@ export default function NavBar() {
   const pipelineCount = pipeline.length;
   const pendingCount = pipeline.filter((a) => a.pipelineStatus === 'pending_review').length;
   const { reviews } = useDraftReviews();
-  const draftReadyCount = underwritingBoard(withReviewStatus(ASSETS, reviews)).draft_ready.length;
+  const draftReady = underwritingBoard(withReviewStatus(ASSETS, reviews)).draft_ready;
+  const draftReadyCount = draftReady.length;
+  const draftsOverdue = draftReady.filter((a) => daysInColumn(a) > BOARD_LATE_DAYS).length;
+  const { reviews: markReviews, published } = useMarkReviews();
+  const marksNeedingApproval = assetsNeedingApproval(withMarkReviews(ASSETS, markReviews, published)).length;
   const contractCount = stageCounts.under_contract;
   const portfolioCount = stageCounts.precon + stageCounts.construction;
   const forSaleCount = stageCounts.for_sale;
@@ -42,15 +47,16 @@ export default function NavBar() {
     .map((a) => daysRemaining(a.contract!.inspectionExpires))
     .sort((a, b) => a - b)[0];
 
-  const contractUrgent = soonestDays !== undefined && soonestDays < 7;
+  const inspectionOverdue = soonestDays !== undefined && soonestDays < 0;
 
+  // Badges stay neutral; amber only when something is overdue or needs approval.
   const links = [
     {
       to: '/queue',
       label: 'Pipeline',
       active: pathname.startsWith('/queue'),
       count: pipelineCount,
-      tone: pendingCount > 0 ? 'attention' : 'muted',
+      tone: 'muted',
       title: `${pipelineCount} opportunities · ${pendingCount} pending review`,
     },
     {
@@ -58,26 +64,31 @@ export default function NavBar() {
       label: 'Underwrite',
       active: pathname.startsWith('/underwrite'),
       count: draftReadyCount,
-      tone: draftReadyCount > 0 ? 'attention' : 'muted',
-      title: `${draftReadyCount} AI drafts ready for review`,
+      tone: draftsOverdue > 0 ? 'urgent' : 'muted',
+      title: draftsOverdue > 0
+        ? `${draftReadyCount} AI drafts ready for review · ${draftsOverdue} waiting over ${BOARD_LATE_DAYS} days`
+        : `${draftReadyCount} AI drafts ready for review`,
     },
     {
       to: '/contract',
       label: 'Under Contract',
       active: pathname.startsWith('/contract'),
       count: contractCount,
-      tone: contractUrgent ? 'urgent' : 'muted',
-      title: contractUrgent
-        ? `${contractCount} under contract · inspection ends in ${soonestDays} days`
-        : `${contractCount} under contract`,
+      tone: inspectionOverdue ? 'urgent' : 'muted',
+      title: soonestDays === undefined
+        ? `${contractCount} under contract`
+        : inspectionOverdue
+          ? `${contractCount} under contract · an inspection period has lapsed`
+          : `${contractCount} under contract · next inspection ends in ${soonestDays} days`,
     },
     {
       to: '/portfolio',
       label: 'Portfolio',
       active: pathname.startsWith('/portfolio'),
       count: portfolioCount,
-      tone: 'muted',
-      title: `${stageCounts.precon} pre-con · ${stageCounts.construction} in construction`,
+      tone: marksNeedingApproval > 0 ? 'urgent' : 'muted',
+      title: `${stageCounts.precon} pre-con · ${stageCounts.construction} in construction`
+        + (marksNeedingApproval > 0 ? ` · ${marksNeedingApproval} month-end marks need approval` : ''),
     },
     {
       to: '/for-sale',
@@ -112,19 +123,19 @@ export default function NavBar() {
             <span className={`nav-count nav-count--${link.tone}`}>{link.count}</span>
           </Link>
         ))}
-        <label className="nav-view">
-          <span className="nav-view-label">View as</span>
-          <select
-            className="nav-select"
-            value={role ?? ''}
-            onChange={(e) => viewAs(e.target.value as Role)}
-          >
-            {!role && <option value="" disabled>Choose…</option>}
-            {(Object.keys(ROLE_LABELS) as Role[]).map((r) => (
-              <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-            ))}
-          </select>
-        </label>
+        <div className="nav-roles" role="group" aria-label="View as">
+          {(Object.keys(ROLE_LABELS) as Role[]).map((r) => (
+            <button
+              key={r}
+              className={`nav-role ${role === r ? 'nav-role--on' : ''}`}
+              aria-pressed={role === r}
+              title={`View as ${ROLE_LABELS[r]}`}
+              onClick={() => role !== r && viewAs(r)}
+            >
+              {ROLE_SHORT_LABELS[r]}
+            </button>
+          ))}
+        </div>
         {role === 'analyst' && (
           <select
             className="nav-select"

@@ -9,6 +9,7 @@ import { AI, BLUEPRINT, MLS, SFDC, TAPE, computed, human, markProvenance } from 
 import { ASSETS } from '../data/assets';
 import { DEMO_TODAY } from '../data/dates';
 import { useListingActions, withListingActions } from '../data/listingActions';
+import { useFromPage } from '../data/navHistory';
 import { useMarkReviews, withMarkReviews } from '../data/markReview';
 import { useDraftReviews, withReviewStatus } from '../data/review';
 import { APPROVAL_THRESHOLD, PIPELINE_STAGES, constructionStatus, constructionSummary, stageHistory, underwritingGap } from '../data/selectors';
@@ -654,6 +655,7 @@ function RealizedSection({ asset }: { asset: Asset }) {
 export default function AssetDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const from = useFromPage();
   const { reviews, published } = useMarkReviews();
   const { actions } = useListingActions();
   const { reviews: draftReviews } = useDraftReviews();
@@ -679,7 +681,7 @@ export default function AssetDetailPage() {
   return (
     <div className="uw-page as-page">
       <div className="uw-breadcrumb">
-        <button className="uw-breadcrumb-link" onClick={() => navigate('/')}>Dashboard</button>
+        <button className="uw-breadcrumb-link" onClick={() => navigate(from.path)}>{from.label}</button>
         <span className="uw-breadcrumb-sep">›</span>
         <span className="uw-breadcrumb-current">{asset.id}</span>
       </div>
