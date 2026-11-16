@@ -386,7 +386,7 @@ const pipelineSeeds: Seed[] = [
   {
     id: 'BOOL-009', address: '11234 Gorham Ave', city: 'Los Angeles', state: 'CA', zip: '90049',
     market: 'LA', stage: 'underwriting', lotSqFt: 7000,
-    uwBoard: { status: 'draft_ready', since: '2026-04-13', analyst: 'Maya Chen' },
+    uwBoard: { status: 'draft_ready', since: '2026-04-13', analyst: 'Elena Ruiz' },
     intake: { source: 'MLS', dateReceived: '2026-04-08' },
   },
   {

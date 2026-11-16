@@ -200,7 +200,7 @@ function ApprovalItem({ asset, p, onApprove, disabled }: {
 }) {
   const [note, setNote] = useState('');
   return (
-    <li className="pf-approval">
+    <li className="pf-approval" id={`approval-${asset.id}`}>
       <div className="pf-approval-main">
         <Link to={`/asset/${asset.id}`} className="pf-asset-id">{asset.id}</Link>
         <span className="pf-approval-address"><AssetLink id={asset.id}>{asset.address}</AssetLink> · {asset.market}</span>

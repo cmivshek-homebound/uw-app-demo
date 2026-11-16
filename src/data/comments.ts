@@ -38,8 +38,8 @@ function comment(assetId: string, author: string, hours: number, text: string): 
 export const SEED_COMMENTS: AssetComment[] = [
   // LA Westside demo thread
   comment('BOOL-048', 'Ava Kim', 20, 'Seller is motivated and open to a quick close if we can move this week.'),
-  comment('BOOL-009', 'Elena Ruiz', 6, '@Maya Chen the survey shows a 4 ft side setback; the city wants 5 ft for a second story. Worth confirming before you submit.'),
-  comment('BOOL-009', 'Maya Chen', 2, 'Good catch. Asked the listing agent for an updated survey; holding the submit until it lands.'),
+  comment('BOOL-009', 'Jordan Pike', 6, '@Elena Ruiz the survey shows a 4 ft side setback; the city wants 5 ft for a second story. Worth confirming before you submit.'),
+  comment('BOOL-009', 'Elena Ruiz', 2, 'Good catch. Asked the listing agent for an updated survey; holding the submit until it lands.'),
   comment('BOOL-012', 'Elena Ruiz', 50, 'Arborist report puts the oak’s root zone along the east side. We could lose about 4 ft of footprint.'),
   comment('BOOL-012', 'Jordan Pike', 27, 'If the footprint shrinks, The Daniel still fits per the draft. The ADU is the piece at risk.'),
   comment('BOOL-028', 'Elena Ruiz', 70, 'Plan check came back with corrections. Resubmitted Monday; that’s where the slip started.'),

@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import { ANALYST_BY_MARKET } from './markProposals';
 import { boardAnalysts } from './selectors';
 
 // ── "View as" role ─────────────────────────────────────────────
@@ -22,8 +23,8 @@ export const ROLE_SHORT_LABELS: Record<Role, string> = {
 
 export const DEFAULT_ROLE: Role = 'manager';
 
-/** Analysts who own cards on the underwrite board, for the Analyst view. */
-export const VIEWABLE_ANALYSTS = boardAnalysts();
+/** Analysts who own board cards or a market's marks, for the Analyst view. */
+export const VIEWABLE_ANALYSTS = [...new Set([...boardAnalysts(), ...Object.values(ANALYST_BY_MARKET)])].sort();
 export const DEFAULT_ANALYST = VIEWABLE_ANALYSTS.includes('Maya Chen') ? 'Maya Chen' : VIEWABLE_ANALYSTS[0];
 
 /** Where each role lands when selected. */

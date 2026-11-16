@@ -13,7 +13,7 @@ import { MARKETS, latestMark, marketPlanNames, projectedTotalCost } from './sele
 // lot's working build budget. Underwriting keeps its own budget version until
 // someone reviews Blueprint's and promotes it. This file seeds what makes each
 // lot's sync distinct; amounts derive from the asset's budget lines so they tie out.
-//   BOOL-023  Blueprint changed  +$38K: grade beams after the soil report (≈5 pts of margin)
+//   BOOL-027  Blueprint changed  +$38K: sycamore root-zone pier foundation (the LA demo step)
 //   BOOL-018  Blueprint changed  +$9.5K: cabinet package re-quote
 //   BOOL-016  Blueprint changed  −$6K: site work rebid
 //   BOOL-020, BOOL-025  Stale: last promoted more than 30 days ago
@@ -118,10 +118,10 @@ interface BudgetSeed {
 }
 
 const BUDGET_SEEDS: Record<string, BudgetSeed> = {
-  'BOOL-023': {
+  'BOOL-027': {
     change: {
-      lines: { foundation: 26_000, framing: 12_000 },
-      note: 'Engineer added grade beams after the soil report; framing re-quoted to match.',
+      lines: { foundation: 26_000, site_work: 12_000 },
+      note: 'Arborist-required pier foundation in the sycamore root zone; site work re-quoted for hand digging.',
       on: '2026-04-15',
     },
   },

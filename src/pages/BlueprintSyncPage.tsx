@@ -1,5 +1,5 @@
-import { Fragment, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Fragment, useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import AssetLink from '../components/AssetLink';
 import { CATEGORY_LABELS } from '../components/constructionFormat';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
@@ -122,7 +122,20 @@ export default function BlueprintSyncPage() {
   const { promotions, promote } = useBlueprint();
   const { role, analyst } = useRole();
   const canAct = useCanAct();
-  const [open, setOpen] = useState<string | null>(null);
+  // ?review=BOOL-027 opens that lot's Review & promote preview (demo steps, notifications).
+  const [params] = useSearchParams();
+  const reviewParam = params.get('review');
+  const [open, setOpen] = useState<string | null>(reviewParam);
+  const [seenParam, setSeenParam] = useState(reviewParam);
+  if (reviewParam !== seenParam) {
+    setSeenParam(reviewParam);
+    if (reviewParam) setOpen(reviewParam);
+  }
+  useEffect(() => {
+    if (!reviewParam) return;
+    const t = window.setTimeout(() => document.getElementById(`budget-${reviewParam}`)?.scrollIntoView({ block: 'center' }), 60);
+    return () => window.clearTimeout(t);
+  }, [reviewParam]);
   const [showAllLog, setShowAllLog] = useState(false);
 
   const owned = assets.filter((a) => a.owned && a.stage !== 'sold');
@@ -244,7 +257,7 @@ export default function BlueprintSyncPage() {
                 const isOpen = open === r.asset.id;
                 return (
                   <Fragment key={r.asset.id}>
-                    <tr className={isOpen ? 'pf-row--open' : ''}>
+                    <tr id={`budget-${r.asset.id}`} className={isOpen ? 'pf-row--open' : ''}>
                       <td>
                         <Link to={`/asset/${r.asset.id}`} className="bp-address">{r.asset.address}</Link>
                         <span className="pf-asset-address">

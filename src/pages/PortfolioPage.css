@@ -424,3 +424,6 @@
 .cx-bp-health:hover { border-color: #1A6B4A; color: #171717; }
 .cx-bp-dot { width: 7px; height: 7px; border-radius: 50%; background: #1A6B4A; }
 .cx-bp-changed { color: #b45309; font-weight: 600; }
+
+/* Deep links (demo steps, notifications) land below the sticky nav. */
+.pf-approval[id], .pf-card[id] { scroll-margin-top: 76px; }

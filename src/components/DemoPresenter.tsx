@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { DEMO_STEPS, useDemo } from '../data/demo';
+import { ROLE_LABELS, useRole } from '../data/role';
 import './DemoPresenter.css';
 
 /** Floating presenter card: the current step's talking point and a link to its page. */
@@ -9,6 +10,15 @@ export default function DemoPresenter() {
   const { pathname, search, hash } = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [showSteps, setShowSteps] = useState(false);
+  const { setRole, setAnalyst } = useRole();
+  const stepRole = DEMO_STEPS[step]?.role;
+
+  // Steps can set View as (e.g. switch to Manager to approve a mark); applied when the step becomes current.
+  useEffect(() => {
+    if (!on || !stepRole) return;
+    setRole(stepRole.role);
+    if (stepRole.analyst) setAnalyst(stepRole.analyst);
+  }, [on, step, stepRole, setRole, setAnalyst]);
 
   // Steps can point at a section (#id); the router doesn't scroll to hashes, so do it here.
   useEffect(() => {
@@ -38,6 +48,11 @@ export default function DemoPresenter() {
       </div>
 
       <h3 className="dp-title">{current.title}</h3>
+      {current.role && (
+        <span className="dp-role">
+          Viewing as {ROLE_LABELS[current.role.role]}{current.role.analyst ? ` · ${current.role.analyst}` : ''}
+        </span>
+      )}
 
       {!collapsed && (
         <>

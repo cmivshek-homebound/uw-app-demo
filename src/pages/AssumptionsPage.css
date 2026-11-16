@@ -35,3 +35,5 @@
 .asm-reason { min-width: 260px; color: #404040; }
 .asm-link { color: #1A6B4A; font-weight: 600; text-decoration: none; white-space: nowrap; }
 .asm-link:hover { text-decoration: underline; }
+
+#change-log { scroll-margin-top: 76px; }

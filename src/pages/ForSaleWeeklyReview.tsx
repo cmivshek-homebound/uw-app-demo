@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import AssetLink from '../components/AssetLink';
 import ProvenanceValue from '../components/ProvenanceValue';
 import { DEMO_TODAY, demoNow } from '../data/dates';
@@ -485,7 +486,19 @@ export default function ForSaleWeeklyReview() {
 
   const reviewed = (id: string) => (actions[id]?.decisions?.length ?? 0) > 0;
   const reviewedCount = items.filter((i) => reviewed(i.asset.id)).length;
-  const [selectedId, setSelectedId] = useState<string | undefined>(() => items.find((i) => !reviewed(i.asset.id))?.asset.id ?? items[0]?.asset.id);
+  // ?listing=BOOL-034 opens that listing's sheet (demo steps); otherwise the first one not yet reviewed.
+  const [params] = useSearchParams();
+  const listingParam = params.get('listing');
+  const [selectedId, setSelectedId] = useState<string | undefined>(
+    () => (listingParam && items.some((i) => i.asset.id === listingParam) ? listingParam : undefined)
+      ?? items.find((i) => !reviewed(i.asset.id))?.asset.id ?? items[0]?.asset.id,
+  );
+  // A new ?listing= while mounted (e.g. the demo's Go link) selects it.
+  const [seenParam, setSeenParam] = useState(listingParam);
+  if (listingParam !== seenParam) {
+    setSeenParam(listingParam);
+    if (listingParam) setSelectedId(listingParam);
+  }
   const index = Math.max(0, items.findIndex((i) => i.asset.id === selectedId));
   const go = (i: number) => setSelectedId(items[Math.min(items.length - 1, Math.max(0, i))]?.asset.id);
 
