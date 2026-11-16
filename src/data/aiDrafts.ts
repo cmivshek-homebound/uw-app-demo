@@ -23,8 +23,9 @@ export type Confidence = 'high' | 'medium' | 'low';
 
 export type DraftSectionKey = 'lot' | 'plans' | 'adu' | 'comps' | 'recommendation';
 
-/** Net margin the max land price is solved for. */
-export const TARGET_MARGIN_PCT = 15;
+/** Net margin the max land price is solved for (assumptions.ts). */
+export { TARGET_MARGIN_PCT } from './assumptions';
+import { TARGET_MARGIN_PCT } from './assumptions';
 
 // Overall score bands. A level caps the score at its band's ceiling.
 const LEVEL_RANK: Record<Confidence, number> = { low: 0, medium: 1, high: 2 };

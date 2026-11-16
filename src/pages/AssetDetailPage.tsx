@@ -7,13 +7,9 @@ import AssetComments from '../components/AssetComments';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
 import { getAIDraft } from '../data/aiDrafts';
 import { AI, BLUEPRINT, MLS, SFDC, TAPE, computed, human, markProvenance } from '../data/provenance';
-import { ASSETS } from '../data/assets';
 import { DEMO_TODAY } from '../data/dates';
-import { useListingActions, withListingActions } from '../data/listingActions';
 import { useFromPage } from '../data/navHistory';
-import { useIntake, withIntakeDecisions } from '../data/intake';
-import { useMarkReviews, withMarkReviews } from '../data/markReview';
-import { useDraftReviews, withReviewStatus } from '../data/review';
+import { useSessionAssets } from '../data/useSessionAssets';
 import { APPROVAL_THRESHOLD, PIPELINE_STAGES, constructionStatus, constructionSummary, stageHistory, underwritingGap } from '../data/selectors';
 import type { GapLine } from '../data/selectors';
 import { CARRY_COST_PCT, SELLING_COST_PCT, closingCostPctFor } from '../data/underwriting';
@@ -706,14 +702,8 @@ export default function AssetDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const from = useFromPage();
-  const { reviews, published } = useMarkReviews();
-  const { actions } = useListingActions();
-  const { reviews: draftReviews } = useDraftReviews();
-  const { decisions } = useIntake();
-  const asset = withListingActions(
-    withReviewStatus(withIntakeDecisions(withMarkReviews(ASSETS, reviews, published), decisions), draftReviews),
-    actions,
-  ).find((a) => a.id === id);
+  // Every session change applies: marks, intake, submissions, listing actions, Blueprint promotions.
+  const asset = useSessionAssets().find((a) => a.id === id);
 
   if (!asset) {
     return (

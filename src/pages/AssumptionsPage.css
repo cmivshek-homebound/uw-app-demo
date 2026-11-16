@@ -1,0 +1,37 @@
+/* ── Assumptions ── */
+.asm-muted { color: #a3a3a3; }
+.asm-name { font-weight: 600; color: #171717; }
+.asm-nowrap { white-space: nowrap; }
+
+.asm-cat-row td {
+  padding-top: 16px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a3a3a3;
+  background: #fafafa;
+}
+
+.asm-all { text-align: center; }
+.asm-all-note { margin-left: 8px; font-size: 11.5px; color: #a3a3a3; }
+
+.asm-changed {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.asm-used { color: #171717; font-weight: 600; }
+.asm-used .asm-muted { font-weight: 400; font-size: 11.5px; }
+
+.asm-old { color: #a3a3a3; text-decoration: line-through; }
+.asm-reason { min-width: 260px; color: #404040; }
+.asm-link { color: #1A6B4A; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.asm-link:hover { text-decoration: underline; }

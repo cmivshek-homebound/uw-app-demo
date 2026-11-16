@@ -19,6 +19,7 @@ import {
 import { useDemo } from '../data/demo';
 import { ROLE_LABELS, ROLE_SHORT_LABELS, VIEWABLE_ANALYSTS, roleLanding, useRole } from '../data/role';
 import type { Role } from '../data/role';
+import NavDataMenu from './NavDataMenu';
 import NotificationBell from './NotificationBell';
 import './NavBar.css';
 
@@ -215,6 +216,7 @@ export default function NavBar() {
         >
           Demo
         </button>
+        <NavDataMenu />
         <NotificationBell />
       </div>
     </nav>

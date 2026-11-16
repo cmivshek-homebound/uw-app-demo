@@ -1,11 +1,8 @@
 import type { ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import ProvenanceValue from '../components/ProvenanceValue';
-import { ASSETS } from '../data/assets';
 import { DEMO_TODAY, daysRemaining, daysSince } from '../data/dates';
-import { useMarkReviews, withMarkReviews } from '../data/markReview';
-import { useDraftReviews, withReviewStatus } from '../data/review';
-import { useIntake, withIntakeDecisions } from '../data/intake';
+import { useSessionAssets } from '../data/useSessionAssets';
 import { MLS, computed } from '../data/provenance';
 import {
   ASSET_STAGES,
@@ -163,17 +160,10 @@ export default function Dashboard() {
     setParams(next, { replace: true });
   };
 
-  // Month-end review state applies: approved moves leave Needs attention, and
-  // once April is published the balance sheet marks to it.
-  const { reviews: markReviews, published } = useMarkReviews();
-  // Drafts submitted to Growth this session count as Ready for Offer, as on the board.
-  const { reviews: draftReviews } = useDraftReviews();
-  // Intake decisions apply too: sent leads join the board, DQ'd leads drop out.
-  const { decisions } = useIntake();
-  const scoped = filterAssets(
-    withReviewStatus(withIntakeDecisions(withMarkReviews(ASSETS, markReviews, published), decisions), draftReviews),
-    { market },
-  );
+  // Every session change applies (useSessionAssets): approved marks leave Needs
+  // attention, published marks and promoted Blueprint budgets reach the balance
+  // sheet, submitted drafts and sent leads move on the board.
+  const scoped = filterAssets(useSessionAssets(), { market });
   // Disqualified leads live only in the Intake page's log.
   const assets = scoped.filter((a) => !a.disqualified);
 

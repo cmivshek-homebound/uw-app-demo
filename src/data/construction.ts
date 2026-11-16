@@ -9,6 +9,7 @@ import type {
   MilestoneKind,
   ScheduleMilestone,
 } from '../types';
+import { CONTINGENCY_PCT, DEFAULT_BUILD_DAYS, DEFAULT_PRECON_DAYS, LISTING_PREP_DAYS } from './assumptions';
 import { DEMO_TODAY } from './dates';
 import { seededRandom } from './random';
 
@@ -28,14 +29,10 @@ import { seededRandom } from './random';
 //   BOOL-042  −3.4%  foundation rebid came in under
 //   BOOL-027  +1.8%  sycamore root-zone work (over, but inside the 2% tolerance)
 
-/** Pre-con runs this long before construction starts unless a seed says otherwise. */
-export const DEFAULT_PRECON_DAYS = 45;
-/** Finished homes get their CO this long before they list. */
-const LISTING_PREP_DAYS = 14;
+// Pre-con length, build duration, listing prep and contingency come from assumptions.ts.
+export { DEFAULT_PRECON_DAYS };
 /** Permits issue this long before the planned start. */
 const PERMIT_LEAD_DAYS = 10;
-/** Planned build duration for jobs not yet started. */
-const DEFAULT_BUILD_DAYS: Record<Market, number> = { DFW: 370, Houston: 365, Tampa: 380, 'St. Pete': 380, LA: 420 };
 /** Derived durations outside this band mean progress and dates disagree. */
 const BUILD_DAYS_RANGE = [300, 470] as const;
 /** Builds without a seeded variance land within this % of budget. */
@@ -62,7 +59,7 @@ const LINES: { category: BudgetCategory; share: number; spend: [number, number];
   { category: 'mep', share: 0.2, spend: [0.25, 0.8], buyoutAt: 0.2 },
   { category: 'exterior', share: 0.1, spend: [0.35, 0.85], buyoutAt: 0.35 },
   { category: 'interior_finishes', share: 0.25, spend: [0.55, 1], buyoutAt: 0.5 },
-  { category: 'contingency', share: 0.03, spend: [1, 1], buyoutAt: 1 },
+  { category: 'contingency', share: CONTINGENCY_PCT / 100, spend: [1, 1], buyoutAt: 1 },
 ];
 
 /** Build milestones: when they fall (fraction of duration) and how much cost is in place by then. */

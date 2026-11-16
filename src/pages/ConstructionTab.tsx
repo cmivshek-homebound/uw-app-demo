@@ -4,8 +4,7 @@ import ConstructionDetail, { MarginImpactLine, StatusChip, VarianceBar } from '.
 import { AI, BLUEPRINT, MILESTONE_LABELS, shortDate, signedPct, usdK, weeksLate } from '../components/constructionFormat';
 import AssetLink from '../components/AssetLink';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
-import { ASSETS } from '../data/assets';
-import { useMarkReviews, withMarkReviews } from '../data/markReview';
+import { useSessionAssets } from '../data/useSessionAssets';
 import { constructionByRisk, constructionStatus, constructionSummary, nextMilestone } from '../data/selectors';
 
 const COLUMNS = 8;
@@ -13,8 +12,7 @@ const COLUMNS = 8;
 export default function ConstructionTab() {
   const [open, setOpen] = useState<Set<string>>(new Set());
   // Same marks as the asset page: once April is published, margin impact reads it.
-  const { reviews, published } = useMarkReviews();
-  const assets = constructionByRisk(withMarkReviews(ASSETS, reviews, published));
+  const assets = constructionByRisk(useSessionAssets());
   const rows = assets.map((asset) => ({
     asset,
     summary: constructionSummary(asset)!,

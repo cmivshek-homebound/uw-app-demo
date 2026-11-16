@@ -12,6 +12,9 @@ import ListingActionProvider from './components/ListingActionProvider';
 import IntakeProvider from './components/IntakeProvider';
 import NotificationProvider from './components/NotificationProvider';
 import CommentsProvider from './components/CommentsProvider';
+import BlueprintProvider from './components/BlueprintProvider';
+import AssumptionsPage from './pages/AssumptionsPage';
+import BlueprintSyncPage from './pages/BlueprintSyncPage';
 import Dashboard from './pages/Dashboard';
 import IntakePage from './pages/IntakePage';
 import UnderwritePage from './pages/UnderwritePage';
@@ -35,6 +38,7 @@ export default function App() {
     <BrowserRouter>
       <NotificationProvider>
       <CommentsProvider>
+      <BlueprintProvider>
       <DraftReviewProvider>
       <IntakeProvider>
         <MarkReviewProvider>
@@ -61,6 +65,9 @@ export default function App() {
               <Route path="/portfolio" element={<PortfolioRedirect />} />
               <Route path="/for-sale" element={<ForSalePage />} />
               <Route path="/integrations" element={<IntegrationsPage />} />
+              <Route path="/data/sources" element={<Navigate to="/integrations" replace />} />
+              <Route path="/data/assumptions" element={<AssumptionsPage />} />
+              <Route path="/data/blueprint" element={<BlueprintSyncPage />} />
               <Route path="/approvals" element={<ApprovalsPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
@@ -74,6 +81,7 @@ export default function App() {
         </MarkReviewProvider>
       </IntakeProvider>
       </DraftReviewProvider>
+      </BlueprintProvider>
       </CommentsProvider>
       </NotificationProvider>
     </BrowserRouter>

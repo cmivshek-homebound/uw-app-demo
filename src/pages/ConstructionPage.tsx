@@ -3,8 +3,9 @@ import AssetLink from '../components/AssetLink';
 import { StatusChip } from '../components/ConstructionDetail';
 import { BLUEPRINT, MILESTONE_LABELS, shortDate } from '../components/constructionFormat';
 import ProvenanceValue from '../components/ProvenanceValue';
-import { ASSETS } from '../data/assets';
-import { useMarkReviews, withMarkReviews } from '../data/markReview';
+import { useSessionAssets } from '../data/useSessionAssets';
+import { LAST_SYNC, budgetSync, useBlueprint } from '../data/blueprint';
+import { relativeTime } from '../data/dates';
 import { assetsByStage, constructionStatus, nextMilestone } from '../data/selectors';
 import ConstructionTab from './ConstructionTab';
 import './OpportunityQueue.css';
@@ -12,8 +13,7 @@ import './PortfolioPage.css';
 
 /** Closed lots not yet started: where each one is headed next. */
 function PreconSection() {
-  const { reviews, published } = useMarkReviews();
-  const precon = assetsByStage(withMarkReviews(ASSETS, reviews, published)).precon
+  const precon = assetsByStage(useSessionAssets()).precon
     .filter((a) => a.owned)
     .sort((a, b) => a.owned!.schedule.plannedStart.localeCompare(b.owned!.schedule.plannedStart));
 
@@ -77,6 +77,25 @@ function PreconSection() {
   );
 }
 
+/** Blueprint data health: when it last synced and how many budgets moved since they were promoted. */
+function BlueprintHealth() {
+  const assets = useSessionAssets();
+  const { promotions } = useBlueprint();
+  const changed = assets
+    .filter((a) => a.owned && a.stage !== 'sold')
+    .filter((a) => budgetSync(a, promotions).status === 'changed').length;
+  return (
+    <Link to="/data/blueprint" className="cx-bp-health">
+      <span className="cx-bp-dot" aria-hidden="true" />
+      Blueprint synced {relativeTime(LAST_SYNC)}
+      {' · '}
+      <span className={changed ? 'cx-bp-changed' : ''}>
+        {changed === 0 ? 'all budgets in sync' : `${changed} ${changed === 1 ? 'budget' : 'budgets'} changed`}
+      </span>
+    </Link>
+  );
+}
+
 export default function ConstructionPage() {
   return (
     <div className="oq-page">
@@ -85,6 +104,7 @@ export default function ConstructionPage() {
           <h1 className="oq-title">Construction</h1>
           <p className="oq-subtitle">Lots waiting to start, then every build in progress, riskiest first.</p>
         </div>
+        <BlueprintHealth />
       </div>
       <PreconSection />
       <ConstructionTab />

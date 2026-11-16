@@ -3,14 +3,19 @@
 // definition of total cost:
 //   land + closing (on land) + build + carry/financing (on build) + selling (on ESP)
 
-export const CLOSING_COST_PCT = 0.9;  // of land price
-export const CARRY_COST_PCT = 6;      // of build, construction-period financing and carry
-export const SELLING_COST_PCT = 5.5;  // of ESP, commissions and seller closing costs
+// Rates live in assumptions.ts (the single source); re-exported for existing imports.
+import {
+  CARRY_COST_PCT,
+  CLOSING_COST_CORRECTED_ON,
+  CLOSING_COST_PCT,
+  LEGACY_CLOSING_COST_PCT,
+  SELLING_COST_PCT,
+} from './assumptions';
 
-// Underwrites before this date assumed 0.5% closing costs; realized closings
-// ran ~0.9%, so the assumption was corrected from January 2026 on.
-export const LEGACY_CLOSING_COST_PCT = 0.5;
-export const CLOSING_COST_CORRECTED_ON = '2026-01-01';
+export { CARRY_COST_PCT, CLOSING_COST_CORRECTED_ON, CLOSING_COST_PCT, LEGACY_CLOSING_COST_PCT, SELLING_COST_PCT };
+
+// Underwrites before CLOSING_COST_CORRECTED_ON assumed 0.5% closing costs;
+// realized closings ran ~0.9%, so the assumption was corrected from January 2026 on.
 
 export function closingCostPctFor(underwrittenOn: string): number {
   return underwrittenOn < CLOSING_COST_CORRECTED_ON ? LEGACY_CLOSING_COST_PCT : CLOSING_COST_PCT;

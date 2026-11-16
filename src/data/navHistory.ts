@@ -30,6 +30,8 @@ export function pageLabel(pathname: string, search: string): string | undefined 
   if (pathname.startsWith('/for-sale')) return 'For Sale';
   if (pathname.startsWith('/approvals')) return 'Approvals';
   if (pathname.startsWith('/integrations')) return 'Data sources';
+  if (pathname.startsWith('/data/assumptions')) return 'Assumptions';
+  if (pathname.startsWith('/data/blueprint')) return 'Blueprint sync';
   return undefined;
 }
 

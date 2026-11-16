@@ -1,3 +1,5 @@
+import { CARRY_COST_PCT, HOMEBOUND_FEE_PCT, PLAN_TRANSACTION_PCT } from './assumptions';
+
 // ── Domain types ───────────────────────────────────────────────
 export interface Elevation {
   name: string;
@@ -264,9 +266,9 @@ export function calcFinancials({
   const sqft = elevation.sqft + sqftDelta;
   const buildCost = sqft * spec.costPerSqft + optionsCost;
   const estSalePrice = sqft * plan.espPerSqft;
-  const financingCost = buildCost * 0.06;
-  const transactionCosts = estSalePrice * 0.03;
-  const homeboundFee = estSalePrice * 0.05;
+  const financingCost = buildCost * (CARRY_COST_PCT / 100);
+  const transactionCosts = estSalePrice * (PLAN_TRANSACTION_PCT / 100);
+  const homeboundFee = estSalePrice * (HOMEBOUND_FEE_PCT / 100);
   const totalCostExLand = buildCost + financingCost + transactionCosts + homeboundFee;
   const maxLotOffer = estSalePrice - totalCostExLand;
   const projectedMargin = estSalePrice > 0 ? (maxLotOffer / estSalePrice) * 100 : 0;

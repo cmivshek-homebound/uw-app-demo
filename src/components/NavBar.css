@@ -220,3 +220,43 @@
   .nav-divider { margin: 0 8px; }
   .nav-link { padding: 4px 7px; }
 }
+
+/* ── Data menu ── */
+.nav-data { position: relative; margin-left: 8px; }
+
+.nav-data-btn {
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.nav-data-caret { font-size: 9px; color: #737373; }
+
+.nav-data-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 240px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+  z-index: 200;
+}
+
+.nav-data-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  text-decoration: none;
+}
+
+.nav-data-item:hover { background: #fafafa; }
+.nav-data-item--active { background: #eef6f1; }
+.nav-data-label { font-size: 13px; font-weight: 600; color: #171717; }
+.nav-data-hint { font-size: 11.5px; color: #8a8a8a; }

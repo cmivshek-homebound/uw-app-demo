@@ -22,7 +22,9 @@ export type ScreenId =
   | 'accuracy'
   | 'construction'
   | 'forSale'
-  | 'approvals';
+  | 'approvals'
+  | 'assumptions'
+  | 'blueprintSync';
 
 /** Screen names, with an example link for routes that take an asset id. */
 export const SCREENS: Record<ScreenId, { label: string; example: string }> = {
@@ -42,6 +44,8 @@ export const SCREENS: Record<ScreenId, { label: string; example: string }> = {
   construction: { label: 'Construction', example: '/construction' },
   forSale: { label: 'For sale', example: '/for-sale' },
   approvals: { label: 'Needs your approval', example: '/approvals' },
+  assumptions: { label: 'Data · Assumptions', example: '/data/assumptions' },
+  blueprintSync: { label: 'Data · Blueprint sync', example: '/data/blueprint' },
 };
 
 export type IntegrationId = 'salesforce' | 'tape' | 'blueprint' | 'mls' | 'ai' | 'slack';
@@ -98,7 +102,9 @@ export const INTEGRATIONS: Integration[] = [
     description: 'Construction budgets, spend and schedules for owned lots, from pre-con through CO.',
     marker: BLUEPRINT,
     fields: [
-      { field: 'Vertical budget and budget lines', screens: ['construction', 'asset'] },
+      { field: 'Vertical budget and budget lines', screens: ['construction', 'asset', 'blueprintSync'] },
+      { field: 'Plan cost book ($/sqft by spec level)', screens: ['blueprintSync'] },
+      { field: 'Budget versions and promotions to underwriting', screens: ['blueprintSync', 'construction'] },
       { field: 'Spend to date and % complete', screens: ['construction', 'asset'] },
       { field: 'Schedule: planned and forecast CO, milestones, weeks late', screens: ['construction', 'asset', 'approvals'] },
       { field: 'Change orders', screens: ['construction', 'asset'] },
