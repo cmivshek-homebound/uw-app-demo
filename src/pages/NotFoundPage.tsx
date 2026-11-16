@@ -12,7 +12,7 @@ export default function NotFoundPage() {
           <p className="oq-subtitle">
             Nothing lives at <code>{pathname}</code>.
             <Link to="/" className="link-button">Back to the dashboard</Link>
-            <Link to="/queue" className="link-button">Open the pipeline</Link>
+            <Link to="/intake" className="link-button">Open intake</Link>
           </p>
         </div>
       </div>

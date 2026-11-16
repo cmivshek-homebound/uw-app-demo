@@ -19,7 +19,7 @@ const PORTFOLIO_TABS: Record<string, string> = {
 export function pageLabel(pathname: string, search: string): string | undefined {
   if (pathname === '/') return 'Dashboard';
   if (pathname.startsWith('/asset/')) return undefined;
-  if (pathname.startsWith('/queue')) return 'Pipeline';
+  if (pathname.startsWith('/intake')) return 'Intake';
   if (pathname === '/underwrite') return 'Underwrite';
   const uw = pathname.match(/^\/underwrite\/([^/]+)(\/draft|\/scenario\/comps|\/scenario)?$/);
   if (uw) {

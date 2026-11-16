@@ -12,7 +12,7 @@ export const PROPOSAL_MONTH = '2026-04';
 /** Mark moves larger than this (either direction) need sign-off. */
 export const APPROVAL_THRESHOLD = 10_000;
 
-const ANALYST_BY_MARKET: Record<Market, string> = {
+export const ANALYST_BY_MARKET: Record<Market, string> = {
   DFW: 'Luis Ortega',
   Houston: 'Priya Shah',
   Tampa: 'Maya Chen',

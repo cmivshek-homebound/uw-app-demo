@@ -3,8 +3,9 @@ import homeboundLogo from '../assets/homebound-logo.png';
 import { daysRemaining } from '../data/dates';
 import { ASSETS } from '../data/assets';
 import { useDraftReviews, withReviewStatus } from '../data/review';
+import { useIntake, withIntakeDecisions } from '../data/intake';
 import { useMarkReviews, withMarkReviews } from '../data/markReview';
-import { BOARD_LATE_DAYS, assetsByStage, assetsNeedingApproval, countByStage, daysInColumn, pipelineAssets, underwritingBoard } from '../data/selectors';
+import { BOARD_LATE_DAYS, assetsByStage, assetsNeedingApproval, countByStage, daysInColumn, underwritingBoard, untriagedLeads } from '../data/selectors';
 import { useDemo } from '../data/demo';
 import { ROLE_LABELS, ROLE_SHORT_LABELS, VIEWABLE_ANALYSTS, roleLanding, useRole } from '../data/role';
 import type { Role } from '../data/role';
@@ -27,12 +28,12 @@ export default function NavBar() {
   };
 
   // Counts shown beside each destination so the bar reports live workload.
-  const pipeline = pipelineAssets();
   const stageCounts = countByStage();
-  const pipelineCount = pipeline.length;
-  const pendingCount = pipeline.filter((a) => a.pipelineStatus === 'pending_review').length;
+  const { decisions } = useIntake();
   const { reviews } = useDraftReviews();
-  const draftReady = underwritingBoard(withReviewStatus(ASSETS, reviews)).draft_ready;
+  const sessionAssets = withReviewStatus(withIntakeDecisions(ASSETS, decisions), reviews);
+  const intakeCount = untriagedLeads(sessionAssets).length;
+  const draftReady = underwritingBoard(sessionAssets).draft_ready;
   const draftReadyCount = draftReady.length;
   const draftsOverdue = draftReady.filter((a) => daysInColumn(a) > BOARD_LATE_DAYS).length;
   const { reviews: markReviews, published } = useMarkReviews();
@@ -52,12 +53,12 @@ export default function NavBar() {
   // Badges stay neutral; amber only when something is overdue or needs approval.
   const links = [
     {
-      to: '/queue',
-      label: 'Pipeline',
-      active: pathname.startsWith('/queue'),
-      count: pipelineCount,
+      to: '/intake',
+      label: 'Intake',
+      active: pathname.startsWith('/intake'),
+      count: intakeCount,
       tone: 'muted',
-      title: `${pipelineCount} opportunities · ${pendingCount} pending review`,
+      title: `${intakeCount} untriaged ${intakeCount === 1 ? 'lead' : 'leads'}`,
     },
     {
       to: '/underwrite',

@@ -9,7 +9,6 @@ export interface Opportunity {
   source: 'MLS' | 'Off-Market';
   sdrOwner: string;
   dateReceived: string;
-  status: 'pending_review' | 'in_review' | 'ready_for_offer' | 'dqd';
 }
 
 // ── Unified asset model ────────────────────────────────────────
@@ -17,6 +16,7 @@ export interface Opportunity {
 // the blocks of every stage before it (e.g. a for_sale asset has
 // underwrite, contract, owned, marks and listing).
 
+/** 'opportunity' is untouched intake: a lead nobody has sent to underwriting yet. */
 export type AssetStage =
   | 'opportunity'
   | 'underwriting'
@@ -41,9 +41,7 @@ export interface ProvenanceInfo {
   note?: string;             // human overrides, e.g. "Overrode AI ESP: corner lot premium"
 }
 
-export type PipelineStatus = Opportunity['status'];
-
-/** Where a pipeline asset sits on the Underwrite board. */
+/** Where an underwriting-stage asset sits on the Underwrite board. The only pipeline status. */
 export type UnderwritingStatus = 'ai_drafting' | 'draft_ready' | 'analyst_review' | 'submitted_to_growth';
 
 export type MarkMethod = 'Asset Valuation' | 'Post-listing';
@@ -90,10 +88,41 @@ export interface MarkProposal {
   approvedBy?: string;
 }
 
+// ── Intake ─────────────────────────────────────────────────────
+/** AI pre-screen on a new lead: a traffic light, why, and what it recommends. */
+export type PreScreenResult = 'green' | 'yellow' | 'red';
+export type IntakeRecommendation = 'send' | 'disqualify' | 'hold';
+
+export const DQ_REASONS = ['Lot too small', 'Price too high', 'Zoning', 'Flood risk', 'Location', 'Other'] as const;
+export type DqReason = (typeof DQ_REASONS)[number];
+
+export interface PreScreen {
+  result: PreScreenResult;
+  reason: string;                  // one line
+  recommendation: IntakeRecommendation;
+  dqReason?: DqReason;             // when recommending disqualify
+}
+
 export interface AssetIntake {
   source: Opportunity['source'];
   sdrOwner: string;
   dateReceived: string; // ISO
+  preScreen?: PreScreen; // intake leads
+}
+
+/** A lead ruled out at intake (or later in underwriting). */
+export interface Disqualification {
+  on: string;      // ISO
+  reason: DqReason;
+  note?: string;
+  by: string;
+}
+
+/** A lead parked at intake until something comes back, e.g. a survey from the SDR. */
+export interface IntakeHold {
+  on: string;      // ISO
+  note: string;
+  by: string;
 }
 
 /** Cost stack shared by the underwrite (projected) and the sale (realized). */
@@ -291,8 +320,9 @@ export interface Asset {
   stage: AssetStage;
   lotSqFt: number;
   floodZone?: boolean;            // lot is in a FEMA flood zone (Salesforce)
-  pipelineStatus?: PipelineStatus; // opportunity / underwriting stages only
-  underwritingStatus?: UnderwritingStatus; // pipeline assets not DQ'd
+  disqualified?: Disqualification;         // DQ'd at intake or in underwriting; off the board
+  hold?: IntakeHold;                       // intake leads parked by a person
+  underwritingStatus?: UnderwritingStatus; // underwriting stage only
   underwritingSince?: string;              // ISO, when it entered its current status
   analyst?: string;                        // assigned underwriting analyst
   intake?: AssetIntake;

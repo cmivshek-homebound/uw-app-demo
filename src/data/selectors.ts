@@ -18,7 +18,7 @@ export const ASSET_STAGES: AssetStage[] = [
   'sold',
 ];
 
-/** Pre-contract stages that carry a pipelineStatus. */
+/** Pre-contract stages: intake ('opportunity') and the Underwrite board ('underwriting'). */
 export const PIPELINE_STAGES: AssetStage[] = ['opportunity', 'underwriting'];
 
 export const MARKETS: Market[] = ['DFW', 'Houston', 'Tampa', 'St. Pete', 'LA'];
@@ -49,6 +49,24 @@ export function pipelineAssets(assets: Asset[] = ASSETS): Asset[] {
   return assets.filter((a) => PIPELINE_STAGES.includes(a.stage));
 }
 
+// ── Intake ─────────────────────────────────────────────────────
+/** Live intake leads: not yet sent to underwriting and not disqualified (held leads included). */
+export function intakeLeads(assets: Asset[] = ASSETS): Asset[] {
+  return assets.filter((a) => a.stage === 'opportunity' && !a.disqualified);
+}
+
+/** Intake leads nobody has acted on yet: no send, DQ or hold. */
+export function untriagedLeads(assets: Asset[] = ASSETS): Asset[] {
+  return intakeLeads(assets).filter((a) => !a.hold);
+}
+
+/** Disqualified pre-contract assets, most recent first. */
+export function disqualifiedLeads(assets: Asset[] = ASSETS): Asset[] {
+  return pipelineAssets(assets)
+    .filter((a) => a.disqualified)
+    .sort((a, b) => b.disqualified!.on.localeCompare(a.disqualified!.on));
+}
+
 /** Underwrite board columns, left to right. */
 export const UNDERWRITING_STATUSES: UnderwritingStatus[] = [
   'ai_drafting',
@@ -67,7 +85,7 @@ export function underwritingBoard(assets: Asset[] = ASSETS): Record<Underwriting
     UNDERWRITING_STATUSES.map((status) => [
       status,
       pipelineAssets(assets)
-        .filter((a) => a.underwritingStatus === status && a.pipelineStatus !== 'dqd')
+        .filter((a) => a.underwritingStatus === status && !a.disqualified)
         .sort((a, b) => daysInColumn(b) - daysInColumn(a)),
     ]),
   ) as Record<UnderwritingStatus, Asset[]>;
@@ -75,10 +93,6 @@ export function underwritingBoard(assets: Asset[] = ASSETS): Record<Underwriting
 
 export function daysInColumn(asset: Asset, asOf: string = DEMO_TODAY): number {
   return asset.underwritingSince ? daysSince(asset.underwritingSince, asOf) : 0;
-}
-
-export function disqualifiedPipeline(assets: Asset[] = ASSETS): Asset[] {
-  return pipelineAssets(assets).filter((a) => a.pipelineStatus === 'dqd');
 }
 
 /** Analysts with at least one asset on the board, alphabetical. */
@@ -95,7 +109,7 @@ export function marketPlanNames(market: Market, assets: Asset[] = ASSETS): Set<s
 export function stageHistory(asset: Asset): { stage: AssetStage; date?: string; reached: boolean }[] {
   const dates: Record<AssetStage, string | undefined> = {
     opportunity: asset.intake?.dateReceived,
-    underwriting: asset.underwrite?.underwrittenOn,
+    underwriting: asset.underwrite?.underwrittenOn ?? asset.underwritingSince,
     under_contract: asset.contract?.contractDate,
     precon: asset.owned?.closedOn,
     construction: asset.owned?.startedOn,
@@ -352,10 +366,10 @@ export interface LifecycleStage {
   valuedCount: number; // assets that carry a value (e.g. underwritten opportunities)
 }
 
-/** Count and dollar value per stage. Sold is limited to the trailing window. */
+/** Count and dollar value per stage. Sold is limited to the trailing window; disqualified leads are left out. */
 export function lifecycleByStage(assets: Asset[] = ASSETS): Record<AssetStage, LifecycleStage> {
   const recentlySold = new Set(soldWithin(assets));
-  const inScope = assets.filter((a) => a.stage !== 'sold' || recentlySold.has(a));
+  const inScope = assets.filter((a) => !a.disqualified && (a.stage !== 'sold' || recentlySold.has(a)));
   return byStage(inScope, (list) => {
     const valued = list.filter((a) => stageValue(a) > 0);
     return {

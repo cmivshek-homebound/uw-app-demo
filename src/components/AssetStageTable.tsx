@@ -9,7 +9,7 @@ import ProvenanceValue from './ProvenanceValue';
 import '../pages/OpportunityQueue.css';
 
 const STAGE_LABELS: Record<AssetStage, string> = {
-  opportunity: 'Opportunity',
+  opportunity: 'Intake',
   underwriting: 'Underwriting',
   under_contract: 'Under Contract',
   precon: 'Pre-Con',

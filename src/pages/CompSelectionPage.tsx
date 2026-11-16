@@ -203,7 +203,7 @@ function OfferPublishedScreen(
             Confirm &amp; Publish Offer →
           </button>
           <button className="cs-return-btn" onClick={onReturn}>
-            ← Back to Pipeline
+            ← Back to Underwrite
           </button>
         </div>
       </div>
@@ -403,7 +403,7 @@ export default function CompSelectionPage() {
         <div className="uc-empty-state">
           <h2>No comp set for {id}.</h2>
           <p>Comp selection needs an AI draft or an underwritten deal with comps.</p>
-          <Link to={id ? `/underwrite/${id}/scenario` : '/queue'} className="link-button">← Back to plan selection</Link>
+          <Link to={id ? `/underwrite/${id}/scenario` : '/underwrite'} className="link-button">← Back to plan selection</Link>
         </div>
       </div>
     );
@@ -434,7 +434,7 @@ export default function CompSelectionPage() {
         offer={offer}
         esp={esp}
         compCheck={{ value: displayESP, info: espInfo }}
-        onReturn={() => navigate('/queue')}
+        onReturn={() => navigate('/underwrite')}
         onViewContract={() => navigate(CONTRACT_DEALS[asset.id] ? `/contract/${asset.id}` : '/contract')}
       />
     );
@@ -446,8 +446,8 @@ export default function CompSelectionPage() {
     <div className="cs-page">
       {/* Breadcrumb — reuse sc- classes from ScenarioEngine.css */}
       <div className="sc-breadcrumb">
-        <button className="sc-breadcrumb-link" onClick={() => navigate('/queue')}>
-          Pipeline
+        <button className="sc-breadcrumb-link" onClick={() => navigate('/underwrite')}>
+          Underwrite
         </button>
         <span className="sc-breadcrumb-sep">›</span>
         <button className="sc-breadcrumb-link" onClick={() => navigate(`/underwrite/${id}`)}>

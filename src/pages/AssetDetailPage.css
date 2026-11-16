@@ -473,3 +473,21 @@
 
 /* Anchored sections land below the sticky nav. */
 .as-card[id] { scroll-margin-top: 76px; }
+
+/* ── Intake card ── */
+.as-intake-line { margin: 10px 0 0; font-size: 13.5px; color: #262626; line-height: 1.5; }
+.as-intake-line .pv { white-space: normal; }
+
+.as-prescreen {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 9px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.as-prescreen .pv--ai .pv-value { background: none; padding: 0; }
+.as-prescreen--green { background: #eef6f1; color: #1A6B4A; }
+.as-prescreen--yellow { background: #fffbeb; color: #b45309; }
+.as-prescreen--red { background: #fef2f2; color: #dc2626; }

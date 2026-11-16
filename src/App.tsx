@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
 import AppFooter from './components/AppFooter';
 import DemoPresenter from './components/DemoPresenter';
 import DemoProvider from './components/DemoProvider';
@@ -9,8 +9,9 @@ import NavHistoryProvider from './components/NavHistoryProvider';
 import DraftReviewProvider from './components/DraftReviewProvider';
 import MarkReviewProvider from './components/MarkReviewProvider';
 import ListingActionProvider from './components/ListingActionProvider';
+import IntakeProvider from './components/IntakeProvider';
 import Dashboard from './pages/Dashboard';
-import OpportunityQueue from './pages/OpportunityQueue';
+import IntakePage from './pages/IntakePage';
 import UnderwritePage from './pages/UnderwritePage';
 import UnderwriteBoard from './pages/UnderwriteBoard';
 import AIDraftPage from './pages/AIDraftPage';
@@ -29,6 +30,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <DraftReviewProvider>
+      <IntakeProvider>
         <MarkReviewProvider>
           <ListingActionProvider>
             <DemoProvider>
@@ -38,7 +40,8 @@ export default function App() {
             <NavBar />
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/queue" element={<OpportunityQueue />} />
+              <Route path="/intake" element={<IntakePage />} />
+              <Route path="/queue" element={<Navigate to="/intake" replace />} />
               <Route path="/underwrite" element={<UnderwriteBoard />} />
               <Route path="/underwrite/:id" element={<UnderwritePage />} />
               <Route path="/underwrite/:id/draft" element={<AIDraftPage />} />
@@ -61,6 +64,7 @@ export default function App() {
             </DemoProvider>
           </ListingActionProvider>
         </MarkReviewProvider>
+      </IntakeProvider>
       </DraftReviewProvider>
     </BrowserRouter>
   );

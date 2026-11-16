@@ -936,8 +936,8 @@ export default function ScenarioEngine() {
     return (
       <div className="sc-page">
         <p className="sc-not-found">
-          Opportunity not found.{' '}
-          <button onClick={() => navigate('/queue')}>← Back to Pipeline</button>
+          Lot not found.{' '}
+          <button onClick={() => navigate('/underwrite')}>← Back to Underwrite</button>
         </p>
       </div>
     );
@@ -947,8 +947,8 @@ export default function ScenarioEngine() {
     <div className="sc-page">
       {/* Breadcrumb */}
       <div className="sc-breadcrumb">
-        <button className="sc-breadcrumb-link" onClick={() => navigate('/queue')}>
-          Pipeline
+        <button className="sc-breadcrumb-link" onClick={() => navigate('/underwrite')}>
+          Underwrite
         </button>
         <span className="sc-breadcrumb-sep">›</span>
         <button className="sc-breadcrumb-link" onClick={() => navigate(`/underwrite/${opp.id}`)}>

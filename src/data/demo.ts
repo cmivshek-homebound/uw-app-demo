@@ -1,14 +1,15 @@
 import { createContext, useContext } from 'react';
-import type { Asset } from '../types';
+import type { Asset, PreScreenResult } from '../types';
 import { getAIDraft } from './aiDrafts';
 import { ASSETS } from './assets';
 import { daysRemaining, diligenceProgress } from './contracts';
-import { constructionSummary } from './selectors';
+import { constructionSummary, untriagedLeads } from './selectors';
 
 // ── Guided demo: LA Westside ───────────────────────────────────
 // One neighborhood followed through the lifecycle. Talking points are built
 // from the data so they never drift from what the screens show.
-//   BOOL-009  11234 Gorham Ave   pipeline lot, Daniel + ADU, AI draft ready
+//   BOOL-048  12031 Rochester Ave  intake lead, green pre-screen (BOOL-053 is the red one)
+//   BOOL-009  11234 Gorham Ave   underwriting lot, Daniel + ADU, AI draft ready
 //   BOOL-012  1418 Superba Ave   under contract, protected oak still open
 //   BOOL-027  1257 Federal Ave   construction, slightly over budget
 //   BOOL-028  4128 Garden Ave    construction, late on its permit
@@ -37,9 +38,20 @@ export const DEMO_STEPS: DemoStep[] = [
     title: 'Dashboard',
     path: '/',
     talkingPoint: () => {
-      const la = ASSETS.filter((a) => a.market === 'LA');
+      const la = ASSETS.filter((a) => a.market === 'LA' && !a.disqualified); // as the Dashboard counts
       const stages = new Set(la.map((a) => a.stage)).size;
       return `One book across five markets. Today we follow LA's Westside: ${la.length} assets spanning ${stages} lifecycle stages, from a new lot to a sold home.`;
+    },
+  },
+  {
+    title: 'Intake',
+    path: '/intake',
+    talkingPoint: () => {
+      const leads = untriagedLeads();
+      const count = (r: PreScreenResult) => leads.filter((a) => a.intake?.preScreen?.result === r).length;
+      const green = asset('BOOL-048');
+      const red = asset('BOOL-053');
+      return `${leads.length} new leads, each pre-screened by the AI: ${count('green')} green, ${count('yellow')} yellow, ${count('red')} red. In LA, ${green.address} is green and ${red.address} is red (${red.intake!.preScreen!.dqReason!.toLowerCase()}). Accept the AI's calls on green and red in one click; yellow always gets a person.`;
     },
   },
   {

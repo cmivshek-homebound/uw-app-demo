@@ -5,6 +5,7 @@ import { ASSETS } from '../data/assets';
 import { DEMO_TODAY, daysRemaining, daysSince } from '../data/dates';
 import { useMarkReviews, withMarkReviews } from '../data/markReview';
 import { useDraftReviews, withReviewStatus } from '../data/review';
+import { useIntake, withIntakeDecisions } from '../data/intake';
 import { MLS, computed } from '../data/provenance';
 import {
   ASSET_STAGES,
@@ -18,9 +19,10 @@ import {
   lifecycleByStage,
   pipelineAssets,
   staleListings,
+  untriagedLeads,
 } from '../data/selectors';
 import type { BalanceSheetRow } from '../data/selectors';
-import type { Asset, AssetStage, Market, PipelineStatus, ProvenanceInfo } from '../types';
+import type { Asset, AssetStage, Market, ProvenanceInfo, UnderwritingStatus } from '../types';
 // Reuse the queue's pill filter buttons (.filter-btn).
 import './OpportunityQueue.css';
 import '../components/AssetLink.css';
@@ -30,19 +32,30 @@ import UnderwritingAccuracyTab from './UnderwritingAccuracyTab';
 import './PortfolioPage.css';
 import './Dashboard.css';
 
-const STATUS_ORDER: PipelineStatus[] = ['pending_review', 'in_review', 'ready_for_offer', 'dqd'];
+// Pre-contract columns: intake (untriaged, on hold), then the Underwrite board.
+type PipelineColumn = 'untriaged' | 'held' | UnderwritingStatus;
 
-const STATUS_LABELS: Record<PipelineStatus, string> = {
-  pending_review: 'Pending Review',
-  in_review: 'In Review',
-  ready_for_offer: 'Ready for Offer',
-  dqd: "DQ'd",
+const STATUS_ORDER: PipelineColumn[] = ['untriaged', 'held', 'ai_drafting', 'draft_ready', 'analyst_review', 'submitted_to_growth'];
+
+const STATUS_LABELS: Record<PipelineColumn, string> = {
+  untriaged: 'Untriaged',
+  held: 'On hold',
+  ai_drafting: 'AI drafting',
+  draft_ready: 'Draft ready',
+  analyst_review: 'Analyst review',
+  submitted_to_growth: 'Submitted',
 };
+
+function pipelineColumn(a: Asset): PipelineColumn | undefined {
+  if (a.disqualified) return undefined;
+  if (a.stage === 'opportunity') return a.hold ? 'held' : 'untriaged';
+  return a.underwritingStatus;
+}
 
 type Phase = 'pipeline' | 'contract' | 'owned' | 'sold';
 
 const STAGE_META: Record<AssetStage, { label: string; phase: Phase; to: string | null; valueNote: string }> = {
-  opportunity:    { label: 'Opportunity',    phase: 'pipeline', to: '/queue',      valueNote: 'UW ESP' },
+  opportunity:    { label: 'Intake',         phase: 'pipeline', to: '/intake',     valueNote: 'UW ESP' },
   underwriting:   { label: 'Underwriting',   phase: 'pipeline', to: '/underwrite', valueNote: 'UW ESP' },
   under_contract: { label: 'Under Contract', phase: 'contract', to: '/contract',   valueNote: 'UW ESP' },
   precon:         { label: 'Pre-Con',        phase: 'owned',    to: '/portfolio',  valueNote: 'current mark' },
@@ -66,13 +79,13 @@ const LONGEST_PENDING_LIMIT = 3;
 // Reasons in urgency order: hard deadlines first, then sign-offs, then
 // slow listings, then intake backlog. Within a reason, `severity` sorts
 // most urgent first.
-type AttentionReason = 'inspection' | 'mark_approval' | 'stale_listing' | 'pending_review';
+type AttentionReason = 'inspection' | 'mark_approval' | 'stale_listing' | 'untriaged';
 
 const REASON_META: Record<AttentionReason, { rank: number; tag: string; tone: string }> = {
   inspection:     { rank: 0, tag: 'Inspection deadline', tone: 'urgent' },
   mark_approval:  { rank: 1, tag: 'Mark needs approval', tone: 'warn' },
   stale_listing:  { rank: 2, tag: 'Stale listing',       tone: 'neutral' },
-  pending_review: { rank: 3, tag: 'Pending review',      tone: 'neutral' },
+  untriaged:      { rank: 3, tag: 'Untriaged lead',      tone: 'neutral' },
 };
 
 interface AttentionItem {
@@ -148,7 +161,14 @@ export default function Dashboard() {
   const { reviews: markReviews, published } = useMarkReviews();
   // Drafts submitted to Growth this session count as Ready for Offer, as on the board.
   const { reviews: draftReviews } = useDraftReviews();
-  const assets = filterAssets(withReviewStatus(withMarkReviews(ASSETS, markReviews, published), draftReviews), { market });
+  // Intake decisions apply too: sent leads join the board, DQ'd leads drop out.
+  const { decisions } = useIntake();
+  const scoped = filterAssets(
+    withReviewStatus(withIntakeDecisions(withMarkReviews(ASSETS, markReviews, published), decisions), draftReviews),
+    { market },
+  );
+  // Disqualified leads live only in the Intake page's log.
+  const assets = scoped.filter((a) => !a.disqualified);
 
   // ── Lifecycle ──
   const lifecycle = lifecycleByStage(assets);
@@ -156,19 +176,19 @@ export default function Dashboard() {
   // ── Balance sheet ──
   const sheet = balanceSheet(assets);
 
-  // ── Pipeline by market ──
-  const pipeline = pipelineAssets(assets);
+  // ── Intake & underwriting by market ──
+  const pipeline = pipelineAssets(assets).filter((a) => pipelineColumn(a));
   const markets = MARKETS.filter((m) => pipeline.some((a) => a.market === m));
   const pipelineRows = markets.map((m) => {
     const inMarket = pipeline.filter((a) => a.market === m);
     const counts = Object.fromEntries(
-      STATUS_ORDER.map((s) => [s, inMarket.filter((a) => a.pipelineStatus === s).length]),
-    ) as Record<PipelineStatus, number>;
+      STATUS_ORDER.map((s) => [s, inMarket.filter((a) => pipelineColumn(a) === s).length]),
+    ) as Record<PipelineColumn, number>;
     return { market: m, counts, total: inMarket.length };
   });
   const statusTotals = Object.fromEntries(
-    STATUS_ORDER.map((s) => [s, pipeline.filter((a) => a.pipelineStatus === s).length]),
-  ) as Record<PipelineStatus, number>;
+    STATUS_ORDER.map((s) => [s, pipeline.filter((a) => pipelineColumn(a) === s).length]),
+  ) as Record<PipelineColumn, number>;
 
   // ── Needs attention ──
   const attention: AttentionItem[] = [
@@ -193,14 +213,14 @@ export default function Dashboard() {
       detail: <><ProvenanceValue info={MLS}>{asset.listing!.daysOnMarket} days</ProvenanceValue> on market</>,
       severity: asset.listing!.daysOnMarket, to: assetPath(asset),
     })),
-    ...pipeline
-      .filter((a) => a.pipelineStatus === 'pending_review' && a.intake)
+    ...untriagedLeads(assets)
+      .filter((a) => a.intake)
       .map((a) => ({ asset: a, days: daysSince(a.intake!.dateReceived) }))
       .sort((a, b) => b.days - a.days)
       .slice(0, LONGEST_PENDING_LIMIT)
       .map(({ asset, days }) => ({
-        asset, reason: 'pending_review' as const,
-        detail: <><ProvenanceValue info={computed('Days since intake')}>{plural(days, 'day')}</ProvenanceValue> waiting</>, severity: days, to: assetPath(asset),
+        asset, reason: 'untriaged' as const,
+        detail: <><ProvenanceValue info={computed('Days since intake')}>{plural(days, 'day')}</ProvenanceValue> waiting</>, severity: days, to: '/intake',
       })),
   ].sort((a, b) => REASON_META[a.reason].rank - REASON_META[b.reason].rank || b.severity - a.severity);
 
@@ -317,7 +337,7 @@ export default function Dashboard() {
         <div className="db-card-header">
           <h2 className="db-card-title">Needs Attention</h2>
           <span className="db-card-caption">
-            Inspections &lt; {INSPECTION_WARN_DAYS} days · marks &gt; $10K awaiting approval · listings over 1.5× market days on market · longest pending review
+            Inspections &lt; {INSPECTION_WARN_DAYS} days · marks &gt; $10K awaiting approval · listings over 1.5× market days on market · oldest untriaged leads
           </span>
         </div>
         {attention.length === 0 ? (
@@ -349,7 +369,7 @@ export default function Dashboard() {
       {/* Pipeline */}
       <section className="db-card">
         <div className="db-card-header">
-          <h2 className="db-card-title">Pipeline by Market</h2>
+          <h2 className="db-card-title">Intake &amp; Underwriting by Market</h2>
           <div className="db-legend">
             {STATUS_ORDER.map((s) => (
               <span key={s} className="db-legend-item">
@@ -361,10 +381,10 @@ export default function Dashboard() {
         </div>
         {pipeline.length === 0 ? (
           <p className="db-empty db-empty--padded">
-            No pipeline opportunities{market ? ` in ${market}` : ''}.
+            No leads in intake or underwriting{market ? ` in ${market}` : ''}.
             {market
               ? <button className="link-button" onClick={() => setMarket(undefined)}>Show all markets</button>
-              : <Link to="/queue" className="link-button">Open the pipeline</Link>}
+              : <Link to="/intake" className="link-button">Open intake</Link>}
           </p>
         ) : (
           <table className="db-table">
@@ -385,7 +405,7 @@ export default function Dashboard() {
                   ))}
                   <td className="db-num db-total">{total}</td>
                   <td className="db-bar-col">
-                    <div className="db-bar" title={`${m}: ${total} of ${pipeline.length} opportunities`}>
+                    <div className="db-bar" title={`${m}: ${total} of ${pipeline.length} pre-contract lots`}>
                       {STATUS_ORDER.filter((s) => counts[s] > 0).map((s) => (
                         <span
                           key={s}

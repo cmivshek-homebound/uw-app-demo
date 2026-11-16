@@ -1,0 +1,203 @@
+/* ── Intake ── */
+.in-muted { color: #a3a3a3; }
+
+.in-bulk {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.in-bulk-hint { font-size: 11.5px; color: #8a8a8a; }
+
+/* ── Lead rows ── */
+.in-rows {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.in-row {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.in-row--done { background: #fafafa; }
+.in-row--done .in-row-main { opacity: 0.6; }
+
+.in-row-main {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.5fr) 0.8fr 0.8fr 1fr 1fr minmax(240px, 2.4fr);
+  gap: 12px 16px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .in-row-main { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .in-cell--lead, .in-cell--screen { grid-column: 1 / -1; }
+}
+
+@media (max-width: 600px) {
+  .in-row-main { grid-template-columns: 1fr 1fr; }
+}
+
+.in-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13.5px;
+  color: #171717;
+  min-width: 0;
+}
+
+.in-address { font-weight: 600; color: #171717; }
+.in-sub { font-size: 12px; color: #737373; }
+
+.in-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #a3a3a3;
+}
+
+.in-screen {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.in-reason { font-size: 13px; color: #404040; line-height: 1.4; }
+.in-reason .pv { white-space: normal; }
+
+/* Pre-screen chip: the color is the signal, so drop the AI value tint inside it. */
+.in-chip {
+  flex-shrink: 0;
+  padding: 2px 9px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.in-chip .pv--ai .pv-value { background: none; padding: 0; }
+.in-chip--green { background: #eef6f1; color: #1A6B4A; }
+.in-chip--yellow { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.in-chip--red { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+.in-row-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #f5f5f5;
+}
+
+.in-rec {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #171717;
+}
+
+.in-needs-person {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.in-action {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.in-held { font-size: 12.5px; color: #525252; }
+.in-held .pv { white-space: normal; }
+.in-done { font-size: 12.5px; font-weight: 600; color: #1A6B4A; }
+.in-done--dq { color: #737373; }
+.in-link { color: #1A6B4A; font-weight: 600; text-decoration: none; }
+.in-link:hover { text-decoration: underline; }
+
+.in-form {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.in-select { min-width: 180px; background: #fff; }
+
+/* ── Disqualified log ── */
+.in-log {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  scroll-margin-top: 76px;
+}
+
+.in-log-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.in-log-summary::-webkit-details-marker { display: none; }
+
+.in-log-title { font-size: 14px; font-weight: 600; color: #171717; }
+
+.in-log-count {
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 9px;
+  background: #f0f0f0;
+  color: #525252;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.in-log-hint { margin-left: auto; font-size: 12px; font-weight: 600; color: #737373; }
+.in-log-summary:hover .in-log-hint { color: #1A6B4A; }
+
+.in-log-body {
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.in-reasons { display: flex; flex-direction: column; gap: 6px; }
+.in-reason-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.in-reason-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #404040;
+}
+
+.in-reason-chip .pv { font-weight: 700; color: #171717; }
+
+.in-log-table td { vertical-align: top; }
+.in-log-table .in-log-reason { white-space: normal; }
+.in-log-row { border-bottom: 1px solid #f5f5f5; }
+.in-log-row:last-child { border-bottom: none; }

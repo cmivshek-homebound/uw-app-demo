@@ -4,6 +4,8 @@ import RoleBanner from '../components/RoleBanner';
 import { getAIDraft } from '../data/aiDrafts';
 import { AI, SFDC, computed } from '../data/provenance';
 import { useDraftReviews, withReviewStatus } from '../data/review';
+import { useIntake, withIntakeDecisions } from '../data/intake';
+import { ASSETS } from '../data/assets';
 import { analystMarksPath, useRole } from '../data/role';
 import {
   BOARD_LATE_DAYS,
@@ -12,7 +14,7 @@ import {
   UNDERWRITING_STATUSES,
   boardAnalysts,
   daysInColumn,
-  disqualifiedPipeline,
+  disqualifiedLeads,
   filterAssets,
   underwritingBoard,
 } from '../data/selectors';
@@ -50,7 +52,7 @@ function BoardCard({ asset }: { asset: Asset }) {
   const days = daysInColumn(asset);
 
   return (
-    <Link to={`/underwrite/${asset.id}/draft`} className="ub-card">
+    <Link to={draft ? `/underwrite/${asset.id}/draft` : `/asset/${asset.id}`} className="ub-card">
       <div className="ub-card-top">
         <span className="ub-address">{asset.address}</span>
         {asset.analyst && (
@@ -103,7 +105,10 @@ export default function UnderwriteBoard() {
   // ── Filters (kept in the URL so they survive navigating to a draft and back) ──
   const marketParam = params.get('market');
   const market = MARKETS.includes(marketParam as Market) ? (marketParam as Market) : undefined;
-  const analysts = boardAnalysts();
+  const { reviews } = useDraftReviews();
+  const { decisions } = useIntake();
+  const sessionAssets = withReviewStatus(withIntakeDecisions(ASSETS, decisions), reviews);
+  const analysts = boardAnalysts(sessionAssets);
   const analystParam = params.get('analyst');
   const analyst = analystParam && analysts.includes(analystParam) ? analystParam : undefined;
 
@@ -114,12 +119,11 @@ export default function UnderwriteBoard() {
     setParams(next, { replace: true });
   };
 
-  const { reviews } = useDraftReviews();
-  const marketAssets = filterAssets(withReviewStatus(filterAssets(), reviews), { market });
+  const marketAssets = filterAssets(sessionAssets, { market });
   const scoped = marketAssets.filter((a) => !analyst || a.analyst === analyst);
   const board = underwritingBoard(scoped);
   const onBoard = UNDERWRITING_STATUSES.reduce((sum, s) => sum + board[s].length, 0);
-  const dqCount = disqualifiedPipeline(marketAssets).length;
+  const dqCount = disqualifiedLeads(marketAssets).length;
 
   return (
     <div className="oq-page ub-page">
@@ -127,7 +131,7 @@ export default function UnderwriteBoard() {
         <div>
           <h1 className="oq-title">Underwrite</h1>
           <p className="oq-subtitle">
-            {onBoard} pipeline {onBoard === 1 ? 'asset' : 'assets'} · {board.draft_ready.length} AI{' '}
+            {onBoard} {onBoard === 1 ? 'lot' : 'lots'} in underwriting · {board.draft_ready.length} AI{' '}
             {board.draft_ready.length === 1 ? 'draft' : 'drafts'} ready for review
           </p>
         </div>
@@ -191,8 +195,8 @@ export default function UnderwriteBoard() {
 
       {dqCount > 0 && (
         <p className="ub-dq">
-          <Link to="/queue?status=dqd" className="ub-dq-link">
-            {dqCount} disqualified {dqCount === 1 ? 'opportunity' : 'opportunities'} →
+          <Link to="/intake#disqualified" className="ub-dq-link">
+            {dqCount} disqualified {dqCount === 1 ? 'lead' : 'leads'} →
           </Link>
         </p>
       )}

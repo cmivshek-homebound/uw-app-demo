@@ -10,6 +10,7 @@ import { ASSETS } from '../data/assets';
 import { DEMO_TODAY } from '../data/dates';
 import { useListingActions, withListingActions } from '../data/listingActions';
 import { useFromPage } from '../data/navHistory';
+import { useIntake, withIntakeDecisions } from '../data/intake';
 import { useMarkReviews, withMarkReviews } from '../data/markReview';
 import { useDraftReviews, withReviewStatus } from '../data/review';
 import { APPROVAL_THRESHOLD, PIPELINE_STAGES, constructionStatus, constructionSummary, stageHistory, underwritingGap } from '../data/selectors';
@@ -30,7 +31,7 @@ import './AssetDetailPage.css';
 
 // ── Labels & formatters ────────────────────────────────────────
 const STAGE_LABELS: Record<AssetStage, string> = {
-  opportunity: 'Opportunity',
+  opportunity: 'Intake',
   underwriting: 'Underwriting',
   under_contract: 'Under Contract',
   precon: 'Pre-Con',
@@ -131,6 +132,50 @@ function StageTimeline({ asset }: { asset: Asset }) {
 }
 
 // ── 1. Original underwrite ─────────────────────────────────────
+const PRESCREEN_LABELS = { green: 'Green', yellow: 'Yellow', red: 'Red' } as const;
+const RECOMMENDATION_LABELS = { send: 'Send to underwriting', disqualify: 'Disqualify', hold: 'Hold' } as const;
+
+/** Intake leads and disqualified lots: the AI pre-screen and where the lead stands. */
+function IntakeSection({ asset }: { asset: Asset }) {
+  const intake = asset.intake;
+  const p = intake?.preScreen;
+  const dq = asset.disqualified;
+  return (
+    <Card title="Intake" aside={<Link to={dq ? '/intake#disqualified' : '/intake'} className="as-link">Open intake →</Link>}>
+      {intake && (
+        <p className="as-muted as-small">
+          <ProvenanceValue info={SFDC}>{intake.source}</ProvenanceValue> lead from{' '}
+          <ProvenanceValue info={SFDC}>{intake.sdrOwner}</ProvenanceValue>, received{' '}
+          <ProvenanceValue info={SFDC}>{shortDate(intake.dateReceived)}</ProvenanceValue>
+        </p>
+      )}
+      {p && (
+        <p className="as-intake-line">
+          <span className={`as-prescreen as-prescreen--${p.result}`}>
+            <ProvenanceValue info={AI}>{PRESCREEN_LABELS[p.result]}</ProvenanceValue>
+          </span>
+          <ProvenanceValue info={AI}>{p.reason}</ProvenanceValue>
+          <span className="as-muted"> · AI recommends {RECOMMENDATION_LABELS[p.recommendation].toLowerCase()}</span>
+        </p>
+      )}
+      {dq ? (
+        <p className="as-intake-line">
+          <strong>Disqualified</strong> {shortDate(dq.on)} by {dq.by}:{' '}
+          <ProvenanceValue info={human(`Disqualified by ${dq.by}`)}>{dq.reason}</ProvenanceValue>
+          {dq.note && <span className="as-muted"> · {dq.note}</span>}
+        </p>
+      ) : asset.hold ? (
+        <p className="as-intake-line">
+          <strong>On hold</strong> since {shortDate(asset.hold.on)} ({asset.hold.by}):{' '}
+          <ProvenanceValue info={human(`Held by ${asset.hold.by}`)}>{asset.hold.note}</ProvenanceValue>
+        </p>
+      ) : (
+        <p className="as-intake-line as-muted">Waiting for someone to send, disqualify or hold it.</p>
+      )}
+    </Card>
+  );
+}
+
 function UnderwriteSection({ asset }: { asset: Asset }) {
   const uw = asset.underwrite!;
   const review = uw.review;
@@ -659,7 +704,11 @@ export default function AssetDetailPage() {
   const { reviews, published } = useMarkReviews();
   const { actions } = useListingActions();
   const { reviews: draftReviews } = useDraftReviews();
-  const asset = withListingActions(withReviewStatus(withMarkReviews(ASSETS, reviews, published), draftReviews), actions).find((a) => a.id === id);
+  const { decisions } = useIntake();
+  const asset = withListingActions(
+    withReviewStatus(withIntakeDecisions(withMarkReviews(ASSETS, reviews, published), decisions), draftReviews),
+    actions,
+  ).find((a) => a.id === id);
 
   if (!asset) {
     return (
@@ -711,12 +760,15 @@ export default function AssetDetailPage() {
       <ProvenanceLegend />
 
       <div className="as-sections">
+        {(asset.stage === 'opportunity' || asset.disqualified) && <IntakeSection asset={asset} />}
         {asset.underwrite && <UnderwriteSection asset={asset} />}
-        {!asset.underwrite && inPipeline && (
+        {!asset.underwrite && inPipeline && asset.stage === 'underwriting' && (
           <Card title="Original underwrite">
             <p className="as-muted as-small">
               Not underwritten yet.{' '}
-              {draft && <Link to={`/underwrite/${asset.id}/draft`} className="as-link">Open the AI draft →</Link>}
+              {draft
+                ? <Link to={`/underwrite/${asset.id}/draft`} className="as-link">Open the AI draft →</Link>
+                : asset.underwritingStatus === 'ai_drafting' && <>The AI is drafting it. <Link to="/underwrite" className="as-link">Underwrite board →</Link></>}
             </p>
           </Card>
         )}

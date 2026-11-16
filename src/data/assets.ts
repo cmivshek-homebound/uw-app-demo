@@ -10,7 +10,7 @@ import type {
   DiligenceIssue,
   DiligenceSignoffKind,
   ListingOffer,
-  PipelineStatus,
+  Disqualification,
   UnderwriteOverrideField,
   UnderwritingStatus,
 } from '../types';
@@ -37,7 +37,8 @@ interface Seed {
   stage: AssetStage;
   lotSqFt: number;
   floodZone?: boolean;
-  pipelineStatus?: PipelineStatus;
+  /** Past disqualification (intake leads ruled out before this session). */
+  dq?: Disqualification;
   /** Underwrite board column, the date it entered it, and the assigned analyst. */
   uwBoard?: { status: UnderwritingStatus; since: string; analyst: string };
   intake?: AssetIntake;
@@ -201,7 +202,7 @@ function buildAsset(s: Seed): Asset {
     lotSqFt: s.lotSqFt,
   };
   if (s.floodZone) asset.floodZone = true;
-  if (s.pipelineStatus) asset.pipelineStatus = s.pipelineStatus;
+  if (s.dq) asset.disqualified = { ...s.dq, on: iso(s.dq.on) };
   if (s.intake) asset.intake = { ...s.intake, dateReceived: iso(s.intake.dateReceived) };
   if (s.uwBoard) {
     asset.underwritingStatus = s.uwBoard.status;
@@ -326,72 +327,173 @@ function buildAsset(s: Seed): Asset {
   return asset;
 }
 
-// ── Opportunity & underwriting ─────────────────────────────────
-// The intake queue. BOOL-001 has moved on to under contract (below).
+// ── Underwriting ───────────────────────────────────────────────
+// Every lot on the Underwrite board. BOOL-001 has moved on to under contract
+// (below); BOOL-005 was disqualified at intake and stays as a past DQ.
 const pipelineSeeds: Seed[] = [
   {
     id: 'BOOL-002', address: '5102 Ridgecrest Ln', city: 'Dallas', state: 'TX', zip: '75228',
-    market: 'DFW', stage: 'underwriting', lotSqFt: 7100, pipelineStatus: 'in_review',
+    market: 'DFW', stage: 'underwriting', lotSqFt: 7100,
     uwBoard: { status: 'analyst_review', since: '2026-04-16', analyst: 'Maya Chen' },
     intake: { source: 'MLS', sdrOwner: 'Ben Teters', dateReceived: '2026-04-14' },
     uw: { plan: 'The Emerson', esp: 900_000, land: 215_000, build: 455_000, on: '2026-04-16' },
   },
   {
     id: 'BOOL-003', address: '8834 Sunbrook Ct', city: 'Houston', state: 'TX', zip: '77055',
-    market: 'Houston', stage: 'opportunity', lotSqFt: 5800, floodZone: true, pipelineStatus: 'pending_review',
+    market: 'Houston', stage: 'underwriting', lotSqFt: 5800, floodZone: true,
     uwBoard: { status: 'draft_ready', since: '2026-04-17', analyst: 'Priya Shah' },
     intake: { source: 'Off-Market', sdrOwner: 'Ryan Weiss', dateReceived: '2026-04-13' },
   },
   {
     id: 'BOOL-004', address: '4710 Elmwood Pass', city: 'Tampa', state: 'FL', zip: '33606',
-    market: 'Tampa', stage: 'underwriting', lotSqFt: 6500, pipelineStatus: 'ready_for_offer',
+    market: 'Tampa', stage: 'underwriting', lotSqFt: 6500,
     uwBoard: { status: 'submitted_to_growth', since: '2026-04-17', analyst: 'Luis Ortega' },
     intake: { source: 'MLS', sdrOwner: 'Danny Gaule', dateReceived: '2026-04-12' },
     uw: { plan: 'The Daniel', esp: 1_210_000, land: 320_000, build: 530_000, on: '2026-04-15' },
   },
   {
     id: 'BOOL-005', address: '3821 Westover Hills Blvd', city: 'Fort Worth', state: 'TX', zip: '76116',
-    market: 'DFW', stage: 'opportunity', lotSqFt: 5400, pipelineStatus: 'dqd',
+    market: 'DFW', stage: 'opportunity', lotSqFt: 5400,
     intake: { source: 'MLS', sdrOwner: 'Ben Teters', dateReceived: '2026-04-10' },
+    dq: { on: '2026-04-11', reason: 'Price too high', note: 'Seller won’t move off an asking price well above max land at target margin', by: 'Luis Ortega' },
   },
   {
     id: 'BOOL-006', address: '7734 Lawndale St', city: 'Houston', state: 'TX', zip: '77023',
-    market: 'Houston', stage: 'underwriting', lotSqFt: 6800, pipelineStatus: 'ready_for_offer',
+    market: 'Houston', stage: 'underwriting', lotSqFt: 6800,
     uwBoard: { status: 'submitted_to_growth', since: '2026-04-16', analyst: 'Maya Chen' },
     intake: { source: 'Off-Market', sdrOwner: 'Ryan Weiss', dateReceived: '2026-04-10' },
     uw: { plan: 'The Benjamin', esp: 730_000, land: 150_000, build: 420_000, on: '2026-04-13' },
   },
   {
     id: 'BOOL-007', address: '2241 Cove Cay Dr', city: 'Clearwater', state: 'FL', zip: '33760',
-    market: 'St. Pete', stage: 'opportunity', lotSqFt: 9000, pipelineStatus: 'pending_review',
+    market: 'St. Pete', stage: 'underwriting', lotSqFt: 9000,
     uwBoard: { status: 'draft_ready', since: '2026-04-15', analyst: 'Luis Ortega' },
     intake: { source: 'MLS', sdrOwner: 'Karsten Thompson', dateReceived: '2026-04-09' },
   },
   {
     id: 'BOOL-008', address: '4892 Chevy Chase Dr', city: 'Dallas', state: 'TX', zip: '75225',
-    market: 'DFW', stage: 'underwriting', lotSqFt: 8100, pipelineStatus: 'in_review',
+    market: 'DFW', stage: 'underwriting', lotSqFt: 8100,
     uwBoard: { status: 'analyst_review', since: '2026-04-14', analyst: 'Luis Ortega' },
     intake: { source: 'Off-Market', sdrOwner: 'Grady Knipper', dateReceived: '2026-04-09' },
     uw: { plan: 'The Daniel', esp: 1_355_000, land: 420_000, build: 570_000, on: '2026-04-14' },
   },
   {
     id: 'BOOL-009', address: '11234 Gorham Ave', city: 'Los Angeles', state: 'CA', zip: '90049',
-    market: 'LA', stage: 'opportunity', lotSqFt: 7000, pipelineStatus: 'pending_review',
+    market: 'LA', stage: 'underwriting', lotSqFt: 7000,
     uwBoard: { status: 'draft_ready', since: '2026-04-13', analyst: 'Maya Chen' },
     intake: { source: 'MLS', sdrOwner: 'Danny Gaule', dateReceived: '2026-04-08' },
   },
   {
     id: 'BOOL-010', address: '5523 Morningside Dr', city: 'Houston', state: 'TX', zip: '77005',
-    market: 'Houston', stage: 'underwriting', lotSqFt: 5600, pipelineStatus: 'in_review',
+    market: 'Houston', stage: 'underwriting', lotSqFt: 5600,
     uwBoard: { status: 'analyst_review', since: '2026-04-13', analyst: 'Priya Shah' },
     intake: { source: 'Off-Market', sdrOwner: 'Ryan Weiss', dateReceived: '2026-04-08' },
     uw: { plan: 'The Ryan', esp: 1_095_000, land: 290_000, build: 555_000, on: '2026-04-13' },
   },
   {
     id: 'BOOL-011', address: '2706 W Prospect Rd', city: 'Tampa', state: 'FL', zip: '33629',
-    market: 'Tampa', stage: 'opportunity', lotSqFt: 8460, pipelineStatus: 'pending_review',
+    market: 'Tampa', stage: 'underwriting', lotSqFt: 8460,
     uwBoard: { status: 'ai_drafting', since: '2026-04-18', analyst: 'Priya Shah' },
     intake: { source: 'Off-Market', sdrOwner: 'Danny Gaule', dateReceived: '2026-04-16' },
+  },
+];
+
+// ── Intake ─────────────────────────────────────────────────────
+// Untouched leads from the SDRs, each with the AI pre-screen. Green and red
+// carry a recommendation a person can accept in bulk; yellow always needs a person.
+const intakeSeeds: Seed[] = [
+  {
+    id: 'BOOL-046', address: '6127 Velasco Ave', city: 'Dallas', state: 'TX', zip: '75214',
+    market: 'DFW', stage: 'opportunity', lotSqFt: 7400,
+    intake: {
+      source: 'Off-Market', sdrOwner: 'Ben Teters', dateReceived: '2026-04-16',
+      preScreen: { result: 'green', recommendation: 'send', reason: 'R-7.5 lot, 60 ft frontage fits 4 plans; zoning, flood and road checks all pass.' },
+    },
+  },
+  {
+    id: 'BOOL-047', address: '3418 W San Nicholas St', city: 'Tampa', state: 'FL', zip: '33629',
+    market: 'Tampa', stage: 'opportunity', lotSqFt: 7800,
+    intake: {
+      source: 'MLS', sdrOwner: 'Danny Gaule', dateReceived: '2026-04-17',
+      preScreen: { result: 'green', recommendation: 'send', reason: 'RS-60, Zone X, fits 3 plans with room for an ADU.' },
+    },
+  },
+  {
+    id: 'BOOL-048', address: '12031 Rochester Ave', city: 'Los Angeles', state: 'CA', zip: '90025',
+    market: 'LA', stage: 'opportunity', lotSqFt: 7200,
+    intake: {
+      source: 'Off-Market', sdrOwner: 'Danny Gaule', dateReceived: '2026-04-17',
+      preScreen: { result: 'green', recommendation: 'send', reason: 'R1 lot fits The Daniel plus an ADU; no hillside or fire-zone flags.' },
+    },
+  },
+  {
+    id: 'BOOL-049', address: '1817 Kipling St', city: 'Houston', state: 'TX', zip: '77098',
+    market: 'Houston', stage: 'opportunity', lotSqFt: 5000,
+    intake: {
+      source: 'MLS', sdrOwner: 'Ryan Weiss', dateReceived: '2026-04-15',
+      preScreen: { result: 'yellow', recommendation: 'hold', reason: 'Deed restrictions may cap height at two stories; confirm before drafting.' },
+    },
+  },
+  {
+    id: 'BOOL-050', address: '2645 Burlington Ave N', city: 'St. Petersburg', state: 'FL', zip: '33713',
+    market: 'St. Pete', stage: 'opportunity', lotSqFt: 6300,
+    intake: {
+      source: 'Off-Market', sdrOwner: 'Karsten Thompson', dateReceived: '2026-04-16',
+      preScreen: { result: 'yellow', recommendation: 'hold', reason: 'Plat shows 98 ft of depth, Salesforce shows 105 ft; needs a survey.' },
+    },
+  },
+  {
+    id: 'BOOL-051', address: '4507 Bluffview Blvd', city: 'Dallas', state: 'TX', zip: '75209',
+    market: 'DFW', stage: 'opportunity', lotSqFt: 6900,
+    intake: {
+      source: 'MLS', sdrOwner: 'Ben Teters', dateReceived: '2026-04-14',
+      preScreen: { result: 'yellow', recommendation: 'send', reason: 'Backs onto a 4-lane collector; nearby comps on busy roads sold lower.' },
+    },
+  },
+  {
+    id: 'BOOL-052', address: '7211 Avenue F', city: 'Houston', state: 'TX', zip: '77011',
+    market: 'Houston', stage: 'opportunity', lotSqFt: 5200, floodZone: true,
+    intake: {
+      source: 'MLS', sdrOwner: 'Ryan Weiss', dateReceived: '2026-04-17',
+      preScreen: { result: 'red', recommendation: 'disqualify', dqReason: 'Flood risk', reason: 'Zone AE flood plain; required elevation erases the margin.' },
+    },
+  },
+  {
+    id: 'BOOL-053', address: '9050 Dorrington Ave', city: 'West Hollywood', state: 'CA', zip: '90048',
+    market: 'LA', stage: 'opportunity', lotSqFt: 3900,
+    intake: {
+      source: 'MLS', sdrOwner: 'Danny Gaule', dateReceived: '2026-04-16',
+      preScreen: { result: 'red', recommendation: 'disqualify', dqReason: 'Lot too small', reason: '3,900 sqft lot; no LA plan fits inside the setbacks.' },
+    },
+  },
+];
+
+// ── Past disqualifications ─────────────────────────────────────
+// Leads ruled out at intake before this session, for the Disqualified log.
+const disqualifiedSeeds: Seed[] = [
+  {
+    id: 'BOOL-054', address: '1406 Harvard St', city: 'Houston', state: 'TX', zip: '77008',
+    market: 'Houston', stage: 'opportunity', lotSqFt: 4800,
+    intake: { source: 'Off-Market', sdrOwner: 'Ryan Weiss', dateReceived: '2026-03-02' },
+    dq: { on: '2026-03-04', reason: 'Zoning', note: 'Lot split still pending city approval', by: 'Priya Shah' },
+  },
+  {
+    id: 'BOOL-055', address: '3302 W Bay Villa Ave', city: 'Tampa', state: 'FL', zip: '33611',
+    market: 'Tampa', stage: 'opportunity', lotSqFt: 6100, floodZone: true,
+    intake: { source: 'MLS', sdrOwner: 'Danny Gaule', dateReceived: '2026-03-18' },
+    dq: { on: '2026-03-20', reason: 'Flood risk', note: 'Coastal VE zone; insurance quotes far over budget', by: 'Maya Chen' },
+  },
+  {
+    id: 'BOOL-056', address: '1124 Eldridge St', city: 'Clearwater', state: 'FL', zip: '33755',
+    market: 'St. Pete', stage: 'opportunity', lotSqFt: 6600,
+    intake: { source: 'MLS', sdrOwner: 'Karsten Thompson', dateReceived: '2026-02-10' },
+    dq: { on: '2026-02-12', reason: 'Location', note: 'Backs onto a rail line and an industrial yard', by: 'J. Park' },
+  },
+  {
+    id: 'BOOL-057', address: '2918 S Bentley Ave', city: 'Los Angeles', state: 'CA', zip: '90064',
+    market: 'LA', stage: 'opportunity', lotSqFt: 6000,
+    intake: { source: 'Off-Market', sdrOwner: 'Danny Gaule', dateReceived: '2026-03-30' },
+    dq: { on: '2026-04-02', reason: 'Price too high', note: 'Seller firm on price; max land at target margin is far below', by: 'Elena Ruiz' },
   },
 ];
 
@@ -985,6 +1087,8 @@ function buildDiligence(s: Seed, contractDate: string): AssetDiligence {
 }
 
 export const ASSETS: Asset[] = [
+  ...intakeSeeds,
+  ...disqualifiedSeeds,
   ...pipelineSeeds,
   ...underContractSeeds,
   ...preconSeeds,

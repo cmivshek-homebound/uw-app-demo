@@ -206,10 +206,12 @@
   border-radius: 2px;
 }
 
-.db-fill--pending_review  { background-color: #f59e0b; }
-.db-fill--in_review       { background-color: #a3a3a3; }
-.db-fill--ready_for_offer { background-color: #1A6B4A; }
-.db-fill--dqd             { background-color: #e5e5e5; }
+.db-fill--untriaged           { background-color: #a3a3a3; }
+.db-fill--held                { background-color: #e5e5e5; }
+.db-fill--ai_drafting         { background-color: #c9e2d5; }
+.db-fill--draft_ready         { background-color: #7fb89b; }
+.db-fill--analyst_review      { background-color: #3d8a66; }
+.db-fill--submitted_to_growth { background-color: #1A6B4A; }
 
 .db-table {
   width: 100%;

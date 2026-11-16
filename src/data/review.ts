@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { Asset, Opportunity } from '../types';
+import type { Asset } from '../types';
 import { SECTION_OVERRIDE_FIELDS } from './aiDrafts';
 import type { AIDraft, DraftOverrides, DraftSectionKey, OverrideField } from './aiDrafts';
 
@@ -86,18 +86,16 @@ export function reviewProgress(draft: AIDraft, review: DraftReview): ReviewProgr
 }
 
 /**
- * Assets with this session's submissions applied. Submitted to Growth is
- * Ready for Offer in the pipeline and the underwriting stage, as in assets.ts,
- * so the board, pipeline, dashboard and asset page agree.
+ * Assets with this session's submissions applied: Submitted to Growth on the
+ * Underwrite board, so the board, dashboard and asset page agree.
  */
 export function withReviewStatus(assets: Asset[], reviews: Record<string, DraftReview>): Asset[] {
   return assets.map((a) => {
     const submitted = reviews[a.id]?.submitted;
-    if (!submitted || a.underwritingStatus === 'submitted_to_growth' || a.pipelineStatus === 'dqd') return a;
+    if (!submitted || a.underwritingStatus === 'submitted_to_growth' || a.disqualified) return a;
     return {
       ...a,
       stage: 'underwriting',
-      pipelineStatus: 'ready_for_offer',
       underwritingStatus: 'submitted_to_growth',
       underwritingSince: submitted.at,
     };
@@ -117,9 +115,4 @@ export const DraftReviewContext = createContext<DraftReviewStore>({
 
 export function useDraftReviews(): DraftReviewStore {
   return useContext(DraftReviewContext);
-}
-
-/** Pipeline rows with this session's submissions applied (see withReviewStatus). */
-export function withReviewedQueueStatus(opps: Opportunity[], reviews: Record<string, DraftReview>): Opportunity[] {
-  return opps.map((o) => (reviews[o.id]?.submitted && o.status !== 'dqd' ? { ...o, status: 'ready_for_offer' } : o));
 }

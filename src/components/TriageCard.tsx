@@ -141,7 +141,7 @@ export default function TriageCard({ opp, onDQ, onProceed, onOverride }: Props) 
               </div>
             ))
           ) : (
-            <p className="triage-no-data">No triage data available for this opportunity.</p>
+            <p className="triage-no-data">No triage data available for this lot.</p>
           )}
         </div>
       </div>

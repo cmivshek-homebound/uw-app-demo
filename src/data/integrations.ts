@@ -8,7 +8,7 @@ import { AI, BLUEPRINT, MLS, SFDC, TAPE } from './provenance';
 
 export type ScreenId =
   | 'dashboard'
-  | 'queue'
+  | 'intake'
   | 'underwriteBoard'
   | 'underwrite'
   | 'aiDraft'
@@ -27,7 +27,7 @@ export type ScreenId =
 /** Screen names, with an example link for routes that take an asset id. */
 export const SCREENS: Record<ScreenId, { label: string; example: string }> = {
   dashboard: { label: 'Dashboard', example: '/' },
-  queue: { label: 'Pipeline queue', example: '/queue' },
+  intake: { label: 'Intake', example: '/intake' },
   underwriteBoard: { label: 'Underwrite board', example: '/underwrite' },
   underwrite: { label: 'Underwrite', example: '/underwrite/BOOL-002' },
   aiDraft: { label: 'AI draft', example: '/underwrite/BOOL-003/draft' },
@@ -60,10 +60,10 @@ export const INTEGRATIONS: Integration[] = [
     id: 'salesforce',
     name: 'Salesforce',
     kind: 'System of record',
-    description: 'Opportunity and deal records: the lot, its zoning, the asking or contracted land price, and contract terms.',
+    description: 'Lead and deal records: the lot, its zoning, the asking or contracted land price, and contract terms.',
     marker: SFDC,
     fields: [
-      { field: 'Lot sqft', screens: ['queue', 'underwriteBoard', 'underwrite', 'aiDraft', 'scenario', 'asset'] },
+      { field: 'Lot sqft', screens: ['intake', 'underwriteBoard', 'underwrite', 'aiDraft', 'scenario', 'asset'] },
       { field: 'Lot dimensions (width × depth)', screens: ['underwrite', 'aiDraft', 'scenario'] },
       { field: 'Setbacks and max lot coverage', screens: ['aiDraft'] },
       { field: 'Asking or contracted land price', screens: ['aiDraft', 'scenario', 'contractList', 'contract', 'asset'] },
