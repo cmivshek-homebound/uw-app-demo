@@ -142,3 +142,20 @@
 .dp-step--done .dp-step-num { background: #eef6f1; color: #1A6B4A; }
 .dp-step--current { color: #171717; font-weight: 600; }
 .dp-step--current .dp-step-num { background: #1A6B4A; color: #fff; }
+
+.dp-toggle {
+  display: block;
+  margin: 10px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #737373;
+  cursor: pointer;
+}
+
+.dp-toggle:hover { color: #1A6B4A; }
+
+.dp-toggle + .dp-steps { margin-top: 8px; }

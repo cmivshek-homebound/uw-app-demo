@@ -470,3 +470,6 @@
 }
 
 .as-card .cx-detail { margin-top: 18px; padding-top: 16px; border-top: 1px solid #f5f5f5; }
+
+/* Anchored sections land below the sticky nav. */
+.as-card[id] { scroll-margin-top: 76px; }

@@ -89,9 +89,9 @@ function overrideValue(field: UnderwriteOverrideField, n: number) {
 }
 
 // ── Layout pieces ──────────────────────────────────────────────
-function Card({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
+function Card({ title, aside, id, children }: { title: string; aside?: ReactNode; id?: string; children: ReactNode }) {
   return (
-    <section className="uw-card as-card">
+    <section className="uw-card as-card" id={id}>
       <div className="as-card-header">
         <h2 className="as-card-title">{title}</h2>
         {aside}
@@ -602,7 +602,7 @@ function RealizedSection({ asset }: { asset: Asset }) {
   };
 
   return (
-    <Card title="Underwritten vs realized" aside={<span className="as-card-caption">Sold {shortDate(sale.soldOn)}</span>}>
+    <Card title="Underwritten vs realized" id="realized" aside={<span className="as-card-caption">Sold {shortDate(sale.soldOn)}</span>}>
       <p className="as-driver">{driverSentence(asset, driver, marginPts)}</p>
       <div className="as-table-scroll">
         <table className="as-table">

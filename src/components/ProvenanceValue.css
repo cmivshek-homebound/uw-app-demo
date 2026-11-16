@@ -14,8 +14,10 @@
 }
 
 /* AI draft: light warm tint until confirmed */
+/* Translucent so the tint reads as cream on white and stays legible on
+   colored chips (e.g. white text on brand green). */
 .pv--ai .pv-value {
-  background: #faf5e8;
+  background: rgba(176, 138, 46, 0.12);
   border-radius: 3px;
   padding: 0 3px;
 }

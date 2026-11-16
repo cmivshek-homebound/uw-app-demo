@@ -687,8 +687,7 @@
 }
 
 .ad-adu-verdict--adds { background: #1A6B4A; color: #fff; }
-/* The AI tint is light; on the dark chip use a translucent one so the value stays readable. */
-.ad-adu-verdict--adds .pv--ai .pv-value { background: rgba(255, 255, 255, 0.2); }
+/* The AI sparkle is dark gold; lighten it on the dark chip. */
 .ad-adu-verdict--adds .pv--ai .pv-icon { color: #f3dfa6; }
 .ad-adu-verdict--thin { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
 

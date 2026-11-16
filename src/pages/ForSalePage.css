@@ -157,6 +157,7 @@
 
 .fs-diag--healthy { background: #eef6f1; color: #1A6B4A; }
 .fs-diag--offer_in_hand { background: #1A6B4A; color: #fff; }
+.fs-diag--offer_in_hand .pv--ai .pv-icon { color: #f3dfa6; }
 .fs-diag--stale { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
 .fs-diag--showings_no_offers,
 .fs-diag--low_traffic,

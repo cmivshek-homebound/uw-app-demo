@@ -18,7 +18,7 @@ import { constructionSummary } from './selectors';
 
 export interface DemoStep {
   title: string;
-  path: string;              // pathname + search, exactly as linked
+  path: string;              // pathname + search (+ #section to scroll to), exactly as linked
   talkingPoint: () => string;
 }
 
@@ -100,12 +100,13 @@ export const DEMO_STEPS: DemoStep[] = [
   },
   {
     title: 'Sold asset record',
-    path: '/asset/BOOL-039',
+    path: '/asset/BOOL-039#realized', // lands on the closing-cost line, clear of the presenter card
     talkingPoint: () => {
       const a = asset('BOOL-039');
       const sale = a.sale!;
       const uw = a.underwrite!;
-      return `${a.address} sold for ${usd(sale.salePrice)}. Closing ran ${pctOf(sale.closingCosts, sale.landPrice)} of land against ${pctOf(uw.closingCosts, uw.landPrice)} underwritten, the gap that led us to correct the closing-cost assumption.`;
+      const buildOver = sale.buildCost - uw.buildCost;
+      return `${a.address} sold for ${usd(sale.salePrice)}. The headline is the ${usdK(buildOver).replace('+', '')} retaining-wall overrun, but look at closing: ${pctOf(sale.closingCosts, sale.landPrice)} of land against ${pctOf(uw.closingCosts, uw.landPrice)} underwritten. That gap, repeated across deals, is why we corrected the closing-cost assumption.`;
     },
   },
 ];
