@@ -7,7 +7,7 @@ export interface Opportunity {
   market: string;
   lotSqFt: number;
   source: 'MLS' | 'Off-Market';
-  sdrOwner: string;
+  sdrOwner?: string;     // Off-Market leads only; MLS listings have no SDR
   dateReceived: string;
 }
 
@@ -105,7 +105,7 @@ export interface PreScreen {
 
 export interface AssetIntake {
   source: Opportunity['source'];
-  sdrOwner: string;
+  sdrOwner?: string;     // Off-Market leads only; MLS listings have no SDR
   dateReceived: string; // ISO
   preScreen?: PreScreen; // intake leads
 }

@@ -144,9 +144,13 @@ function IntakeSection({ asset }: { asset: Asset }) {
     <Card title="Intake" aside={<Link to={dq ? '/intake#disqualified' : '/intake'} className="as-link">Open intake →</Link>}>
       {intake && (
         <p className="as-muted as-small">
-          <ProvenanceValue info={SFDC}>{intake.source}</ProvenanceValue> lead from{' '}
-          <ProvenanceValue info={SFDC}>{intake.sdrOwner}</ProvenanceValue>, received{' '}
-          <ProvenanceValue info={SFDC}>{shortDate(intake.dateReceived)}</ProvenanceValue>
+          {intake.source === 'Off-Market' ? (
+            <>
+              Off-Market
+              {intake.sdrOwner && <> · sourced by <ProvenanceValue info={SFDC}>{intake.sdrOwner}</ProvenanceValue></>}
+            </>
+          ) : 'MLS listing'}
+          , received <ProvenanceValue info={SFDC}>{shortDate(intake.dateReceived)}</ProvenanceValue>
         </p>
       )}
       {p && (

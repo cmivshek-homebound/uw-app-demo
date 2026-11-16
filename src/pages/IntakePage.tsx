@@ -28,7 +28,7 @@ const RECOMMENDATION_LABELS: Record<IntakeRecommendation, string> = {
   hold: 'Hold',
 };
 
-const RECEIVED = computed('Days since the SDR logged the lead');
+const RECEIVED = computed('Days since the lead came in');
 
 function shortDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
@@ -164,7 +164,8 @@ function LeadRow({ asset, decision }: { asset: Asset; decision?: IntakeDecision 
         </div>
         <div className="in-cell">
           <span className="in-label">SDR</span>
-          <ProvenanceValue info={SFDC}>{intake.sdrOwner}</ProvenanceValue>
+          {/* Off-Market leads only; MLS listings have no SDR, so the spot stays empty. */}
+          {intake.sdrOwner && <ProvenanceValue info={SFDC}>{intake.sdrOwner}</ProvenanceValue>}
         </div>
         <div className="in-cell">
           <span className="in-label">Received</span>
