@@ -201,7 +201,7 @@ function LeadRow({ asset, decision }: { asset: Asset; decision?: IntakeDecision 
         <div className="in-action">
           {decision?.kind === 'sent' ? (
             <span className="in-done">
-              Sent to underwriting by {decision.by} · AI drafting, assigned to {ANALYST_BY_MARKET[asset.market]}{' '}
+              Sent to underwriting by {decision.by} · {decision.draftReadyAt ? 'AI draft ready' : 'AI drafting'}, assigned to {ANALYST_BY_MARKET[asset.market]}{' '}
               <Link to="/underwrite" className="in-link">Underwrite board →</Link>
             </span>
           ) : decision?.kind === 'disqualified' ? (

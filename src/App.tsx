@@ -10,6 +10,8 @@ import DraftReviewProvider from './components/DraftReviewProvider';
 import MarkReviewProvider from './components/MarkReviewProvider';
 import ListingActionProvider from './components/ListingActionProvider';
 import IntakeProvider from './components/IntakeProvider';
+import NotificationProvider from './components/NotificationProvider';
+import CommentsProvider from './components/CommentsProvider';
 import Dashboard from './pages/Dashboard';
 import IntakePage from './pages/IntakePage';
 import UnderwritePage from './pages/UnderwritePage';
@@ -31,6 +33,8 @@ import NotFoundPage from './pages/NotFoundPage';
 export default function App() {
   return (
     <BrowserRouter>
+      <NotificationProvider>
+      <CommentsProvider>
       <DraftReviewProvider>
       <IntakeProvider>
         <MarkReviewProvider>
@@ -70,6 +74,8 @@ export default function App() {
         </MarkReviewProvider>
       </IntakeProvider>
       </DraftReviewProvider>
+      </CommentsProvider>
+      </NotificationProvider>
     </BrowserRouter>
   );
 }

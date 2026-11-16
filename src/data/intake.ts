@@ -8,8 +8,11 @@ import type { Role } from './role';
 // Session-only send / disqualify / hold decisions on intake leads, held in
 // React by IntakeProvider (resets on reload), like the draft review actions.
 
+/** How long the simulated AI draft takes after a lead is sent, so the demo can watch it land. */
+export const DRAFT_SECONDS = 15;
+
 export type IntakeDecision =
-  | { kind: 'sent'; at: string; by: string }
+  | { kind: 'sent'; at: string; by: string; draftReadyAt?: string }
   | { kind: 'disqualified'; at: string; by: string; reason: DqReason; note?: string }
   | { kind: 'held'; at: string; by: string; note: string };
 
@@ -32,8 +35,8 @@ export function withIntakeDecisions(assets: Asset[], decisions: Record<string, I
         return {
           ...a,
           stage: 'underwriting',
-          underwritingStatus: 'ai_drafting',
-          underwritingSince: d.at,
+          underwritingStatus: d.draftReadyAt ? 'draft_ready' : 'ai_drafting',
+          underwritingSince: d.draftReadyAt ?? d.at,
           analyst: ANALYST_BY_MARKET[a.market],
           hold: undefined,
         };

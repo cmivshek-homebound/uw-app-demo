@@ -23,6 +23,7 @@ import {
 } from '../data/review';
 import type { DraftReview, SectionStatus } from '../data/review';
 import { AI, MLS, SFDC, human } from '../data/provenance';
+import { useNotifications } from '../data/notifications';
 import { useCanAct } from '../data/role';
 import { PIPELINE_STAGES } from '../data/selectors';
 import { CARRY_COST_PCT, CLOSING_COST_PCT, SELLING_COST_PCT } from '../data/underwriting';
@@ -386,6 +387,7 @@ export default function AIDraftPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { reviews, updateReview } = useDraftReviews();
+  const { notify } = useNotifications();
   const canAct = useCanAct();
   const aiDraft = id ? getAIDraft(id) : undefined;
 
@@ -740,9 +742,20 @@ export default function AIDraftPage() {
               confirmed: { ...r.confirmed, ...Object.fromEntries(sections.map((s) => [s, true])) },
             }))
           }
-          onSubmit={() =>
-            updateReview(aiDraft, (r) => ({ ...r, submitted: { by: analyst, at: demoNow(), timeKnown: true } }))
-          }
+          onSubmit={() => {
+            const at = demoNow();
+            updateReview(aiDraft, (r) => ({ ...r, submitted: { by: analyst, at, timeKnown: true } }));
+            notify({
+              type: 'handoff',
+              title: `Submitted to Growth: ${asset.address}`,
+              detail: `${analyst} submitted ${rec.plan.plan.name} at ${rec.marginPct}% margin, max land ${usd(rec.maxLandPrice)}.`,
+              assetId: asset.id,
+              to: `/asset/${asset.id}`,
+              at,
+              roles: ['analyst', 'manager', 'executive'],
+              analyst,
+            });
+          }}
         />
       </div>
     </div>

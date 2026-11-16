@@ -39,7 +39,7 @@ export default function IntegrationsPage() {
                     {i === 0 && (
                       <td rowSpan={source.fields.length} className="ig-source">
                         <span className="ig-source-name">
-                          <ProvenanceValue info={source.marker}>{source.name}</ProvenanceValue>
+                          {source.marker ? <ProvenanceValue info={source.marker}>{source.name}</ProvenanceValue> : source.name}
                         </span>
                         <span className="ig-source-kind">{source.kind}</span>
                         <p className="ig-source-desc">{source.description}</p>

@@ -1,4 +1,4 @@
-import type { ProvenanceInfo } from '../types';
+import type { Market, ProvenanceInfo } from '../types';
 import { AI, BLUEPRINT, MLS, SFDC, TAPE } from './provenance';
 
 // ── Data sources & integrations ────────────────────────────────
@@ -44,14 +44,23 @@ export const SCREENS: Record<ScreenId, { label: string; example: string }> = {
   approvals: { label: 'Needs your approval', example: '/approvals' },
 };
 
-export type IntegrationId = 'salesforce' | 'tape' | 'blueprint' | 'mls' | 'ai';
+export type IntegrationId = 'salesforce' | 'tape' | 'blueprint' | 'mls' | 'ai' | 'slack';
+
+/** Each market's Slack channel; in production every notification posts to its asset's market channel. */
+export const SLACK_CHANNELS: Record<Market, string> = {
+  DFW: '#bool-dfw',
+  Houston: '#bool-houston',
+  Tampa: '#bool-tampa',
+  'St. Pete': '#bool-st-pete',
+  LA: '#bool-la',
+};
 
 export interface Integration {
   id: IntegrationId;
   name: string;
-  kind: 'System of record' | 'AI model';
+  kind: 'System of record' | 'AI model' | 'Notifications';
   description: string;
-  marker: ProvenanceInfo;     // the marker its values carry on screen
+  marker?: ProvenanceInfo;    // the marker its values carry on screen; none for outbound-only sources
   fields: { field: string; screens: ScreenId[] }[];
 }
 
@@ -127,6 +136,18 @@ export const INTEGRATIONS: Integration[] = [
       { field: 'Listing health diagnosis and recommendations', screens: ['forSale', 'approvals'] },
       { field: 'Estimate at completion and cost to complete', screens: ['construction', 'asset', 'approvals'] },
       { field: 'Margin impact of build overruns and slips', screens: ['construction', 'asset', 'approvals'] },
+    ],
+  },
+  {
+    id: 'slack',
+    name: 'Slack',
+    kind: 'Notifications',
+    description: `Outbound only. In production every in-app notification also posts to its market’s channel (${Object.values(SLACK_CHANNELS).join(', ')}), and @mentions in asset comments DM the person.`,
+    fields: [
+      { field: 'AI draft ready, Growth handoffs and AE counters', screens: ['underwriteBoard', 'aiDraft', 'asset'] },
+      { field: 'Mark approvals needed and approved', screens: ['marks', 'approvals'] },
+      { field: 'Inspection deadlines, stale listings and over-budget builds', screens: ['contract', 'forSale', 'construction'] },
+      { field: '@mentions in asset comments', screens: ['asset'] },
     ],
   },
 ];

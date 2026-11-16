@@ -28,3 +28,24 @@ export function demoNow(): string {
     now.getSeconds(),
   ).toISOString();
 }
+
+/** A time `hours` before the demo's current moment, for seeded activity. */
+export function hoursAgo(hours: number, now: string = demoNow()): string {
+  return new Date(new Date(now).getTime() - hours * 3_600_000).toISOString();
+}
+
+/** Whether a timestamp falls on the demo's "today" (local calendar day). */
+export function isDemoToday(iso: string, now: string = demoNow()): boolean {
+  return new Date(iso).toDateString() === new Date(now).toDateString();
+}
+
+/** "just now", "12m ago", "3h ago", "Yesterday", "4d ago". */
+export function relativeTime(iso: string, now: string = demoNow()): string {
+  const mins = Math.max(0, Math.round((new Date(now).getTime() - new Date(iso).getTime()) / 60_000));
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (isDemoToday(iso, now)) return `${Math.floor(mins / 60)}h ago`;
+  const yesterday = new Date(new Date(now).getTime() - DAY_MS).toDateString();
+  if (new Date(iso).toDateString() === yesterday) return 'Yesterday';
+  return `${Math.max(2, Math.round(mins / 1440))}d ago`;
+}

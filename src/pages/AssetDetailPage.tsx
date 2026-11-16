@@ -3,6 +3,7 @@ import type { PointerEvent, ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import ConstructionDetail, { MarginImpactLine, StatusChip } from '../components/ConstructionDetail';
 import { eacInfo, weeksLate } from '../components/constructionFormat';
+import AssetComments from '../components/AssetComments';
 import ProvenanceValue, { ProvenanceLegend } from '../components/ProvenanceValue';
 import { getAIDraft } from '../data/aiDrafts';
 import { AI, BLUEPRINT, MLS, SFDC, TAPE, computed, human, markProvenance } from '../data/provenance';
@@ -781,6 +782,7 @@ export default function AssetDetailPage() {
         {asset.marks && asset.marks.length > 0 && <MarksSection asset={asset} />}
         {asset.listing && <ListingSection asset={asset} />}
         {asset.sale && <RealizedSection asset={asset} />}
+        <AssetComments assetId={asset.id} />
       </div>
     </div>
   );
